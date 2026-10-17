@@ -7,6 +7,19 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 ## [0.13.3] — unreleased
 
+### Changed
+
+- **BREAKING — collection reports are unified.** `describe_collection()` now includes structure,
+  UI metadata (including tooltips), scalar null/non-null counts and integer distributions, and
+  group coverage on the same lines. `describe()` appends these complete reports for every
+  collection after its database/version header, querying statistics for each one. Enum meanings
+  appear once in `enum {...}`; histograms contain numeric codes and counts.
+
+  *Adapt:* replace `summarize_collection()` with `describe_collection()` in C++, Lua, Julia and
+  Python, `summarizeCollection()` with `describeCollection()` in Dart/JS, and
+  `quiver_database_summarize_collection()` with `quiver_database_describe_collection()` in C.
+  The old API is removed; update any report-text assertions for the combined format.
+
 ### Added
 
 - **Python: macOS Apple Silicon wheels.** PyPI releases now include arm64 wheels for CPython

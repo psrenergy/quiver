@@ -255,8 +255,6 @@ ffi.cdef("""
     quiver_error_t quiver_database_describe(quiver_database_t* db, char** out_report);
     quiver_error_t quiver_database_describe_collection(quiver_database_t* db,
         const char* collection, char** out_report);
-    quiver_error_t quiver_database_summarize_collection(quiver_database_t* db,
-        const char* collection, char** out_report);
 
     // Update element
     quiver_error_t quiver_database_update_element(quiver_database_t* db,

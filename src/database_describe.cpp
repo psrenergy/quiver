@@ -6,7 +6,6 @@
 #include <sstream>
 #include <string>
 #include <utility>
-#include <vector>
 
 namespace quiver {
 
@@ -44,7 +43,6 @@ void print_group_columns(std::ostream& out, const TableDefinition& table, GroupT
         }
         first = false;
     }
-    out << "\n";
 }
 
 const char* plural(int64_t n) {
@@ -136,10 +134,8 @@ bool is_redundant(const std::string& squashed_text, const std::string& squashed_
 
 // Appends zero to three "; keyword body" clauses for one scalar attribute, in the fixed
 // order label, enum, tooltip. Each clause carries its own leading "; " so eliding one leaves no
-// dangling separator. Only the tooltip clause is conditional on with_tooltip -- label and enum
-// are unconditional -- which is what makes describe()'s line a strict prefix of
-// describe_collection()'s line by construction.
-void write_ui_clauses(std::ostream& out, const UiAttribute* meta, const std::string& name, bool with_tooltip) {
+// dangling separator.
+void write_ui_clauses(std::ostream& out, const UiAttribute* meta, const std::string& name) {
     if (!meta) {
         return;
     }
@@ -170,59 +166,15 @@ void write_ui_clauses(std::ostream& out, const UiAttribute* meta, const std::str
         out << "; enum {" << enum_body << "}";
     }
 
-    if (with_tooltip) {
-        const std::string normalized_tooltip = normalize_ui_text(meta->tooltip);
-        if (!normalized_tooltip.empty()) {
-            // Compared against the sidecar label too, even when the label clause itself was
-            // suppressed as redundant. `label_key` above is that comparand: normalize_ui_text only
-            // rewrites bytes squash() discards anyway, so squash(normalize(x)) == squash(x) and
-            // the raw-vs-normalized distinction is unobservable.
-            const std::string tooltip_key = squash(normalized_tooltip);
-            if (!is_redundant(tooltip_key, name_key) && !is_redundant(tooltip_key, label_key)) {
-                out << "; tooltip " << quote_ui_text(normalized_tooltip);
-            }
-        }
-    }
-}
-
-// Write one collection's structural section (scalars + vector/set/time-series groups).
-void write_collection_section(
-    std::ostream& out,
-    const Schema& schema,
-    const std::string& collection,
-    int64_t count,
-    const UiMetadata& ui,
-    bool with_tooltip
-) {
-    out << "Collection: " << collection << " (" << count << " element" << plural(count) << ")\n";
-
-    const auto* table_def = schema.get_table(collection);
-    if (table_def && !table_def->column_order.empty()) {
-        out << "  Scalars:\n";
-        for (const auto& name : table_def->column_order) {
-            const auto& col = table_def->columns.at(name);
-            out << "    - " << name << " (" << data_type_to_string(col.type) << ")";
-            if (col.primary_key) {
-                out << " PRIMARY KEY";
-            }
-            if (col.not_null && !col.primary_key) {
-                out << " NOT NULL";
-            }
-            write_ui_clauses(out, ui.find(collection, name), name, with_tooltip);
-            out << "\n";
-        }
-    }
-
-    for (const auto& [header, type] : kGroupSections) {
-        auto groups = schema.group_names(collection, type);
-        if (groups.empty()) {
-            continue;
-        }
-        out << header << "\n";
-        for (const auto& group_name : groups) {
-            const auto* table = schema.get_table(Schema::group_table_name(collection, group_name, type));
-            out << "    - " << group_name << ": ";
-            print_group_columns(out, *table, type);
+    const std::string normalized_tooltip = normalize_ui_text(meta->tooltip);
+    if (!normalized_tooltip.empty()) {
+        // Compared against the sidecar label too, even when the label clause itself was
+        // suppressed as redundant. `label_key` above is that comparand: normalize_ui_text only
+        // rewrites bytes squash() discards anyway, so squash(normalize(x)) == squash(x) and
+        // the raw-vs-normalized distinction is unobservable.
+        const std::string tooltip_key = squash(normalized_tooltip);
+        if (!is_redundant(tooltip_key, name_key) && !is_redundant(tooltip_key, label_key)) {
+            out << "; tooltip " << quote_ui_text(normalized_tooltip);
         }
     }
 }
@@ -237,15 +189,7 @@ std::string Database::describe() const {
     out << "Version: " << current_version() << "\n";
 
     for (const auto& collection : impl_->schema->collection_names()) {
-        out << "\n";
-        write_collection_section(
-            out,
-            *impl_->schema,
-            collection,
-            number_of_elements(collection),
-            impl_->ui_metadata,
-            false
-        );
+        out << "\n" << describe_collection(collection);
     }
 
     return out.str();
@@ -253,14 +197,6 @@ std::string Database::describe() const {
 
 std::string Database::describe_collection(const std::string& collection) const {
     impl_->require_collection(collection, "describe_collection");
-
-    std::ostringstream out;
-    write_collection_section(out, *impl_->schema, collection, number_of_elements(collection), impl_->ui_metadata, true);
-    return out.str();
-}
-
-std::string Database::summarize_collection(const std::string& collection) const {
-    impl_->require_collection(collection, "summarize_collection");
 
     const int64_t element_count = number_of_elements(collection);
     const std::string quoted_collection = "\"" + collection + "\"";
@@ -277,7 +213,15 @@ std::string Database::summarize_collection(const std::string& collection) const 
         );
         const int64_t null_count = *counts[0].get_integer(0);
         const int64_t non_null_count = *counts[0].get_integer(1);
-        out << "    - " << scalar.name << ": " << non_null_count << " non-null, " << null_count << " null";
+        out << "    - " << scalar.name << " (" << data_type_to_string(scalar.data_type) << ")";
+        if (scalar.primary_key) {
+            out << " PRIMARY KEY";
+        }
+        if (scalar.not_null && !scalar.primary_key) {
+            out << " NOT NULL";
+        }
+        write_ui_clauses(out, impl_->ui_metadata.find(collection, scalar.name), scalar.name);
+        out << "; " << non_null_count << " non-null, " << null_count << " null";
 
         // Integer value distribution: only for non-primary-key INTEGER columns whose distinct
         // cardinality is bounded. The LIMIT-based pre-check keeps high-cardinality columns
@@ -293,30 +237,12 @@ std::string Database::summarize_collection(const std::string& collection) const 
                     "SELECT " + quoted_col + ", COUNT(*) FROM " + quoted_collection + integer_cells + " GROUP BY " +
                     quoted_col + " ORDER BY " + quoted_col
                 );
-                // The lookup sits here, not at the top of the per-scalar loop, so a
-                // collection of TEXT/REAL/PK scalars pays zero two-level map lookups.
-                const auto* meta = impl_->ui_metadata.find(collection, scalar.name);
                 out << "; values {";
                 for (size_t i = 0; i < rows.row_count(); ++i) {
                     if (i != 0) {
                         out << ", ";
                     }
-                    const int64_t code = *rows[i].get_integer(0);
-                    out << code;
-                    // Deliberate divergence from the enum clause in write_ui_clauses. There the
-                    // entry IS the vocabulary, so an empty-normalizing label drops the whole entry;
-                    // here the entry is an observed row count, so an empty-normalizing label drops
-                    // only the annotation and keeps the entry.
-                    if (meta) {
-                        auto label_it = meta->enum_labels.find(code);
-                        if (label_it != meta->enum_labels.end()) {
-                            const std::string normalized_label = normalize_ui_text(label_it->second);
-                            if (!normalized_label.empty()) {
-                                out << " " << quote_ui_text(normalized_label);
-                            }
-                        }
-                    }
-                    out << ": " << *rows[i].get_integer(1);
+                    out << *rows[i].get_integer(0) << ": " << *rows[i].get_integer(1);
                 }
                 out << "}";
             }
@@ -332,10 +258,13 @@ std::string Database::summarize_collection(const std::string& collection) const 
         }
         out << header << "\n";
         for (const auto& group_name : groups) {
-            const auto table = Schema::group_table_name(collection, group_name, type);
+            const auto table_name = Schema::group_table_name(collection, group_name, type);
+            const auto* table = impl_->schema->get_table(table_name);
             const auto non_empty =
-                *impl_->execute("SELECT COUNT(DISTINCT id) FROM \"" + table + "\"")[0].get_integer(0);
-            out << "    - " << group_name << ": " << non_empty << "/" << element_count << " non-empty\n";
+                *impl_->execute("SELECT COUNT(DISTINCT id) FROM \"" + table_name + "\"")[0].get_integer(0);
+            out << "    - " << group_name << ": ";
+            print_group_columns(out, *table, type);
+            out << "; " << non_empty << "/" << element_count << " non-empty\n";
         }
     }
 

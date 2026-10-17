@@ -55,7 +55,7 @@ src/                      # C++ implementation
     database_read.cpp     # bind_read: bulk + by-id readers, number_of_elements
     database_update.cpp   # bind_update: update_element, relations, vector/set group writers; group decoder
     database_delete.cpp   # bind_delete: delete_element(_by_label)
-    database_describe.cpp # bind_describe: describe, describe_collection, summarize_collection
+    database_describe.cpp # bind_describe: describe, describe_collection
     database_metadata.cpp # bind_metadata: get_{scalar,vector,set}_metadata, list_*; metadata_to_lua
     database_query.cpp    # bind_query: query_string/integer/float
     database_time_series.cpp # bind_time_series: time-series read/write/upsert/files, its metadata + list
@@ -190,7 +190,7 @@ be listed in `QUIVER_SOURCES` for exactly that reason. The load happens once, in
 `Impl::require_schema` — `migrate_up` early-returns before reaching the schema-load path on every
 re-open of an already-up-to-date study, which is the common case for a real PSR run. A database
 opened with `from_schema` never populates it, so its `Database::Impl::ui_metadata` stays
-default-constructed (empty), and `describe`/`describe_collection` render exactly as before.
+default-constructed (empty), and `describe`/`describe_collection` render without UI clauses.
 
 The sibling directory is `fs::weakly_canonical(migrations_path).parent_path() / "ui"` — raw
 `parent_path()` was tried and is provably wrong two ways: a trailing separator on the migrations
@@ -232,13 +232,11 @@ logs a `Duplicate UI metadata for collection` warning before replacing it, since
 shape rather than filename and `directory_iterator` order is unspecified — last-in still wins, but
 the collision is diagnosable instead of varying silently by filesystem.
 
-Rendering lives in `database_describe.cpp`, not here: `write_collection_section` gained a
-`const UiMetadata&` and a `bool with_tooltip` parameter and appends zero to three `"; keyword body"`
-clauses (`label`, `enum`, `tooltip`, in that fixed order) after each scalar's existing
-name/type/flags line — `describe()` passes `with_tooltip = false`, `describe_collection()` passes
-`true`, so `describe()`'s line is always a prefix of `describe_collection()`'s by
-construction (identical whenever the tooltip clause is suppressed, so "prefix", not "strict
-prefix"). Only **main-table scalars** are annotated: `print_group_columns` takes no `UiMetadata`,
+Rendering lives in `database_describe.cpp`: `describe_collection` writes each scalar's
+name/type/flags, then `write_ui_clauses` appends zero to three `"; keyword body"` clauses
+(`label`, `enum`, `tooltip`, in that fixed order), then the scalar's statistics. `describe()`
+appends each complete collection report directly, so both reports include tooltips.
+Only **main-table scalars** are annotated: `print_group_columns` takes no `UiMetadata`,
 so a sidecar entry for a vector/set/time-series column is parsed and then never rendered anywhere.
 A label or tooltip whose `squash` (ASCII-lowercase, digits and letters only —
 spelled as an explicit ASCII test, never `std::tolower(char)`, which is undefined behavior on a
@@ -264,17 +262,11 @@ the same `0xC2`/`0xC3` lead bytes). An attribute with `hide = true` in
 its sidecar still renders every clause: `describe*` describes the schema, not the UI's visibility
 policy.
 
-`summarize_collection()`'s integer value histogram (`src/database_describe.cpp`, inside the
-`kMaxDistributionCardinality`-bounded branch) also annotates each *observed* code with its enum
-label: `values {0 "Per Unit": 2, 1: 1}`. The `ui_metadata.find(collection, scalar.name)` lookup
-sits immediately before `"; values {"` is written, not at the top of the per-scalar loop, so a
-collection of TEXT/REAL/PK scalars pays zero two-level map lookups. **Deliberate divergence
-from the `enum {}` clause:** here a label that normalizes to empty drops only the *annotation*
-and keeps the *entry* — unlike the `enum {}` clause above, where the entry IS the vocabulary and an
-empty-normalizing label drops the whole thing. In the histogram the entry is an observed row
-count, and dropping it would destroy data. Three known limits, recorded rather than fixed: (1)
+Enum meanings appear only in the `enum {...}` clause. Integer histograms contain numeric codes
+and counts (`values {0: 2, 1: 1}`), without a second UI lookup or label rendering path. An empty
+enum label omits its vocabulary entry without affecting the observed counts. Known limits:
 `ui_metadata` is populated only by `from_migrations` (see the early-return trap above), so
-`Database::open("study.db").summarize_collection(...)` still shows bare codes — this must not be
+`Database("study.db").describe_collection(...)` has no UI clauses — this must not be
 "fixed" by hooking the load onto `load_schema_metadata` / `require_schema`, since `migrate_up`
 early-returns before it on the open-an-existing-study path. Note the sharpest edge of that limit:
 `from_migrations` **throws** on `options.read_only`, so a read-only handle — the natural mode for
@@ -282,15 +274,11 @@ an inspection tool, and the mode PSR's `load_study` defaults to — can never ca
 all. Closing it needs a dedicated lazy `require_ui_metadata()` that remembers the migrations path
 (orthogonal to schema loading, and not the forbidden `require_schema` hook), or persisting the
 sidecar into the database file at `from_migrations` time; both are design changes, not cleanups.
-(1b) group columns are never annotated — see the render paragraph above; and (2)
-`kMaxDistributionCardinality`
-(64) still suppresses the whole `; values {}` clause above 64 distinct codes, so the richest enum
-column renders no labels at all — `describe_collection()`'s `; enum {...}` is the fallback, and 64
-labelled entries is already a ~2 KB single line, so no truncation is proposed (truncation needs its
-own ellipsis convention). One more honest note: `quote_ui_text` gives a parse-level guarantee, not
-substring immunity, and `summarize_collection` additionally emits `  Vectors:` / `  Sets:` /
-`  Time Series:` headers — so a naive header-count test written against it on a `from_migrations`
-database would be breakable by a label containing that text. The remedy, if it ever bites, is
+Group columns are never annotated. `kMaxDistributionCardinality` (64) suppresses the whole
+`; values {}` clause above 64 distinct integer codes; `; enum {...}` remains present regardless
+of observed cardinality. `quote_ui_text` gives a parse-level guarantee, not substring immunity,
+so a naive header-count test written against a report on a `from_migrations`
+database would be breakable by a label containing a section heading. The remedy, if it ever bites, is
 asserting on report structure (line prefix + indentation), never a substring blocklist.
 
 Three guards in the Lua layer's decoders (`src/sandbox/`: `csv.cpp`, `internal.h`, `database_update.cpp`) exist because a script is
@@ -532,16 +520,18 @@ impl_->logger->debug("Opening database: {}", path);
 - **`number_of_elements` lives in `database_read.cpp`** alongside the other element-level reads
   (`read_element_ids`). `number_of_elements(c)
   const` validates through `Impl::require_collection` and directly executes `SELECT COUNT(*)`
-  against the quoted collection. The value is queried on demand and is not cached. `describe()`,
-  `describe_collection(c)`, and `summarize_collection(c)` reuse the public operation; the
-  collection-specific report methods intentionally retain their own validation so
+  against the quoted collection. The value is queried on demand and is not cached.
+  `describe_collection(c)` calls it, and `describe()` delegates to that report. The
+  collection-specific report intentionally retains its own validation so
   errors name the operation the caller invoked.
-- **`describe*` return text reports** (`database_describe.cpp`): `describe()` (whole-DB overview),
-  `describe_collection(c)` (one collection's structure), `summarize_collection(c)` (per-scalar
-  null/non-null counts + low-cardinality integer distributions [threshold `kMaxDistributionCardinality`]
-  + per-group empty/non-empty counts) all build an `std::ostringstream` and return `std::string`. They
-  run their SQL through `Impl::execute`, which is const. The distribution counts only cells whose
-  `typeof` is `integer`, since a non-STRICT INTEGER column can also hold TEXT/REAL. All three are
+- **`describe*` return complete text reports** (`database_describe.cpp`): `describe_collection(c)`
+  combines structure, UI metadata, per-scalar null/non-null counts, low-cardinality integer
+  distributions (threshold `kMaxDistributionCardinality`) and per-group coverage in one set of
+  loops. It preserves declaration order, type/constraint flags and bracketed time-series keys.
+  `describe()` appends the same reports for every collection after its database/version header,
+  querying statistics for every collection. Both build an `std::ostringstream` and return
+  `std::string`, with SQL through const `Impl::execute`. Distributions count only `typeof = integer`
+  cells in non-PK INTEGER columns, since non-STRICT columns can also hold TEXT/REAL. Both are
   bound 1:1 across the C API and every binding as string getters.
 - **`validate_scalar`/`validate_array` thread the caller's name** (`type_validator.cpp`): call sites pass
   `"create_element"` / `"update_element"` so messages read `"Cannot create_element: type
@@ -821,8 +811,8 @@ Implementation conventions in `src/sandbox/`:
 - `to_lua_table<T>` overloads (flat + nested) are the only vector→table marshalers.
 - The plain forwarders — `is_healthy`, `current_version`, `path`, the transaction and dry-run
   methods (`begin_transaction`, `commit`, `rollback`, `in_transaction`, `begin_dry_run`,
-  `end_dry_run`, `in_dry_run`), `number_of_elements`, `describe` / `describe_collection` /
-  `summarize_collection`, `delete_element` / `delete_element_by_label` and `has_time_series_files`
+  `end_dry_run`, `in_dry_run`), `number_of_elements`, `describe` / `describe_collection`,
+  `delete_element` / `delete_element_by_label` and `has_time_series_files`
   — are bound as `&Database::` member pointers, not lambdas. `db:describe()` and its siblings still
   return the C++ `std::string` text report — they do not print.
 - Lua→C++ converters **throw on unsupported value types** (functions, nested tables, ...) — never

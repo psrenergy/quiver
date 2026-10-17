@@ -181,14 +181,16 @@ db:is_healthy()                    -- boolean
 db:current_version()               -- integer (current migration version)
 db:path()                          -- string (database file path)
 db:number_of_elements(collection)  -- integer: how many elements the collection holds right now
-db:describe()                      -- string: whole-DB text report (returns it, does NOT print)
-db:describe_collection(collection) -- string: one collection's structure (text report)
-db:summarize_collection(collection)-- string: per-scalar null/non-null counts, low-cardinality
-                                   --         integer value distributions, per-group sizes
+db:describe()                      -- string: database/version header + complete reports for every collection
+db:describe_collection(collection) -- string: structure, UI metadata (including tooltips), scalar
+                                   --         null/non-null counts, integer distributions, group coverage
 db:validate_migrations(path)       -- validate a migrations dir (up then down) in-memory; no return
 \`\`\`
 
-All three \`describe*\`/\`summarize*\` methods **return** a string — \`print()\` it to see it.
+Both \`describe*\` methods **return** a string — \`print()\` it to see it. Declarations and statistics
+share each line, with UI clauses between them. Enum meanings appear once in \`enum {...}\`;
+value histograms contain numeric codes and counts, only for non-primary-key INTEGER scalars with
+at most 64 distinct integer values. \`db:describe()\` queries statistics for every collection.
 
 \`db:validate_migrations(path)\` applies every \`up.sql\` in version order, then every \`down.sql\` in
 reverse, against a throwaway in-memory database — nothing in \`db\` itself is touched. The round trip

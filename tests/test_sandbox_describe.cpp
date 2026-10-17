@@ -37,7 +37,7 @@ TEST_F(SandboxTest, DescribeCollection) {
     )LUA");
 }
 
-TEST_F(SandboxTest, SummarizeCollection) {
+TEST_F(SandboxTest, DescribeCollectionStatistics) {
     auto db = open_collections();
     db.create_element(
         "Collection",
@@ -51,9 +51,12 @@ TEST_F(SandboxTest, SummarizeCollection) {
 
     quiver::Sandbox sandbox(db);
     sandbox.run(R"LUA(
-        local report = db:summarize_collection("Collection")
-        assert(type(report) == "string", "summarize_collection should return a string")
-        assert(report:find("some_integer: 3 non%-null, 0 null; values {1: 2, 5: 1}"), "bad some_integer stats")
-        assert(report:find("values: 1/3 non%-empty"), "bad vector group stats")
+        local report = db:describe_collection("Collection")
+        assert(report:find("some_integer (INTEGER); 3 non-null, 0 null; values {1: 2, 5: 1}", 1, true),
+               "bad some_integer stats")
+        assert(report:find("values: value_int(INTEGER), value_float(REAL); 1/3 non-empty", 1, true),
+               "bad vector group stats")
+        assert(db:describe() == "Database: :memory:\nVersion: 0\n\n" .. report .. "\n" ..
+               db:describe_collection("Configuration"), "reports differ")
     )LUA");
 }

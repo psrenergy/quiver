@@ -309,13 +309,11 @@ public:
     const std::string& path() const;
 
     // Schema inspection — human-readable text reports.
-    // describe(): whole-database overview (every collection, element counts, attribute/group names).
+    // describe(): database/version header followed by every collection's complete report.
     std::string describe() const;
-    // describe_collection(): one collection's structure (scalars, vector/set/time-series groups).
+    // describe_collection(): one collection's structure, UI metadata (including tooltips), scalar
+    // null/non-null counts, low-cardinality integer distributions and per-group coverage counts.
     std::string describe_collection(const std::string& collection) const;
-    // summarize_collection(): one collection's value statistics (null/non-null counts, low-cardinality
-    // integer value distributions, per-group empty/non-empty counts).
-    std::string summarize_collection(const std::string& collection) const;
 
     // CSV operations
     void export_csv(

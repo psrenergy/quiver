@@ -15,16 +15,19 @@ C++ core and C API suites live here; binding suites live in each binding's `test
   `upsert_time_series_row`/`read_time_series_row`; the C++ core has no `_nulls` file),
   `test_database_transaction.cpp`, `test_database_csv_export.cpp`, `test_database_csv_import.cpp`,
   `test_database_errors.cpp`
+- `test_database_describe.cpp` covers combined declaration/statistics lines, NULL counts,
+  coverage for all group kinds, primary-key/float/text histogram exclusion and the 64/65 boundary.
 - `test_database_ui_metadata.cpp` covers the `ui/` TOML sidecar reader (`src/ui_metadata.{h,cpp}`)
-  and its render into `describe`/`describe_collection`/`summarize_collection` — the one suite in
+  and its render into `describe`/`describe_collection` — the one suite in
   this list that drives `from_migrations` describe output (every other describe assertion in the
   repo goes through `from_schema`, which never populates the sidecar). Two gtest fixture names
   exist so the loader-facing and render-facing halves can be filtered separately:
   `UiMetadataTest` (path resolution, shape selection, localized-value reading including the C0/C1
   control-byte collapse, and the `enum.toml` join) and `DatabaseUiMetadataTest`
   (label/tooltip/enum clause rendering, the redundancy-suppression rules, the undescribed cases,
-  the malformed/degrade cases, the `summarize_collection` histogram annotation, and the
-  no-`ui/` baseline, `NoUiDirReportsUnchanged`). Its `UiTempTreeFixture` base builds a
+  the malformed/degrade cases, enum meanings appearing once before numeric histograms, exact
+  full-report/collection-report equality including tooltips, and the no-`ui/` baseline,
+  `NoUiDirReportsStructureAndStatistics`). Its `UiTempTreeFixture` base builds a
   per-test temp-dir `migrations/` tree plus sibling `ui/` tree from caller-supplied file contents
   (extending the `MigrationsTestFixture` idiom in `test_migrations.cpp`) — **nothing may be
   committed under `tests/schemas/ui/`**, because such a directory would become a live sibling of
@@ -126,7 +129,7 @@ or host-binding reader suite is needed: the methods exist only in Sandbox.
 
 Mirror the same areas with the `test_c_api_*` prefix (`test_c_api_database_*.cpp` per database
 area — the file sets diverge slightly: the C API has no `describe`, `errors` or `ui_metadata` file
-(its describe/describe_collection/summarize_collection coverage lives in
+(its describe/describe_collection coverage lives in
 `test_c_api_database_metadata.cpp`)) plus `test_c_api_element.cpp`, `test_c_api_sandbox.cpp`,
 `test_c_api_expression.cpp`, and the binary trio `test_c_api_binary_file.cpp` /
 `test_c_api_binary_metadata.cpp` / `test_c_api_csv_converter.cpp`. The same `read` →
@@ -259,7 +262,7 @@ never copy them into a binding.
     REAL and a non-numeric one as TEXT, so a cell's storage class can differ from its declared
     type. `DatabaseCApi.ReadVectorGroupByIdMasksRealCellInIntegerColumn` uses it to pin that the C
     API group marshaller reports such a cell absent instead of truncating it, and
-    `DatabaseDescribe.SummarizeDistributionSkipsNonIntegerCells` that `summarize_collection`'s
+    `DatabaseDescribe.DistributionSkipsNonIntegerCells` that `describe_collection`'s
     value distribution counts only integer cells. Keep the other `valid/` schemas STRICT.
   - `shared_group_columns.sql` has groups whose column names collide, which the validator allows
     for FK columns: `Child_vector_links` / `Child_vector_routes` and `Child_set_mentors` /

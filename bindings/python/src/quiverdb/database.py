@@ -167,7 +167,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
     # -- Schema inspection ------------------------------------------------------
 
     def describe(self) -> str:
-        """Return a human-readable report of every collection in the database."""
+        """Return complete collection reports with the database/version header."""
         self._ensure_open()
         lib = get_lib()
         out = ffi.new("char**")
@@ -178,26 +178,11 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
             lib.quiver_database_free_string(out[0])
 
     def describe_collection(self, collection: str) -> str:
-        """Return a human-readable report of a single collection's structure."""
+        """Return one collection's structure, UI metadata and statistics as text."""
         self._ensure_open()
         lib = get_lib()
         out = ffi.new("char**")
         check(lib.quiver_database_describe_collection(self._ptr, collection.encode("utf-8"), out))
-        try:
-            return ffi.string(out[0]).decode("utf-8")
-        finally:
-            lib.quiver_database_free_string(out[0])
-
-    def summarize_collection(self, collection: str) -> str:
-        """Return a human-readable value-statistics report for a single collection.
-
-        Reports per-scalar null/non-null counts and integer value distributions,
-        and per-group empty/non-empty element counts.
-        """
-        self._ensure_open()
-        lib = get_lib()
-        out = ffi.new("char**")
-        check(lib.quiver_database_summarize_collection(self._ptr, collection.encode("utf-8"), out))
         try:
             return ffi.string(out[0]).decode("utf-8")
         finally:

@@ -160,20 +160,4 @@ QUIVER_C_API quiver_error_t quiver_database_describe_collection(
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_database_summarize_collection(
-    quiver_database_t* db,
-    const char* collection,
-    char** out_report
-) {
-    QUIVER_REQUIRE(db, collection, out_report);
-
-    try {
-        *out_report = quiver::string::new_c_str(db->db.summarize_collection(collection));
-        return QUIVER_OK;
-    } catch (const std::exception& e) {
-        quiver_set_last_error(e.what());
-        return QUIVER_ERROR;
-    }
-}
-
 }  // extern "C"

@@ -125,7 +125,7 @@ protected:
 // localized-value reading and the enum.toml join.
 class UiMetadataTest : public UiTempTreeFixture {};
 
-// Render-facing gtest suite name -- describe / describe_collection / summarize_collection
+// Render-facing gtest suite name -- describe / describe_collection
 // assertions, the undescribed and malformed-degradation cases, and the no-sidecar baseline below.
 class DatabaseUiMetadataTest : public UiTempTreeFixture {};
 
@@ -152,13 +152,7 @@ CREATE TABLE HydroPlant (
 )";
 }
 
-// Lines beginning with the pinned four-space-dash scalar prefix, in order -- used by the
-// prefix-invariant test to compare describe()'s per-scalar line against
-// describe_collection()'s correspondingly-indexed line. Collection only inside the `  Scalars:`
-// section: write_collection_section emits the *same* `    - ` prefix for vector/set/time-series
-// entries, so an unfiltered scan would start comparing group lines against group lines the day
-// a group is added to reservoir_schema() -- passing vacuously and silently retiring the
-// invariant this helper exists to guard.
+// Scalar lines in declaration order, excluding the group lines that share their indentation.
 std::vector<std::string> extract_scalar_lines(const std::string& text) {
     std::vector<std::string> lines;
     std::istringstream iss(text);
@@ -190,7 +184,7 @@ std::string extract_collection_section(const std::string& describe_output, const
     return end == std::string::npos ? describe_output.substr(pos) : describe_output.substr(pos, end - pos);
 }
 
-// Shared malformed-sidecar assertion: a collection's describe()/describe_collection()/summarize_collection()
+// Shared malformed-sidecar assertion: a collection's describe()/describe_collection()
 // output is byte-identical between `db` (some sidecar tree, possibly malformed or undescribed) and
 // `mirror_db` (the same migrations tree with no ui/ sidecar at all).
 void expect_reports_match(quiver::Database& db, quiver::Database& mirror_db, const std::string& collection) {
@@ -199,38 +193,23 @@ void expect_reports_match(quiver::Database& db, quiver::Database& mirror_db, con
         extract_collection_section(mirror_db.describe(), collection)
     );
     EXPECT_EQ(db.describe_collection(collection), mirror_db.describe_collection(collection));
-    EXPECT_EQ(db.summarize_collection(collection), mirror_db.summarize_collection(collection));
 }
 
 }  // namespace
 
-// No-sidecar baseline: with no `ui/` sibling, a from_migrations tree renders describe(),
-// describe_collection() and summarize_collection() exactly as it does today -- no "; label",
-// "; enum" or "; tooltip" clause anywhere, and write_collection_section's existing scalar line
-// (shared by describe()/describe_collection()) is untouched. This test is green against today's
-// build with zero production changes, and stays green after the feature lands -- it is the
-// no-sidecar anchor, not a scaffold placeholder.
-TEST_F(DatabaseUiMetadataTest, NoUiDirReportsUnchanged) {
+// Without a `ui/` sibling, both reports still include structure and statistics without UI clauses.
+TEST_F(DatabaseUiMetadataTest, NoUiDirReportsStructureAndStatistics) {
     write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
 
     auto db = open_tree();
 
     auto describe = db.describe();
     auto describe_collection = db.describe_collection("HydroPlant");
-    auto summarize_collection = db.summarize_collection("HydroPlant");
-
-    // describe() and describe_collection() share write_collection_section, which emits this exact
-    // scalar line (src/database_describe.cpp) -- present verbatim today, and must stay so when no
-    // ui/ sidecar exists.
-    const std::string expected_scalar_line = "    - initial_volume_type (INTEGER) NOT NULL\n";
+    const std::string expected_scalar_line = "    - initial_volume_type (INTEGER) NOT NULL; 0 non-null, 0 null\n";
     EXPECT_NE(describe.find(expected_scalar_line), std::string::npos) << describe;
     EXPECT_NE(describe_collection.find(expected_scalar_line), std::string::npos) << describe_collection;
 
-    // summarize_collection has its own scalar loop (null/non-null counts, not the "(TYPE) ..."
-    // declaration form), so it is checked for its own unchanged shape instead of the line above.
-    EXPECT_NE(summarize_collection.find("    - initial_volume_type: "), std::string::npos) << summarize_collection;
-
-    for (const auto* output : {&describe, &describe_collection, &summarize_collection}) {
+    for (const auto* output : {&describe, &describe_collection}) {
         EXPECT_EQ(output->find(kLabelClauseOpener), std::string::npos) << *output;
         EXPECT_EQ(output->find(kEnumClauseOpener), std::string::npos) << *output;
         EXPECT_EQ(output->find(kTooltipClauseOpener), std::string::npos) << *output;
@@ -241,8 +220,7 @@ TEST_F(DatabaseUiMetadataTest, NoUiDirReportsUnchanged) {
 // Label + tooltip render, one path through every layer
 // ============================================================================
 
-// Worked example: a label renders in both reports, a tooltip renders only in
-// describe_collection() and sits after the label clause.
+// A label and tooltip render in both reports, between the declaration and statistics.
 TEST_F(DatabaseUiMetadataTest, RenderLabelAndTooltipClauses) {
     write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
     write_ui_file("hydro_plant.toml", R"TOML(
@@ -256,16 +234,14 @@ tooltip.en = "Reservoir volume at the start of the study."
 
     auto db = open_tree();
 
-    const std::string expected_describe_line = "    - hm3_initial (REAL); label \"Initial Storage (hm³)\"\n";
-    const std::string expected_describe_collection_line = "    - hm3_initial (REAL); label \"Initial Storage (hm³)\"; "
-                                                          "tooltip \"Reservoir volume at the start of the study.\"\n";
+    const std::string expected_line = "    - hm3_initial (REAL); label \"Initial Storage (hm³)\"; "
+                                      "tooltip \"Reservoir volume at the start of the study.\"; 0 non-null, 0 null\n";
 
     auto describe = db.describe();
     auto describe_collection = db.describe_collection("HydroPlant");
 
-    EXPECT_NE(describe.find(expected_describe_line), std::string::npos) << describe;
-    EXPECT_EQ(describe.find(kTooltipClauseOpener), std::string::npos) << describe;
-    EXPECT_NE(describe_collection.find(expected_describe_collection_line), std::string::npos) << describe_collection;
+    EXPECT_NE(describe.find(expected_line), std::string::npos) << describe;
+    EXPECT_NE(describe_collection.find(expected_line), std::string::npos) << describe_collection;
 }
 
 // A label whose squash equals the attribute name's squash emits no label clause.
@@ -282,8 +258,10 @@ label.en = "Initial Volume Type"
     auto db = open_tree();
     auto describe_collection = db.describe_collection("HydroPlant");
 
-    EXPECT_NE(describe_collection.find("    - initial_volume_type (INTEGER) NOT NULL\n"), std::string::npos)
-        << describe_collection;
+    EXPECT_NE(
+        describe_collection.find("    - initial_volume_type (INTEGER) NOT NULL; 0 non-null, 0 null\n"),
+        std::string::npos
+    ) << describe_collection;
     EXPECT_EQ(describe_collection.find(kLabelClauseOpener), std::string::npos) << describe_collection;
 }
 
@@ -351,8 +329,8 @@ label = 'Say "Hi" and a backslash \ here'
         << describe_collection;
 }
 
-// describe() never renders a tooltip clause, even when one is present in the sidecar.
-TEST_F(DatabaseUiMetadataTest, RenderDescribeOmitsTooltip) {
+// describe() includes the same tooltip clauses as describe_collection().
+TEST_F(DatabaseUiMetadataTest, RenderDescribeIncludesTooltip) {
     write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
     write_ui_file("hydro_plant.toml", R"(
 id = "HydroPlant"
@@ -366,13 +344,12 @@ tooltip.en = "Annual discount rate applied to future operating costs, in %."
     auto describe = db.describe();
     auto describe_collection = db.describe_collection("HydroPlant");
 
-    EXPECT_EQ(describe.find(kTooltipClauseOpener), std::string::npos) << describe;
+    EXPECT_NE(describe.find(kTooltipClauseOpener), std::string::npos) << describe;
     EXPECT_NE(describe_collection.find(kTooltipClauseOpener), std::string::npos) << describe_collection;
 }
 
-// For every scalar, describe()'s line is a strict character-for-character prefix of
-// describe_collection()'s line. The cheapest possible anti-drift guarantee -- write it first.
-TEST_F(DatabaseUiMetadataTest, PrefixInvariantDescribeIsPrefixOfDescribeCollection) {
+// The full report is exactly its header plus each complete collection report, including tooltips.
+TEST_F(DatabaseUiMetadataTest, DescribeEqualsHeaderAndCollectionReports) {
     write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
     write_ui_file("enum.toml", R"(
 [[reservoir_type]]
@@ -403,25 +380,29 @@ tooltip.en = "Operating mode of the plant."
 )");
 
     auto db = open_tree();
+    db.create_element(
+        "HydroPlant",
+        quiver::Element()
+            .set("label", std::string("a"))
+            .set("initial_volume_type", static_cast<int64_t>(0))
+            .set("reservoir_type", static_cast<int64_t>(1))
+    );
     auto describe = db.describe();
     auto describe_collection = db.describe_collection("HydroPlant");
 
-    auto pos = describe.find("Collection: HydroPlant");
-    ASSERT_NE(pos, std::string::npos) << describe;
-    auto section_end = describe.find("\nCollection: ", pos + 1);
-    const std::string hydro_section =
-        section_end == std::string::npos ? describe.substr(pos) : describe.substr(pos, section_end - pos);
-
-    auto describe_lines = extract_scalar_lines(hydro_section);
-    auto describe_collection_lines = extract_scalar_lines(describe_collection);
-
-    ASSERT_EQ(describe_lines.size(), describe_collection_lines.size());
-    ASSERT_FALSE(describe_lines.empty());
-    for (size_t i = 0; i < describe_lines.size(); ++i) {
-        EXPECT_TRUE(describe_collection_lines[i].starts_with(describe_lines[i]))
-            << "describe line:            " << describe_lines[i] << "\n"
-            << "describe_collection line: " << describe_collection_lines[i];
-    }
+    EXPECT_EQ(
+        describe,
+        "Database: " + db.path() + "\nVersion: " + std::to_string(db.current_version()) + "\n\n" +
+            db.describe_collection("Configuration") + "\n" + describe_collection
+    );
+    EXPECT_NE(
+        describe_collection.find(
+            "    - reservoir_type (INTEGER); label \"Reservoir Kind\"; "
+            "enum {0: \"Reservoir\", 1: \"Run of river\"}; "
+            "tooltip \"Operating mode of the plant.\"; 1 non-null, 0 null; values {1: 1}\n"
+        ),
+        std::string::npos
+    ) << describe_collection;
 }
 
 // ============================================================================
@@ -443,8 +424,10 @@ label.en = "Reservoir Kind"
     auto db = open_tree();
     auto describe_collection = db.describe_collection("HydroPlant");
 
-    EXPECT_NE(describe_collection.find("    - reservoir_type (INTEGER); label \"Reservoir Kind\"\n"), std::string::npos)
-        << describe_collection;
+    EXPECT_NE(
+        describe_collection.find("    - reservoir_type (INTEGER); label \"Reservoir Kind\"; 0 non-null, 0 null\n"),
+        std::string::npos
+    ) << describe_collection;
 }
 
 // A localizable value is read either as a bare string or from a table's `en` sub-key.
@@ -1133,12 +1116,11 @@ label.en = "Installed Capacity (MW)"
 }
 
 // ============================================================================
-// summarize_collection's histogram annotates observed codes with enum labels
+// Enum meanings appear once; histograms contain only observed numeric codes and counts
 // ============================================================================
 
-// The label rides on the key (`code SP "Label": count`), an
-// uncovered code (1) stays bare, and an unobserved vocabulary code (2) never appears at all.
-TEST_F(DatabaseUiMetadataTest, SummarizeHistogramAnnotatesCodesWithEnumLabels) {
+// The enum clause includes unobserved vocabulary codes; the histogram only includes observed codes.
+TEST_F(DatabaseUiMetadataTest, EnumMeaningsAppearOnceBeforeNumericHistogram) {
     write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
     write_ui_file("enum.toml", R"(
 [[initial_volume_type]]
@@ -1171,16 +1153,22 @@ enum = "initial_volume_type"
         quiver::Element().set("label", std::string("c")).set("initial_volume_type", static_cast<int64_t>(1))
     );
 
-    auto report = db.summarize_collection("HydroPlant");
+    auto report = db.describe_collection("HydroPlant");
 
-    EXPECT_TRUE(report.find(R"(values {0 "Per Unit": 2, 1: 1})") != std::string::npos) << report;
-    EXPECT_FALSE(report.find("\"Volume\"") != std::string::npos) << report;
+    EXPECT_NE(
+        report.find(
+            "    - initial_volume_type (INTEGER) NOT NULL; enum {0: \"Per Unit\", 2: \"Volume\"}; "
+            "3 non-null, 0 null; values {0: 2, 1: 1}\n"
+        ),
+        std::string::npos
+    ) << report;
+    auto label_pos = report.find("\"Per Unit\"");
+    ASSERT_NE(label_pos, std::string::npos) << report;
+    EXPECT_EQ(report.find("\"Per Unit\"", label_pos + 1), std::string::npos) << report;
 }
 
-// A label that normalizes to empty (here, all-whitespace) drops only the annotation and
-// keeps the histogram entry -- deliberate divergence from the `enum {}` clause, where an
-// empty-normalizing label drops the whole vocabulary entry.
-TEST_F(DatabaseUiMetadataTest, SummarizeHistogramKeepsEntryWhenLabelNormalizesToEmpty) {
+// A label that normalizes to empty omits the enum clause without affecting the histogram.
+TEST_F(DatabaseUiMetadataTest, HistogramKeepsEntryWhenEnumLabelNormalizesToEmpty) {
     write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
     write_ui_file("enum.toml", R"(
 [[initial_volume_type]]
@@ -1201,8 +1189,8 @@ enum = "initial_volume_type"
         quiver::Element().set("label", std::string("a")).set("initial_volume_type", static_cast<int64_t>(0))
     );
 
-    auto report = db.summarize_collection("HydroPlant");
+    auto report = db.describe_collection("HydroPlant");
 
-    // The entry survives with a bare code -- only the annotation is dropped.
+    EXPECT_EQ(report.find(kEnumClauseOpener), std::string::npos) << report;
     EXPECT_NE(report.find(R"(values {0: 1})"), std::string::npos) << report;
 }

@@ -227,7 +227,7 @@ class Database {
     }
   }
 
-  /// Returns a human-readable overview of every collection in the database.
+  /// Returns complete reports for every collection, with the database/version header.
   String describe() {
     _ensureNotClosed();
     final arena = Arena();
@@ -242,8 +242,7 @@ class Database {
     }
   }
 
-  /// Returns a human-readable description (scalars, vectors, sets, time series)
-  /// of one collection.
+  /// Returns one collection's structure, UI metadata and statistics as text.
   String describeCollection(String collection) {
     _ensureNotClosed();
     final arena = Arena();
@@ -251,27 +250,6 @@ class Database {
       final outReport = arena<Pointer<Char>>();
       check(
         bindings.quiver_database_describe_collection(
-          _ptr,
-          collection.toNativeUtf8(allocator: arena).cast(),
-          outReport,
-        ),
-      );
-      final result = outReport.value.cast<Utf8>().toDartString();
-      bindings.quiver_database_free_string(outReport.value);
-      return result;
-    } finally {
-      arena.releaseAll();
-    }
-  }
-
-  /// Returns a human-readable summary (value statistics) of one collection.
-  String summarizeCollection(String collection) {
-    _ensureNotClosed();
-    final arena = Arena();
-    try {
-      final outReport = arena<Pointer<Char>>();
-      check(
-        bindings.quiver_database_summarize_collection(
           _ptr,
           collection.toNativeUtf8(allocator: arena).cast(),
           outReport,
