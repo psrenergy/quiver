@@ -169,7 +169,7 @@ TEST(DatabaseCApiMetadata, ListScalarAttributes) {
 }
 
 // ============================================================================
-// describe / describe_collection / summarize_collection (text reports)
+// describe / describe_collection (text reports)
 // ============================================================================
 
 namespace {
@@ -196,6 +196,7 @@ TEST(DatabaseCApiMetadata, DescribeReturnsText) {
     std::string text = report;
     EXPECT_NE(text.find("Collection: Configuration"), std::string::npos);
     EXPECT_NE(text.find("Collection: Collection"), std::string::npos);
+    EXPECT_NE(text.find("some_integer (INTEGER); 0 non-null, 0 null\n"), std::string::npos);
     quiver_database_free_string(report);
 
     quiver_database_close(db);
@@ -210,28 +211,19 @@ TEST(DatabaseCApiMetadata, DescribeCollectionReturnsText) {
     std::string text = report;
     EXPECT_NE(text.find("Collection: Collection"), std::string::npos);
     EXPECT_NE(text.find("[date_time]"), std::string::npos);
+    EXPECT_NE(text.find("some_integer (INTEGER); 0 non-null, 0 null\n"), std::string::npos);
+    EXPECT_NE(text.find("data: [date_time], value(REAL); 0/0 non-empty\n"), std::string::npos);
     quiver_database_free_string(report);
 
     quiver_database_close(db);
 }
 
-TEST(DatabaseCApiMetadata, SummarizeCollectionReturnsText) {
+TEST(DatabaseCApiMetadata, DescribeCollectionNotFound) {
     quiver_database_t* db = open_collections();
 
     char* report = nullptr;
-    ASSERT_EQ(quiver_database_summarize_collection(db, "Collection", &report), QUIVER_OK);
-    ASSERT_NE(report, nullptr);
-    EXPECT_NE(std::string(report).find("non-null"), std::string::npos);
-    quiver_database_free_string(report);
-
-    quiver_database_close(db);
-}
-
-TEST(DatabaseCApiMetadata, SummarizeCollectionNotFound) {
-    quiver_database_t* db = open_collections();
-
-    char* report = nullptr;
-    EXPECT_EQ(quiver_database_summarize_collection(db, "Nope", &report), QUIVER_ERROR);
+    EXPECT_EQ(quiver_database_describe_collection(db, "Nope", &report), QUIVER_ERROR);
+    EXPECT_STREQ(quiver_get_last_error(), "Cannot describe_collection: collection not found: Nope");
 
     quiver_database_close(db);
 }

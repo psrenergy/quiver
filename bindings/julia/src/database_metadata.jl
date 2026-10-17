@@ -186,8 +186,8 @@ function list_time_series_files_columns(db::Database, collection::String)
 end
 
 # -----------------------------------------------------------------------------
-# Schema inspection — human-readable text reports
-# (describe / describe_collection / summarize_collection)
+# Schema inspection — text reports for agents
+# (describe / describe_collection: structure, UI metadata and statistics)
 # -----------------------------------------------------------------------------
 
 function describe(db::Database)
@@ -201,14 +201,6 @@ end
 function describe_collection(db::Database, collection::AbstractString)
     out_report = Ref{Ptr{Cchar}}(C_NULL)
     check(C.quiver_database_describe_collection(db.ptr, collection, out_report))
-    result = unsafe_string(out_report[])
-    C.quiver_database_free_string(out_report[])
-    return result
-end
-
-function summarize_collection(db::Database, collection::AbstractString)
-    out_report = Ref{Ptr{Cchar}}(C_NULL)
-    check(C.quiver_database_summarize_collection(db.ptr, collection, out_report))
     result = unsafe_string(out_report[])
     C.quiver_database_free_string(out_report[])
     return result

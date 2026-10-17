@@ -31,6 +31,9 @@ bunfig.toml       # coverageSkipTestFiles = true (Bun 1.3 reports test/ otherwis
 
 ## Rules and gotchas
 
+- **Collection reports for agents**: `describeCollection` returns structure, UI metadata (including
+  tooltips), scalar statistics and group coverage. `describe` appends these same complete reports
+  after its database/version header; both forward the C string without binding-side formatting.
 - **`SANDBOX_API_REFERENCE` (`src/sandbox-api.ts`) is shipped prompt payload, not just docs.** The
   downstream consumer (`claw`) imports it from the package root and interpolates it verbatim into an
   LLM system prompt, which is why it stays a plain `export const`: a string constant costs no FFI,

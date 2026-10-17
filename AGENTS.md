@@ -782,7 +782,16 @@ Public Database methods follow `verb_[category_]type[_by_id]`:
   Otherwise `SELECT COUNT(*)` / `SUM(int_col)`, which SQLite answers as INTEGER, and an integer
   stored in a REAL column, all read back as "no value". `query_integer` does **not** narrow a REAL;
   that direction is lossy.
-- Schema inspection — human-readable **text reports** (all return `std::string`): `describe()` (whole-DB overview: every collection, element counts, attribute/group names, each **scalar** line carrying its `ui/` sidecar `; label` and `; enum {code: "label"}` clauses); `describe_collection(c)` (one collection's structure — the same scalar line plus a trailing `; tooltip` clause, so `describe()`'s line is a prefix of this one); `summarize_collection(c)` (per-scalar null/non-null counts + low-cardinality integer value distributions, each observed code annotated with its `ui/` sidecar enum label; per-group empty/non-empty counts). Every sidecar clause is present **only when the database was opened via `from_migrations`** (the sole path that loads the sidecar) and only for main-table scalars — group columns render bare. CSV: `export_csv()`, `import_csv()` with optional enum/date formatting via `CSVOptions`.
+- Schema inspection — **text reports for agents** (both return `std::string`):
+  `describe_collection(c)` combines structure, UI metadata (including tooltips), scalar
+  null/non-null counts and low-cardinality integer distributions, and per-group coverage.
+  Declarations and statistics share each line, with `; label`, `; enum {code: "label"}` and
+  `; tooltip` clauses between them. Enum meanings appear only in `enum {...}`; histograms contain
+  numeric codes and counts. `describe()` returns its database/version header followed by the
+  exact complete report for every collection, querying statistics for each one. Every sidecar
+  clause is present **only when the database was opened via `from_migrations`** (the sole path
+  that loads the sidecar) and only for main-table scalars — group columns render bare.
+  CSV: `export_csv()`, `import_csv()` with optional enum/date formatting via `CSVOptions`.
   **Export and import are symmetric on foreign keys**: a FK column is written as the referenced
   element's `label` and read back by label (self-references are excluded on both sides, since the
   target rows are the ones being rewritten). Export used to emit the raw integer id, which import
@@ -878,7 +887,6 @@ The rules are mechanical: given any C++ method name, you can derive the equivale
 | CSV | `export_csv()` | `quiver_database_export_csv()` | `export_csv()` | `exportCSV()` | `export_csv()` |
 | Describe (text) | `describe()` | `quiver_database_describe()` | `describe()` | `describe()` | `describe()` |
 | Describe collection | `describe_collection()` | `quiver_database_describe_collection()` | `describe_collection()` | `describeCollection()` | `describe_collection()` |
-| Summarize collection | `summarize_collection()` | `quiver_database_summarize_collection()` | `summarize_collection()` | `summarizeCollection()` | `summarize_collection()` |
 | CSV file read | N/A | N/A | N/A | N/A | `db:read_csv()` / `db:read_csv_stream()` |
 | XLSX file read | N/A | N/A | N/A | N/A | `db:read_xlsx()` / `db:read_xlsx_stream()` |
 | JSON file read | N/A | N/A | N/A | N/A | `db:read_json()` |

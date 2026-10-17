@@ -501,10 +501,6 @@ function quiver_database_describe_collection(db, collection, out_report)
     @ccall libquiver_c.quiver_database_describe_collection(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, out_report::Ptr{Ptr{Cchar}})::quiver_error_t
 end
 
-function quiver_database_summarize_collection(db, collection, out_report)
-    @ccall libquiver_c.quiver_database_summarize_collection(db::Ptr{quiver_database_t}, collection::Ptr{Cchar}, out_report::Ptr{Ptr{Cchar}})::quiver_error_t
-end
-
 function quiver_element_create(out_element)
     @ccall libquiver_c.quiver_element_create(out_element::Ptr{Ptr{quiver_element_t}})::quiver_error_t
 end

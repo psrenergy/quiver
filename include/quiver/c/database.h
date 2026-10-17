@@ -727,15 +727,10 @@ QUIVER_C_API quiver_error_t quiver_database_query_float(
     int* out_has_value
 );
 
-// Schema inspection — human-readable text reports. Each returns a heap string via *out_report,
-// freed with quiver_database_free_string.
+// Schema inspection — text reports for agents: structure, UI metadata and statistics.
+// Each returns a heap string via *out_report, freed with quiver_database_free_string.
 QUIVER_C_API quiver_error_t quiver_database_describe(quiver_database_t* db, char** out_report);
 QUIVER_C_API quiver_error_t quiver_database_describe_collection(
-    quiver_database_t* db,
-    const char* collection,
-    char** out_report
-);
-QUIVER_C_API quiver_error_t quiver_database_summarize_collection(
     quiver_database_t* db,
     const char* collection,
     char** out_report

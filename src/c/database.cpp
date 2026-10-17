@@ -130,7 +130,7 @@ QUIVER_C_API quiver_error_t quiver_database_from_schema(
     }
 }
 
-// Schema inspection — human-readable text reports.
+// Schema inspection — text reports for agents.
 
 QUIVER_C_API quiver_error_t quiver_database_describe(quiver_database_t* db, char** out_report) {
     QUIVER_REQUIRE(db, out_report);
@@ -153,22 +153,6 @@ QUIVER_C_API quiver_error_t quiver_database_describe_collection(
 
     try {
         *out_report = quiver::string::new_c_str(db->db.describe_collection(collection));
-        return QUIVER_OK;
-    } catch (const std::exception& e) {
-        quiver_set_last_error(e.what());
-        return QUIVER_ERROR;
-    }
-}
-
-QUIVER_C_API quiver_error_t quiver_database_summarize_collection(
-    quiver_database_t* db,
-    const char* collection,
-    char** out_report
-) {
-    QUIVER_REQUIRE(db, collection, out_report);
-
-    try {
-        *out_report = quiver::string::new_c_str(db->db.summarize_collection(collection));
         return QUIVER_OK;
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());

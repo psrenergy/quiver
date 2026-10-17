@@ -3069,33 +3069,6 @@ class QuiverDatabaseBindings {
         int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Pointer<ffi.Char>>)
       >();
 
-  int quiver_database_summarize_collection(
-    ffi.Pointer<quiver_database_t> db,
-    ffi.Pointer<ffi.Char> collection,
-    ffi.Pointer<ffi.Pointer<ffi.Char>> out_report,
-  ) {
-    return _quiver_database_summarize_collection(
-      db,
-      collection,
-      out_report,
-    );
-  }
-
-  late final _quiver_database_summarize_collectionPtr =
-      _lookup<
-        ffi.NativeFunction<
-          ffi.UnsignedInt Function(
-            ffi.Pointer<quiver_database_t>,
-            ffi.Pointer<ffi.Char>,
-            ffi.Pointer<ffi.Pointer<ffi.Char>>,
-          )
-        >
-      >('quiver_database_summarize_collection');
-  late final _quiver_database_summarize_collection = _quiver_database_summarize_collectionPtr
-      .asFunction<
-        int Function(ffi.Pointer<quiver_database_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Pointer<ffi.Char>>)
-      >();
-
   int quiver_element_create(
     ffi.Pointer<ffi.Pointer<quiver_element_t$1>> out_element,
   ) {

@@ -1,6 +1,6 @@
 -- Schema: a collection and a vector group whose tables are deliberately NOT STRICT
 -- Tests: the C API group readers never narrow a REAL cell into an INTEGER column, and
--- summarize_collection's value distribution counts only integer cells. Without STRICT, INTEGER
+-- describe_collection's value distribution counts only integer cells. Without STRICT, INTEGER
 -- affinity keeps a non-integral value written through raw SQL (1.5) as REAL, and a non-numeric one
 -- as TEXT, so a cell's storage class can differ from its declared type.
 PRAGMA foreign_keys = ON;

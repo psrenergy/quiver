@@ -22,6 +22,9 @@ Project.toml      # Deps: Artifacts, CEnum, Dates, Libdl; julia 1.11 compat
 
 ## Rules and gotchas
 
+- **Collection reports for agents**: `describe_collection` returns structure, UI metadata (including
+  tooltips), scalar statistics and group coverage. `describe` appends these same complete reports
+  after its database/version header; both forward the C string without binding-side formatting.
 - **Sandbox array types are handled in C++.** `test/test_sandbox.jl` checks mixed Lua REAL
   arrays on create/update; Julia passes the script through without converting its cells.
 - **Regenerate after C API changes**: `generator/generator.bat` rewrites `src/c_api.jl`

@@ -32,6 +32,9 @@ ruff.toml         # Lint/format config; lint is isort only (select = ["I"])
 
 ## Rules and gotchas
 
+- **Collection reports for agents**: `describe_collection` returns structure, UI metadata (including
+  tooltips), scalar statistics and group coverage. `describe` appends these same complete reports
+  after its database/version header; both forward the C string without binding-side formatting.
 - **CFFI ABI-mode** — no compiler required at install time; `_c_api.py` declarations must match
   the C headers exactly (struct layout mismatches corrupt silently). After C API changes, run
   `generator/generator.bat` and diff its output against `_c_api.py`.

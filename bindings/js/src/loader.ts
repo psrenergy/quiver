@@ -128,7 +128,6 @@ const metadataSymbols = {
 
 const describeSymbols = {
   quiver_database_describe_collection: { args: [P, BUF, P], returns: I32 },
-  quiver_database_summarize_collection: { args: [P, BUF, P], returns: I32 },
 } as const;
 
 const timeSeriesSymbols = {

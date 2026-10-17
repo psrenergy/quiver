@@ -302,7 +302,6 @@ export class Database {
   declare path: () => string;
   declare describe: () => string;
   declare describeCollection: (collection: string) => string;
-  declare summarizeCollection: (collection: string) => string;
 
   // --- Composite helpers (implemented in composites.ts) ---
   declare readScalarsById: (

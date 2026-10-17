@@ -42,13 +42,3 @@ Database.prototype.describeCollection = function (this: Database, collection: st
   lib.quiver_database_free_string(readPtrOut(out));
   return result;
 };
-
-Database.prototype.summarizeCollection = function (this: Database, collection: string): string {
-  const lib = getSymbols();
-  const collBuf = toCString(collection);
-  const out = allocPtrOut();
-  check(lib.quiver_database_summarize_collection(this._handle, collBuf.buf, out.buf));
-  const result = decodeStringFromBuf(out);
-  lib.quiver_database_free_string(readPtrOut(out));
-  return result;
-};

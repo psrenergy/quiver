@@ -19,6 +19,9 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
 
 ## Rules and gotchas
 
+- **Collection reports for agents**: `describeCollection` returns structure, UI metadata (including
+  tooltips), scalar statistics and group coverage. `describe` appends these same complete reports
+  after its database/version header; both forward the C string without binding-side formatting.
 - **Regenerate after C API changes**: `generator/generator.bat` rewrites
   `lib/src/ffi/bindings.dart`. The live ffigen config is the `ffigen:` block in
   **pubspec.yaml** (plain `dart run ffigen` reads only that); the sibling `ffigen.yaml` is an

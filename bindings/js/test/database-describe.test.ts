@@ -5,8 +5,7 @@ const __dirname = import.meta.dir;
 import { join } from "node:path";
 import { Database } from "../src/index.ts";
 
-// The binding only verifies each method returns a string; the report content is
-// covered by the C++ core tests (tests/test_database_describe.cpp).
+// Verify report forwarding; detailed formatting is covered by the C++ core tests.
 const SCHEMA_PATH = join(
   __dirname,
   "..",
@@ -26,7 +25,12 @@ describe("describe", () => {
   test("returns a string", () => {
     const db = openDb();
     try {
-      expect(typeof db.describe()).toBe("string");
+      expect(db.describe()).toBe(
+        "Database: :memory:\nVersion: 0\n\n" +
+          db.describeCollection("Collection") +
+          "\n" +
+          db.describeCollection("Configuration"),
+      );
     } finally {
       db.close();
     }
@@ -34,21 +38,14 @@ describe("describe", () => {
 });
 
 describe("describeCollection", () => {
-  test("returns a string", () => {
+  test("returns structure and statistics", () => {
     const db = openDb();
     try {
-      expect(typeof db.describeCollection("Collection")).toBe("string");
-    } finally {
-      db.close();
-    }
-  });
-});
-
-describe("summarizeCollection", () => {
-  test("returns a string", () => {
-    const db = openDb();
-    try {
-      expect(typeof db.summarizeCollection("Collection")).toBe("string");
+      db.createElement("Collection", { label: "a", some_integer: 1 });
+      const report = db.describeCollection("Collection");
+      expect(report).toContain("some_integer (INTEGER); 1 non-null, 0 null; values {1: 1}\n");
+      expect(report).toContain("some_float (REAL); 0 non-null, 1 null\n");
+      expect(report).toContain("data: [date_time], value(REAL); 0/1 non-empty\n");
     } finally {
       db.close();
     }

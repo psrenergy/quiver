@@ -250,12 +250,10 @@ ffi.cdef("""
     quiver_error_t quiver_database_free_group_metadata_array(
         quiver_group_metadata_t* metadata, size_t count);
 
-    // Schema inspection - human-readable text reports. Each returns a heap string
+    // Schema inspection - text reports for agents. Each returns a heap string
     // via *out_report, freed with quiver_database_free_string.
     quiver_error_t quiver_database_describe(quiver_database_t* db, char** out_report);
     quiver_error_t quiver_database_describe_collection(quiver_database_t* db,
-        const char* collection, char** out_report);
-    quiver_error_t quiver_database_summarize_collection(quiver_database_t* db,
         const char* collection, char** out_report);
 
     // Update element

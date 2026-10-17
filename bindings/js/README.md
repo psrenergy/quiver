@@ -185,9 +185,12 @@ as an exact INTEGER, a `boolean` as the INTEGER 1 or 0).
 
 ### Introspection
 
-- `describe()` -- Whole-database text report (returns a string)
-- `describeCollection(collection)` -- One collection's structure (returns a string)
-- `summarizeCollection(collection)` -- Per-attribute null/value summary (returns a string)
+The describe methods give agents the schema, attribute meanings and data coverage as text reports.
+
+- `describe()` -- Database/version header followed by complete reports for every collection
+- `describeCollection(collection)` -- One collection's structure, UI metadata (including tooltips),
+  scalar null/value statistics and group coverage, returned as a string. Enum meanings appear
+  once in `enum {...}`; value histograms contain numeric codes and counts.
 - `isHealthy()` -- Check database health
 - `path()` -- Get database file path
 - `currentVersion()` -- Get current schema version
