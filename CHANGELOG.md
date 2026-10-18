@@ -5,7 +5,7 @@ All notable changes to Quiver are recorded here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Entries that require
 callers to change something are prefixed **BREAKING** and say what to do.
 
-## [0.14.0] — unreleased
+## [0.13.4] — unreleased
 
 ### Changed
 
@@ -23,10 +23,6 @@ callers to change something are prefixed **BREAKING** and say what to do.
   *Adapt:* write through the typed API (`create_element`, `update_element`, the group and time
   series writers, `import_csv`) and read `PRAGMA user_version` through `current_version()`. Code
   that planted raw rows for tests opens its own SQLite connection to the file instead.
-
-## [0.13.4] — 2026-10-16
-
-### Changed
 
 - **BREAKING — collection reports are unified.** `describe_collection()` now gives agents a text
   report with structure, UI metadata (including tooltips), scalar null/non-null counts, integer
@@ -1510,7 +1506,6 @@ are functionally identical to 0.10.0.
   `read_time_series_group` emits for a NULL STRING cell — so feeding a read result back with the
   mask stripped was UB. A NULL entry, or a NULL per-column data pointer, is now SQL NULL.
 
-[0.14.0]: https://github.com/psrenergy/quiver/compare/v0.13.4...HEAD
 [0.13.4]: https://github.com/psrenergy/quiver/compare/v0.13.3...v0.13.4
 [0.13.3]: https://github.com/psrenergy/quiver/compare/v0.13.2...v0.13.3
 [0.13.2]: https://github.com/psrenergy/quiver/compare/v0.13.1...v0.13.2
