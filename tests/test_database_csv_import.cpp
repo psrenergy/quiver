@@ -884,8 +884,8 @@ TEST(DatabaseCSV, ImportCSV_DatePrefixedIntegerColumn_ImportsByDeclaredType) {
             VALID_SCHEMA("csv_export.sql"),
             {.read_only = false, .console_level = quiver::LogLevel::Off}
         );
-        db.query_string("ALTER TABLE Items ADD COLUMN date_count INTEGER");
     }
+    quiver::test::exec_sql(db_path.string(), "ALTER TABLE Items ADD COLUMN date_count INTEGER");
 
     auto csv_path = temp_csv("ImportDatePrefixedInteger");
     write_csv_file(

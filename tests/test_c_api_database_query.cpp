@@ -646,3 +646,32 @@ TEST(DatabaseCApiQuery, QueryParameterCountMismatch) {
 
     quiver_database_close(db);
 }
+
+// ============================================================================
+// Read-only SQL
+// ============================================================================
+
+TEST(DatabaseCApiQuery, QueryRefusesWrites) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", VALID_SCHEMA("basic.sql").c_str(), &options, &db), QUIVER_OK);
+
+    int64_t value = 0;
+    int has_value = 0;
+    const auto err = quiver_database_query_integer(
+        db,
+        "UPDATE Configuration SET label = 'x'",
+        nullptr,
+        nullptr,
+        0,
+        &value,
+        &has_value
+    );
+    EXPECT_EQ(err, QUIVER_ERROR);
+    EXPECT_STREQ(
+        quiver_get_last_error(),
+        "Cannot query: SQL must be read-only; writes, PRAGMA, ATTACH, VACUUM and transaction control are not allowed"
+    );
+
+    quiver_database_close(db);
+}

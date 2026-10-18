@@ -151,7 +151,7 @@ bun run example.ts
 - `readTimeSeriesFiles(collection)` -- Read the file paths (`null` for an unset column)
 - `updateTimeSeriesFiles(collection, data)` -- Write the file paths
 
-### Query
+### Query (read-only SQL)
 
 - `queryString(sql, parameters?)` -- Query returning string or null
 - `queryInteger(sql, parameters?)` -- Query returning integer or null

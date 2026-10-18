@@ -742,8 +742,10 @@ TEST(DatabaseCApi, ReadVectorGroupByIdPreservesNullCells) {
 TEST(DatabaseCApi, ReadVectorGroupByIdMasksRealCellInIntegerColumn) {
     auto options = quiver::test::quiet_options();
     quiver_database_t* db = nullptr;
+    const auto db_path = (std::filesystem::temp_directory_path() / "quiver_test_CApiMasksRealCell.db").string();
+    std::filesystem::remove(db_path);
     ASSERT_EQ(
-        quiver_database_from_schema(":memory:", VALID_SCHEMA("non_strict_vector.sql").c_str(), &options, &db),
+        quiver_database_from_schema(db_path.c_str(), VALID_SCHEMA("non_strict_vector.sql").c_str(), &options, &db),
         QUIVER_OK
     );
     ASSERT_NE(db, nullptr);
@@ -755,25 +757,13 @@ TEST(DatabaseCApi, ReadVectorGroupByIdMasksRealCellInIntegerColumn) {
     ASSERT_EQ(quiver_database_create_element(db, "Items", item, &item_id), QUIVER_OK);
     EXPECT_EQ(quiver_element_destroy(item), QUIVER_OK);
 
-    // Every API write path rejects a double for an INTEGER column, so raw SQL is the only way in.
-    int param_types[] = {QUIVER_DATA_TYPE_INTEGER, QUIVER_DATA_TYPE_INTEGER};
-    const void* param_values[] = {&item_id, &item_id};
-    int64_t unused = 0;
-    int has_value = 1;
-    ASSERT_EQ(
-        quiver_database_query_integer(
-            db,
-            "INSERT INTO Items_vector_counts (id, vector_index, quantity) "
-            "VALUES (?, 1, 7), (?, 2, 1.5)",
-            param_types,
-            param_values,
-            2,
-            &unused,
-            &has_value
-        ),
-        QUIVER_OK
+    // Every API write path rejects a double for an INTEGER column, and query_* is read-only, so a
+    // second connection is the only way in.
+    const auto id = std::to_string(item_id);
+    quiver::test::exec_sql(
+        db_path,
+        "INSERT INTO Items_vector_counts (id, vector_index, quantity) VALUES (" + id + ", 1, 7), (" + id + ", 2, 1.5)"
     );
-    EXPECT_EQ(has_value, 0);
 
     char** column_names = nullptr;
     int* column_types = nullptr;

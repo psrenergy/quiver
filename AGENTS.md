@@ -117,6 +117,8 @@ Settled questions — don't relitigate without the user; each was decided delibe
   not verify bytecode. The script given to `Sandbox::run` is loaded with mode `"t"` too, so a host
   must pass source, not bytecode. The enabled standard libraries are the pure-computation set
   `base`/`string`/`table`/`math`/`coroutine`/`utf8`; `os`/`io`/`package`/`debug` stay unloaded.
+  Raw SQL cannot bypass the sandbox either: `query_*` is read-only in every layer (see below), so
+  `ATTACH`, `VACUUM INTO` and transaction control through SQL are refused.
   Julia's standalone `open_file` is unaffected — this is Sandbox policy
   (`resolve_sandboxed_path` in `src/sandbox/path_policy.cpp`), not binary-subsystem policy.
 - **One scalar typing policy lives in C++**: an int64 is accepted for INTEGER and REAL columns
@@ -159,6 +161,14 @@ Settled questions — don't relitigate without the user; each was decided delibe
   channel and every binding.
 - **`query_*` validate parameter count**: `execute` rejects a mismatch between bound parameters and
   `?` placeholders (too few or too many) instead of binding NULL / ignoring extras.
+- **`query_*` only runs read-only SQL, in every layer.** The SQL may come from an untrusted Lua
+  script, and raw `ATTACH`, `VACUUM INTO` and `COMMIT` escaped the filesystem sandbox and the
+  host's transaction. `Impl::execute(sql, params, read_only)` installs SQLite's authorizer
+  (allowlist `SELECT`/`READ`/`FUNCTION`/`RECURSIVE`) while the statement compiles and then checks
+  `sqlite3_stmt_readonly`, which is what catches `VACUUM` (the authorizer never sees it). One
+  message: `Cannot query: SQL must be read-only; writes, PRAGMA, ATTACH, VACUUM and transaction
+  control are not allowed`. Table-valued `pragma_*()` functions stay allowed. Writes go through the
+  typed API; tests that must plant invalid data use `quiver::test::exec_sql` (a second connection).
 - **Migration `down_sql` is a required feature** — do not remove the down path.
 - **Dry runs live on `Database`, not on `Sandbox`.** `begin_dry_run`/`end_dry_run`/`in_dry_run`
   hold one transaction and always roll it back; while active, the public
@@ -169,8 +179,9 @@ Settled questions — don't relitigate without the user; each was decided delibe
   feature behind Lua for no reason. Consequences, all documented rather than fixed: a nested
   rollback is **not** partial (everything is undone at the end regardless); `in_transaction()`
   still reports `true`; `import_csv` still throws its `transaction already active` precondition;
-  and a caller can escape via a raw `COMMIT` through `query_*` (so `end_dry_run` guards on
-  `sqlite3_get_autocommit` instead of throwing). A per-table changeset (SQLite session extension)
+  and a caller could once escape via a raw `COMMIT` through `query_*` — closed now that `query_*`
+  is read-only, but `end_dry_run` keeps guarding on `sqlite3_get_autocommit` instead of throwing,
+  as defense. A per-table changeset (SQLite session extension)
   was skipped — a script that wants a change count already has `SELECT total_changes()`.
 - **Writers check everything before their first write, and there are no SAVEPOINTs.**
   `Impl::TransactionGuard` no-ops inside a caller-owned transaction or a dry run, so it cannot roll
@@ -775,8 +786,9 @@ Public Database methods follow `verb_[category_]type[_by_id]`:
   all four throw Pattern 1 `Cannot <op>: collection not found: <c>` for a name that is not a table (an existing
   collection with no groups of that kind is an empty list), and the `read_vectors_by_id` / `read_sets_by_id`
   composites inherit that throw.
-- Query: `query_string/integer/float(sql, parameters = {})` - parameterized SQL with positional `?`
-  placeholders. **`Row::get_float` widens an INTEGER value** (the same int64-for-REAL rule as the
+- Query: `query_string/integer/float(sql, parameters = {})` - parameterized, read-only SQL with
+  positional `?` placeholders (anything but a read throws `Cannot query: SQL must be read-only; ...`,
+  see the design decision). **`Row::get_float` widens an INTEGER value** (the same int64-for-REAL rule as the
   scalar typing policy), so it applies to every float read — `query_float`, `read_scalar_floats`,
   `read_scalar_float_by_id`, `read_vector_floats_by_id`, `read_set_floats_by_id` — not just queries.
   Otherwise `SELECT COUNT(*)` / `SUM(int_col)`, which SQLite answers as INTEGER, and an integer

@@ -2,8 +2,10 @@
 #define QUIVER_TEST_UTILS_H
 
 #include <quiver/c/database.h>
+#include <sqlite3.h>
 
 #include <filesystem>
+#include <stdexcept>
 #include <string>
 
 namespace quiver::test {
@@ -20,6 +22,23 @@ inline quiver_database_options_t quiet_options() {
     auto options = quiver_database_options_default();
     options.console_level = QUIVER_LOG_OFF;
     return options;
+}
+
+// Runs raw SQL on a file-backed database through a second sqlite3 connection. query_* only accepts read-only SQL,
+// so this is how a test plants data the typed API refuses (an invalid cell, an extra column).
+inline void exec_sql(const std::string& db_path, const std::string& sql) {
+    sqlite3* db = nullptr;
+    if (sqlite3_open(db_path.c_str(), &db) != SQLITE_OK) {
+        throw std::runtime_error("exec_sql: cannot open " + db_path);
+    }
+    char* error = nullptr;
+    const auto rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &error);
+    const std::string message = error ? error : "";
+    sqlite3_free(error);
+    sqlite3_close(db);
+    if (rc != SQLITE_OK) {
+        throw std::runtime_error("exec_sql: " + message);
+    }
 }
 
 }  // namespace quiver::test

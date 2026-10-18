@@ -47,7 +47,7 @@ NULL" (`nothing`) — a contract change, explicitly out of scope. Leave as-is.
 
 ### `query_*` — leave optional (unknown nullability)
 
-`query_string` / `query_integer` / `query_float` / `query_date_time` run arbitrary SQL. The result
+`query_string` / `query_integer` / `query_float` / `query_date_time` run arbitrary read-only SQL. The result
 column's nullability is generally not recoverable from schema metadata (expressions, aggregates,
 joins), and a query with no rows legitimately yields `nothing`. Keep returning `Optional{T}`.
 

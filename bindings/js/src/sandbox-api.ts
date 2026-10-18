@@ -116,6 +116,13 @@ midnight.
   (subdirectories are fine; \`..\` escapes and outside absolute paths throw \`Cannot <op>: path '...' escapes the
   database directory ...\`). On an in-memory database these operations throw
   \`Cannot <op>: database is in-memory, file operations are unavailable\`.
+- **Raw SQL is read-only.** \`db:query_string\` / \`db:query_integer\` / \`db:query_float\` accept only
+  statements that read: a write (\`INSERT\`, \`UPDATE\`, \`DELETE\`, DDL), a \`PRAGMA\` statement,
+  \`ATTACH\`/\`DETACH\`, \`VACUUM\` or transaction control (\`BEGIN\`, \`COMMIT\`, \`ROLLBACK\`,
+  \`SAVEPOINT\`) throws \`Cannot query: SQL must be read-only; writes, PRAGMA, ATTACH, VACUUM and
+  transaction control are not allowed\` before anything runs. The table-valued \`pragma_*()\`
+  functions (\`SELECT name FROM pragma_table_info('X')\`) are reads and stay available. Write
+  through the \`db:\` API, which validates what it writes.
 - **What the sandbox does not limit.** The sandbox controls which files a script can touch and
   which standard libraries exist. It does not bound how much work a script does: there is no
   instruction-count limit, no memory cap and no wall-clock timeout (\`while true do end\` runs
@@ -624,9 +631,10 @@ entirely.
 
 ---
 
-## Query (parameterized SQL)
+## Query (parameterized, read-only SQL)
 
-Positional \`?\` placeholders; \`params\` is an optional 1-indexed array. Each returns the first
+Only statements that read are accepted (see "Raw SQL is read-only" above); anything else throws
+before it runs. Positional \`?\` placeholders; \`params\` is an optional 1-indexed array. Each returns the first
 column of the first row, or \`nil\` when there is no row, the value is NULL, or it is not already
 the requested type. Only \`query_float\` converts (it widens an INTEGER), so
 \`db:query_string("SELECT COUNT(*) ...")\` and \`db:query_integer("SELECT AVG(x) ...")\` return
@@ -1024,6 +1032,7 @@ value of the wrong type throws.
 DateTime wrapper helpers (Lua uses ISO 8601 strings), boolean *reader* helpers (a stored flag reads
 back as \`0\`/\`1\` — writing a boolean is supported), \`_by_id\` single-scalar variants (use the
 composite by-id readers or the bulk readers instead), and the row-aligned whole-group readers the
-other bindings have (hence the row-count caveat under composite by-id reads). Everything else
-the native binding exposes — CRUD, reads, time series, metadata, query, CSV, and the
-binary/expression subsystems — is documented above and callable.`;
+other bindings have (hence the row-count caveat under composite by-id reads). Raw SQL that writes,
+sets a \`PRAGMA\`, attaches a database, vacuums or controls a transaction (\`query_*\` is read-only
+in every binding). Everything else the native binding exposes — CRUD, reads, time series,
+metadata, query, CSV, and the binary/expression subsystems — is documented above and callable.`;

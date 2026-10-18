@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import sqlite3
 from datetime import datetime
+from pathlib import Path
 
 import pytest
 
@@ -164,14 +166,25 @@ class TestQueryDateTime:
         assert result.year == 2025
         assert result.month == 1
 
-    def test_query_date_time_invalid_format_raises_valueerror(self, db: Database) -> None:
-        # create_element rejects an unparseable DATE_TIME value, so a bad date can only reach the
-        # column through raw SQL or a database written before that validation existed. The reader
-        # still has to cope with it.
+    def test_query_date_time_invalid_format_raises_valueerror(self, db: Database, tmp_path: Path) -> None:
+        # create_element rejects an unparseable DATE_TIME value, and query_* only runs read-only SQL, so
+        # a bad date can only reach the column through another connection or a database written before
+        # that validation existed. The reader still has to cope with it.
         db.create_element("Configuration", label="item1", date_attribute="2025-06-15T10:30:00")
-        db.query_string("UPDATE Configuration SET date_attribute = 'not-a-date' WHERE label = 'item1'")
+        with sqlite3.connect(tmp_path / "test.db") as raw:
+            raw.execute("UPDATE Configuration SET date_attribute = 'not-a-date' WHERE label = 'item1'")
         with pytest.raises(ValueError):
             db.query_date_time("SELECT date_attribute FROM Configuration WHERE label = 'item1'")
+
+
+class TestQueryReadOnly:
+    def test_query_refuses_writes(self, db: Database) -> None:
+        db.create_element("Configuration", label="item1", integer_attribute=1)
+        with pytest.raises(QuiverError, match="SQL must be read-only"):
+            db.query_integer("UPDATE Configuration SET integer_attribute = 2")
+        with pytest.raises(QuiverError, match="SQL must be read-only"):
+            db.query_string("PRAGMA user_version")
+        assert db.query_integer("SELECT integer_attribute FROM Configuration WHERE label = 'item1'") == 1
 
 
 class TestQueryParameterCount:

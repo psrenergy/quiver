@@ -217,13 +217,25 @@ TEST(DatabaseDescribe, DistributionCardinalityBoundary) {
 // A non-STRICT INTEGER column can hold TEXT and REAL cells; the value distribution counts only
 // integers (they used to read back as codes 0 and 1).
 TEST(DatabaseDescribe, DistributionSkipsNonIntegerCells) {
-    auto db = open(VALID_SCHEMA("non_strict_vector.sql"));
-    db.query_string("INSERT INTO Items (label, code) VALUES ('a', 'not-a-number'), ('b', 1.5), ('c', 1)");
+    const auto path = (std::filesystem::temp_directory_path() / "quiver_test_DescribeNonInteger.db").string();
+    std::filesystem::remove(path);
+    auto db = quiver::Database::from_schema(
+        path,
+        VALID_SCHEMA("non_strict_vector.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
+    quiver::test::exec_sql(path, "INSERT INTO Items (label, code) VALUES ('a', 'not-a-number'), ('b', 1.5), ('c', 1)");
     EXPECT_TRUE(contains(db.describe_collection("Items"), "code (INTEGER); 3 non-null, 0 null; values {1: 1}\n"));
 }
 
 TEST(DatabaseDescribe, GroupCoverageCountsElementsInsteadOfRows) {
-    auto db = open(VALID_SCHEMA("collections.sql"));
+    const auto path = (std::filesystem::temp_directory_path() / "quiver_test_DescribeGroupCoverage.db").string();
+    std::filesystem::remove(path);
+    auto db = quiver::Database::from_schema(
+        path,
+        VALID_SCHEMA("collections.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
     auto id = db.create_element(
         "Collection",
         quiver::Element()
@@ -233,10 +245,11 @@ TEST(DatabaseDescribe, GroupCoverageCountsElementsInsteadOfRows) {
     );
     db.create_element("Collection", quiver::Element().set("label", std::string("b")));
     db.create_element("Collection", quiver::Element().set("label", std::string("c")));
-    db.query_string(
-        "INSERT INTO Collection_time_series_data (id, date_time, value) VALUES (?, '2024-01-01', 1), "
-        "(?, '2024-01-02', 2)",
-        {id, id}
+    const auto id_text = std::to_string(id);
+    quiver::test::exec_sql(
+        path,
+        "INSERT INTO Collection_time_series_data (id, date_time, value) VALUES (" + id_text + ", '2024-01-01', 1), (" +
+            id_text + ", '2024-01-02', 2)"
     );
 
     auto report = db.describe_collection("Collection");

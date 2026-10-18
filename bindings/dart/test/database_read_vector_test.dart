@@ -395,21 +395,14 @@ void main() {
     });
 
     test('malformed DATE_TIME cell throws ArgumentError and the handle stays usable', () {
+      // The schema seeds element 1 with a date the DATE_TIME write gate would refuse, as a
+      // pre-gate database or another tool leaves behind (query_* is read-only).
       final db = Database.fromSchema(
         ':memory:',
-        path.join(testsPath, 'schemas', 'valid', 'multi_column_groups.sql'),
+        path.join(testsPath, 'schemas', 'valid', 'malformed_dates.sql'),
       );
       try {
-        db.createElement('Configuration', {'label': 'Test Config'});
-        final id = db.createElement('Items', {
-          'label': 'Item 1',
-          'date_event': ['2024-01-01'],
-        });
-        // Bypass the DATE_TIME write gate, as a pre-gate database or another tool would.
-        db.queryString(
-          'UPDATE Items_vector_events SET date_event = ? WHERE id = ?',
-          ['2024-1-5', id],
-        );
+        const id = 1;
 
         expect(
           () => db.readVectorGroupById('Items', 'events', id),

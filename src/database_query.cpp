@@ -4,15 +4,15 @@
 namespace quiver {
 
 std::optional<std::string> Database::query_string(const std::string& sql, const std::vector<Value>& parameters) {
-    return internal::read_single_value<std::string>(impl_->execute(sql, parameters));
+    return internal::read_single_value<std::string>(impl_->execute(sql, parameters, true));
 }
 
 std::optional<int64_t> Database::query_integer(const std::string& sql, const std::vector<Value>& parameters) {
-    return internal::read_single_value<int64_t>(impl_->execute(sql, parameters));
+    return internal::read_single_value<int64_t>(impl_->execute(sql, parameters, true));
 }
 
 std::optional<double> Database::query_float(const std::string& sql, const std::vector<Value>& parameters) {
-    return internal::read_single_value<double>(impl_->execute(sql, parameters));
+    return internal::read_single_value<double>(impl_->execute(sql, parameters, true));
 }
 
 }  // namespace quiver

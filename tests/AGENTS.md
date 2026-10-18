@@ -10,7 +10,12 @@ C++ core and C API suites live here; binding suites live in each binding's `test
   `read_element_ids`/`read_element_by_id`/`number_of_elements` live in the `_scalar` file),
   `test_database_update.cpp`, `test_database_delete.cpp`, `test_database_describe.cpp`,
   `test_database_metadata.cpp` (group-metadata FK flags, `list_{vector,set}_groups`),
-  `test_database_query.cpp`, `test_database_time_series_{metadata,group,row,files}.cpp` (time
+  `test_database_query.cpp` (`query_*` is read-only SQL: `QueryOnlyRunsReadOnlySql` pins the
+  refusal message; a test that must plant data the typed API refuses, such as an invalid cell or an
+  extra column, uses `quiver::test::exec_sql(db_path, sql)` from `test_utils.h`, a second sqlite3
+  connection on a file-backed database — the Lua side is in `test_sandbox_query.cpp`, with
+  `relations_deferred.sql` giving `test_sandbox_transaction.cpp` a commit-time FK failure without
+  raw SQL), `test_database_time_series_{metadata,group,row,files}.cpp` (time
   series split by sub-concern: `group` = group read/update + validation, `row` =
   `upsert_time_series_row`/`read_time_series_row`; the C++ core has no `_nulls` file),
   `test_database_transaction.cpp`, `test_database_csv_export.cpp`, `test_database_csv_import.cpp`,

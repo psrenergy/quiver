@@ -62,22 +62,14 @@ void main() {
     });
 
     test('malformed dimension value throws ArgumentError and the handle stays usable', () {
+      // The schema seeds element 1 with a date the DATE_TIME write gate would refuse, as a
+      // pre-gate database or another tool leaves behind (query_* is read-only).
       final db = Database.fromSchema(
         ':memory:',
-        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+        path.join(testsPath, 'schemas', 'valid', 'malformed_dates.sql'),
       );
       try {
-        db.createElement('Configuration', {'label': 'Test Config'});
-        final id = db.createElement('Collection', {'label': 'Item 1'});
-        db.updateTimeSeriesGroup('Collection', 'data', id, {
-          'date_time': ['2024-01-01T10:00:00'],
-          'value': [1.5],
-        });
-        // Bypass the DATE_TIME write gate, as a pre-gate database or another tool would.
-        db.queryString(
-          'UPDATE Collection_time_series_data SET date_time = ? WHERE id = ?',
-          ['2024-1-5', id],
-        );
+        const id = 1;
 
         expect(
           () => db.readTimeSeriesGroup('Collection', 'data', id),

@@ -385,3 +385,40 @@ TEST(Database, ReadFloatsWidenIntegerValuesInRealColumns) {
         (std::vector<std::optional<double>>{1.0, 2.0})
     );
 }
+
+// ============================================================================
+// Read-only SQL
+// ============================================================================
+
+// query_* may carry SQL from an untrusted Lua script, so every layer refuses anything but reads;
+// writes go through the typed API.
+TEST(DatabaseQuery, QueryOnlyRunsReadOnlySql) {
+    auto db = quiver::Database::from_schema(
+        ":memory:",
+        VALID_SCHEMA("basic.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
+    db.create_element(
+        "Configuration",
+        quiver::Element().set("label", std::string("a")).set("integer_attribute", int64_t{1})
+    );
+
+    const auto expect_refused = [&](const std::string& sql) {
+        try {
+            db.query_integer(sql);
+            FAIL() << "expected a refusal: " << sql;
+        } catch (const std::exception& e) {
+            EXPECT_STREQ(
+                e.what(),
+                "Cannot query: SQL must be read-only; writes, PRAGMA, ATTACH, VACUUM and transaction control are not "
+                "allowed"
+            );
+        }
+    };
+    expect_refused("UPDATE Configuration SET integer_attribute = 2");
+    expect_refused("PRAGMA user_version");
+    expect_refused("VACUUM");
+
+    EXPECT_EQ(db.current_version(), 0);
+    EXPECT_EQ(db.query_integer("SELECT integer_attribute FROM Configuration"), 1);
+}
