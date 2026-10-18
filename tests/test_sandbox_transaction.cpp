@@ -211,7 +211,7 @@ TEST_F(SandboxTest, TransactionBlockRejectsNonFunction) {
 // A deferred foreign key fails only at COMMIT, after the callback returned: the block must still be
 // rolled back, not left open for the host to commit.
 TEST_F(SandboxTest, TransactionBlockCommitFailureRollsBack) {
-    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("relations.sql"));
+    auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("relations_deferred.sql"));
 
     quiver::Sandbox sandbox(db);
 
@@ -219,8 +219,7 @@ TEST_F(SandboxTest, TransactionBlockCommitFailureRollsBack) {
         sandbox,
         R"lua(
             db:transaction(function(d)
-                d:query_string("PRAGMA defer_foreign_keys = ON")
-                d:query_string("INSERT INTO Child (label, parent_id) VALUES ('orphan', 999)")
+                d:create_element("Child", { label = "orphan", parent_id = 999 })
             end)
         )lua",
         "Failed to commit transaction: FOREIGN KEY constraint failed"

@@ -378,8 +378,9 @@ while the flag is set, so going through it would silently do nothing. The public
 `begin_transaction`/`commit`/`rollback` each start with a one-line `if (impl_->dry_run) return;`.
 `TransactionGuard` needs no flag awareness: it checks `sqlite3_get_autocommit` and already no-ops
 because the dry run holds a real transaction. `end_dry_run` guards its rollback on
-`sqlite3_get_autocommit` because a caller can end the transaction out from under it with a bare
-`COMMIT` through `query_*`. Rationale and the documented consequences: root design decisions.
+`sqlite3_get_autocommit`: a caller could once end the transaction out from under it with a bare
+`COMMIT` through `query_*` (read-only now), and the guard stays as defense. Rationale and the
+documented consequences: root design decisions.
 
 The one write path that cannot nest is `import_csv`: it must own its transaction, because inside a
 caller's its `TransactionGuard` would no-op, and a failure partway through would leave import's
@@ -636,6 +637,14 @@ impl_->logger->debug("Opening database: {}", path);
 - **`execute` validates parameter count** (`Impl::execute`, `database.cpp`):
   `sqlite3_bind_parameter_count` must equal `parameters.size()`, else it throws — the single guard
   for every `query_*` and internal parameterized statement.
+- **`execute(sql, params, read_only)` is how `query_*` stays read-only** (`database.cpp`): with
+  `read_only`, a `ReadOnlyAuthorizer` (RAII around `sqlite3_set_authorizer`, allowlist
+  `SQLITE_SELECT`/`READ`/`FUNCTION`/`RECURSIVE`) is installed only while `sqlite3_prepare_v2`
+  compiles the statement — never across a whole Lua run, because the schema load, the typed
+  writers' `BEGIN`/`COMMIT` and `current_version`'s `PRAGMA` share the connection. A denial
+  (`SQLITE_AUTH`) and a statement that `sqlite3_stmt_readonly` reports as writing (`VACUUM`, which
+  the authorizer never sees) both throw the one `kNotReadOnly` message. Internal callers pass no
+  flag and keep writing through `execute`.
 - **Utilities**: `quiver::string::new_c_str` / `trim` in `src/utils/string.h`; ISO 8601
   parse/format helpers in `src/utils/datetime.h` — `parse_iso8601` accepts `YYYY-MM-DD` with an
   optional `THH:MM:SS`/` HH:MM:SS`, every field fixed-width and zero-padded, year `0001`-`9999`,

@@ -52,7 +52,8 @@ struct Database::Impl {
 
     // The one statement runner (defined in database.cpp). const: it only uses the sqlite3 handle,
     // so const readers (number_of_elements, current_version, describe*) go through it too.
-    Result execute(const std::string& sql, const std::vector<Value>& parameters = {}) const;
+    // read_only is what query_* pass: SQL that may come from an untrusted Lua script and may only read.
+    Result execute(const std::string& sql, const std::vector<Value>& parameters = {}, bool read_only = false) const;
     // The one sqlite3_exec runner, for SQL with no parameters or results (multi-statement scripts,
     // BEGIN/COMMIT, PRAGMA user_version): throws Pattern 3 "Failed to <what>: <sqlite message>".
     void execute_raw(const std::string& sql, const char* what = "execute SQL") const;

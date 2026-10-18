@@ -421,4 +421,30 @@ void main() {
       }
     });
   });
+
+  group('Read-only SQL', () {
+    test('refuses writes and PRAGMA, keeps reads', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'basic.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Item1', 'integer_attribute': 1});
+        expect(
+          () => db.queryInteger('UPDATE Configuration SET integer_attribute = 2'),
+          throwsA(isA<DatabaseException>()),
+        );
+        expect(
+          () => db.queryString('PRAGMA user_version'),
+          throwsA(isA<DatabaseException>()),
+        );
+        expect(
+          db.queryInteger("SELECT integer_attribute FROM Configuration WHERE label = 'Item1'"),
+          equals(1),
+        );
+      } finally {
+        db.close();
+      }
+    });
+  });
 }

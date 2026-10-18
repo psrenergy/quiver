@@ -289,6 +289,18 @@ include("fixture.jl")
 
         Quiver.close!(db)
     end
+
+    @testset "Read-Only SQL" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+        Quiver.create_element!(db, "Configuration"; label = "Item1", integer_attribute = 1)
+
+        @test_throws Quiver.DatabaseException Quiver.query_integer(db, "UPDATE Configuration SET integer_attribute = 2")
+        @test_throws Quiver.DatabaseException Quiver.query_string(db, "PRAGMA user_version")
+        @test Quiver.query_integer(db, "SELECT integer_attribute FROM Configuration WHERE label = 'Item1'") == 1
+
+        Quiver.close!(db)
+    end
 end
 
 end

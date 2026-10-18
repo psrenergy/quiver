@@ -171,3 +171,19 @@ describe("query parameter count", () => {
     }
   });
 });
+
+describe("query read-only SQL", () => {
+  test("refuses writes and PRAGMA, keeps reads", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    try {
+      db.createElement("AllTypes", { label: "Item1", some_integer: 1 });
+      expect(() => db.queryInteger("UPDATE AllTypes SET some_integer = 2")).toThrow(
+        "SQL must be read-only",
+      );
+      expect(() => db.queryString("PRAGMA user_version")).toThrow("SQL must be read-only");
+      expect(db.queryInteger("SELECT some_integer FROM AllTypes WHERE label = 'Item1'")).toEqual(1);
+    } finally {
+      db.close();
+    }
+  });
+});

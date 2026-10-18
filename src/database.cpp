@@ -13,6 +13,7 @@
 #include <filesystem>
 #include <fstream>
 #include <mutex>
+#include <optional>
 #include <sstream>
 #include <stdexcept>
 
@@ -24,6 +25,37 @@ std::once_flag sqlite3_init_flag;
 void ensure_sqlite3_initialized() {
     std::call_once(sqlite3_init_flag, []() { sqlite3_initialize(); });
 }
+
+// query_* runs SQL that may come from an untrusted Lua script, so it may only read. SQLite's authorizer refuses
+// writes, PRAGMA, ATTACH, DETACH and transaction control while the statement compiles; VACUUM never reaches the
+// authorizer, so sqlite3_stmt_readonly catches it after compilation (see Impl::execute).
+struct ReadOnlyAuthorizer {
+    explicit ReadOnlyAuthorizer(sqlite3* db) : db(db) {
+        sqlite3_set_authorizer(db, allow_reads, nullptr);
+    }
+    ~ReadOnlyAuthorizer() {
+        sqlite3_set_authorizer(db, nullptr, nullptr);
+    }
+    ReadOnlyAuthorizer(const ReadOnlyAuthorizer&) = delete;
+    ReadOnlyAuthorizer& operator=(const ReadOnlyAuthorizer&) = delete;
+
+    static int allow_reads(void*, int action, const char*, const char*, const char*, const char*) {
+        switch (action) {
+        case SQLITE_SELECT:
+        case SQLITE_READ:
+        case SQLITE_FUNCTION:
+        case SQLITE_RECURSIVE:
+            return SQLITE_OK;
+        default:
+            return SQLITE_DENY;
+        }
+    }
+
+    sqlite3* db;
+};
+
+constexpr auto kNotReadOnly =
+    "Cannot query: SQL must be read-only; writes, PRAGMA, ATTACH, VACUUM and transaction control are not allowed";
 
 spdlog::level::level_enum to_spdlog_level(quiver::LogLevel level) {
     switch (level) {
@@ -130,13 +162,26 @@ bool Database::is_healthy() const {
     return impl_ && impl_->db != nullptr;
 }
 
-Result Database::Impl::execute(const std::string& sql, const std::vector<Value>& parameters) const {
+Result Database::Impl::execute(const std::string& sql, const std::vector<Value>& parameters, bool read_only) const {
     sqlite3_stmt* raw_stmt = nullptr;
-    auto rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &raw_stmt, nullptr);
+    auto rc = SQLITE_OK;
+    {
+        std::optional<ReadOnlyAuthorizer> authorizer;
+        if (read_only) {
+            authorizer.emplace(db);
+        }
+        rc = sqlite3_prepare_v2(db, sql.c_str(), -1, &raw_stmt, nullptr);
+    }
+    if (rc == SQLITE_AUTH) {
+        throw std::runtime_error(kNotReadOnly);
+    }
     if (rc != SQLITE_OK) {
         throw std::runtime_error("Failed to prepare statement: " + std::string(sqlite3_errmsg(db)));
     }
     StmtPtr stmt(raw_stmt, sqlite3_finalize);
+    if (read_only && !sqlite3_stmt_readonly(stmt.get())) {
+        throw std::runtime_error(kNotReadOnly);
+    }
 
     // Reject a parameter-count mismatch loudly: too few would bind NULL to the trailing
     // placeholder, too many would silently ignore the extras.

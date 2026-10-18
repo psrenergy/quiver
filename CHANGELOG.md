@@ -5,7 +5,26 @@ All notable changes to Quiver are recorded here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Entries that require
 callers to change something are prefixed **BREAKING** and say what to do.
 
-## [0.13.3] — unreleased
+## [0.14.0] — unreleased
+
+### Changed
+
+- **BREAKING — `query_*` only runs read-only SQL.** `query_string`, `query_integer` and
+  `query_float` (and the bindings' `query_boolean`) now refuse, before anything runs, every
+  statement that is not a read: writes and DDL, `PRAGMA` statements, `ATTACH`/`DETACH`, `VACUUM`
+  and transaction control (`BEGIN`, `COMMIT`, `ROLLBACK`, `SAVEPOINT`). The refusal is
+  `Cannot query: SQL must be read-only; writes, PRAGMA, ATTACH, VACUUM and transaction control are
+  not allowed`, in C++, the C API, Julia, Dart, Python, JS and Lua alike. It closes three escapes
+  from the Lua sandbox: `ATTACH DATABASE '<any path>'` created and wrote files outside the
+  database directory, `VACUUM INTO '<any path>'` copied the database out even from a read-only
+  open, and a raw `COMMIT` ended the host's transaction or dry run. The table-valued `pragma_*()`
+  functions (`SELECT ... FROM pragma_table_info('X')`) remain available.
+
+  *Adapt:* write through the typed API (`create_element`, `update_element`, the group and time
+  series writers, `import_csv`) and read `PRAGMA user_version` through `current_version()`. Code
+  that planted raw rows for tests opens its own SQLite connection to the file instead.
+
+## [0.13.4] — 2026-10-16
 
 ### Changed
 
@@ -19,6 +38,8 @@ callers to change something are prefixed **BREAKING** and say what to do.
   Python, `summarizeCollection()` with `describeCollection()` in Dart/JS, and
   `quiver_database_summarize_collection()` with `quiver_database_describe_collection()` in C.
   The old API is removed; update any report-text assertions for the combined format.
+
+## [0.13.3] — 2026-10-15
 
 ### Added
 
@@ -1489,7 +1510,9 @@ are functionally identical to 0.10.0.
   `read_time_series_group` emits for a NULL STRING cell — so feeding a read result back with the
   mask stripped was UB. A NULL entry, or a NULL per-column data pointer, is now SQL NULL.
 
-[0.13.3]: https://github.com/psrenergy/quiver/compare/v0.13.2...HEAD
+[0.14.0]: https://github.com/psrenergy/quiver/compare/v0.13.4...HEAD
+[0.13.4]: https://github.com/psrenergy/quiver/compare/v0.13.3...v0.13.4
+[0.13.3]: https://github.com/psrenergy/quiver/compare/v0.13.2...v0.13.3
 [0.13.2]: https://github.com/psrenergy/quiver/compare/v0.13.1...v0.13.2
 [0.13.1]: https://github.com/psrenergy/quiver/compare/v0.13.0...v0.13.1
 [0.13.0]: https://github.com/psrenergy/quiver/compare/v0.12.9...v0.13.0
