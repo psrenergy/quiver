@@ -130,11 +130,17 @@ void bind_expression_operators(sol::usertype<T>& type) {
 
 }  // namespace
 
-void bind_expression(sol::state& state, sol::table& ns, sol::usertype<BinaryFile>& binary_file_type, Database& db) {
+void bind_expression(
+    sol::state& state,
+    sol::table& ns,
+    sol::usertype<BinaryFile>& binary_file_type,
+    Database& db,
+    RunHandles& handles
+) {
     // The expression methods, one body each for every usertype that is an expression. Saving from a
     // file reads it by path and leaves the handle open.
-    auto save = [&db](const AbstractExpression& self, const std::string& path) {
-        self.save(resolve_sandbox_path(db, "save", path));
+    auto save = [&db, &handles](const AbstractExpression& self, const std::string& path) {
+        self.save(handles.resolve_write_path(db, "save", path, {".qvr", ".toml"}));
     };
     auto get_metadata = [](const AbstractExpression& self) -> BinaryMetadata { return self.get_metadata(); };
     auto aggregate = [](const AbstractExpression& self,

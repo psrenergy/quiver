@@ -363,7 +363,7 @@ void bind_csv(sol::state& state, sol::usertype<Database>& bind, RunHandles& hand
         [&handles](Database& self, const std::string& path, sol::object options) -> std::unique_ptr<CsvWriter> {
             // Evaluation order: sandbox checks (in-memory db, path escape) before
             // the options table, so a bad separator never masks an escaping path.
-            const auto resolved = resolve_sandbox_path(self, "write_csv", path);
+            const auto resolved = handles.resolve_write_path(self, "write_csv", path);
             auto csv_options = write_csv_options_from_lua(options, "write_csv");
             if (handles.path_has_open_writer(resolved)) {
                 throw std::runtime_error("Cannot write_csv: file is already open for writing: " + path);

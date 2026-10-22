@@ -66,7 +66,7 @@ C++ core and C API suites live here; binding suites live in each binding's `test
   The Lua binary/expression subsystem bindings (and the sandbox itself) are covered by
   `test_sandbox_binary.cpp` and
   `test_sandbox_expression.cpp`.
-- `test_sandboxed_path.cpp` (`SandboxedPathTest`) unit-tests `resolve_sandboxed_path`, the gate
+- `test_sandbox_path.cpp` (`SandboxPathTest`) unit-tests `resolve_sandbox_path`, the gate
   every file-touching Lua operation shares, without Lua: containment, `..` and absolute escapes, a
   symlink pointing outside, the root itself, `:memory:`, and (`_WIN32` only) the device-name prefix.
   It is the only test that includes a `src/` header and compiles a `src/` TU: the function is hidden
@@ -108,7 +108,15 @@ C++ core and C API suites live here; binding suites live in each binding's `test
   degrade into re-testing an earlier catalogue message. `DeviceNamePathIsReportedWithPrefix` (here
   and in `test_sandbox_binary.cpp`) is `_WIN32`-only because no POSIX path is reserved the way `NUL`
   is; the `test_sandbox_binary.cpp` copy spans `open_file`/`bin_to_csv`/`csv_to_bin` on purpose, so the
-  fix stays in the shared `resolve_sandboxed_path` gate instead of regressing to a per-caller patch.
+  fix stays in the shared `resolve_sandbox_path` gate instead of regressing to a per-caller patch.
+- `test_sandbox_write_policy.cpp` (`SandboxWritePolicyTest`) covers the write gate every Lua
+  writer shares (`RunHandles::resolve_write_path`): the database file and its journals refused
+  (under a host transaction too, file size unchanged), a journal name used as a directory,
+  case-folded, a binary writer's appended extensions, names that only share the prefix still
+  writable, every writer refused on a read-only database, and reads still working there. The
+  host-owned-scope refusals of `db:commit`/`db:rollback`/`db:end_dry_run` live in
+  `test_sandbox_transaction.cpp`, including `FinalizerAtTeardownCannotEndAHost{Transaction,DryRun}`:
+  a `__gc` finalizer that `lua_close` runs when the Sandbox is destroyed.
 - `test_sandbox_write_csv.cpp` covers the Lua-only `db:write_csv`/`w:write_row`/`w:close`
   binding (cell-type dispatch, the `separator`/`header` options, the max-integer-key row walk, and
   the truncate-at-open behaviour) — same no-other-layer-counterpart situation as

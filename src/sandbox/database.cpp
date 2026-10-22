@@ -53,13 +53,31 @@ sol::object run_in_scope(
 
 }  // namespace
 
-void bind_database(sol::usertype<Database>& bind) {
+void bind_database(sol::usertype<Database>& bind, RunHandles& handles) {
+    // A scope open when run() started is the host's: ending it from the script would commit the
+    // host's work early, or turn a host dry run into real writes. Under a host dry run, commit and
+    // rollback still reach Database, which absorbs them. db:transaction / db:dry_run need no check:
+    // their begin already throws under a host scope.
+    const auto refuse_host_transaction = [&handles](const char* operation) {
+        if (handles.host_transaction) {
+            throw std::runtime_error(
+                std::string("Cannot ") + operation +
+                ": the transaction was open before the script started, so it belongs to the host"
+            );
+        }
+    };
     bind.set_function("is_healthy", &Database::is_healthy);
     bind.set_function("current_version", &Database::current_version);
     bind.set_function("path", &Database::path);
     bind.set_function("begin_transaction", &Database::begin_transaction);
-    bind.set_function("commit", &Database::commit);
-    bind.set_function("rollback", &Database::rollback);
+    bind.set_function("commit", [refuse_host_transaction](Database& self) {
+        refuse_host_transaction("commit");
+        self.commit();
+    });
+    bind.set_function("rollback", [refuse_host_transaction](Database& self) {
+        refuse_host_transaction("rollback");
+        self.rollback();
+    });
     bind.set_function("in_transaction", &Database::in_transaction);
     bind.set_function("transaction", [](Database& self, const sol::object& fn) -> sol::object {
         return run_in_scope(
@@ -72,7 +90,14 @@ void bind_database(sol::usertype<Database>& bind) {
         );
     });
     bind.set_function("begin_dry_run", &Database::begin_dry_run);
-    bind.set_function("end_dry_run", &Database::end_dry_run);
+    bind.set_function("end_dry_run", [&handles](Database& self) {
+        if (handles.host_dry_run) {
+            throw std::runtime_error(
+                "Cannot end_dry_run: the dry run was open before the script started, so it belongs to the host"
+            );
+        }
+        self.end_dry_run();
+    });
     bind.set_function("in_dry_run", &Database::in_dry_run);
     bind.set_function("dry_run", [](Database& self, const sol::object& fn) -> sol::object {
         return run_in_scope(

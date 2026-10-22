@@ -48,8 +48,8 @@ src/                      # C++ implementation
     sandbox.cpp        # Sandbox::Impl (ctor order, the one Database usertype), RunHandles bodies, run()/GcGuard
     internal.h            # quiver::lua_internal: RunHandles, binder decls, converters, read adapters, option walk, group-decoder decls, metadata templates, parse_csv_options decl
     return_json.cpp       # run()'s JSON encoder
-    path_policy.h         # resolve_sandboxed_path's declaration; no sol2, included by internal.h and SandboxedPathTest
-    path_policy.cpp       # resolve_sandboxed_path, the single filesystem gate
+    path_policy.h         # resolve_sandbox_path's declaration; no sol2, included by internal.h and SandboxPathTest
+    path_policy.cpp       # resolve_sandbox_path, the single filesystem gate
     database.cpp          # bind_database: info, transactions, dry runs (run_in_scope), validate_migrations
     database_create.cpp   # bind_create: create_element; table_to_element
     database_read.cpp     # bind_read: bulk + by-id readers, number_of_elements
@@ -197,7 +197,7 @@ The sibling directory is `fs::weakly_canonical(migrations_path).parent_path() / 
 path yields `<migrations>/ui`, which never exists, and a bare relative migrations path yields
 `./ui` against whatever the process CWD happens to be at call time, not the sibling directory a
 caller means. `fs::weakly_canonical` normalizes both away before `parent_path()` ever runs (the
-same idiom `src/sandbox/path_policy.cpp`'s `resolve_sandboxed_path` already uses).
+same idiom `src/sandbox/path_policy.cpp`'s `resolve_sandbox_path` already uses).
 
 A `ui/*.toml` collection file self-selects by shape, never by filename: a top-level string `id`
 plus an `attribute` array are both required, which is what excludes `main.toml` (no `id`), every
@@ -268,12 +268,14 @@ enum label omits its vocabulary entry without affecting the observed counts. Kno
 `ui_metadata` is populated only by `from_migrations` (see the early-return trap above), so
 `Database("study.db").describe_collection(...)` has no UI clauses — this must not be
 "fixed" by hooking the load onto `load_schema_metadata` / `require_schema`, since `migrate_up`
-early-returns before it on the open-an-existing-study path. Note the sharpest edge of that limit:
-`from_migrations` **throws** on `options.read_only`, so a read-only handle — the natural mode for
-an inspection tool, and the mode PSR's `load_study` defaults to — can never carry the sidecar at
-all. Closing it needs a dedicated lazy `require_ui_metadata()` that remembers the migrations path
-(orthogonal to schema loading, and not the forbidden `require_schema` hook), or persisting the
-sidecar into the database file at `from_migrations` time; both are design changes, not cleanups.
+early-returns before it on the open-an-existing-study path. A read-only handle — the natural mode
+for an inspection tool, and the mode PSR's `load_study` defaults to — carries the sidecar through
+`from_migrations(path, migrations, {.read_only = true})`: it skips `migrate_up`, refuses (Pattern 1)
+a database with pending migrations, since the sidecar is written for the latest version and is
+never validated against the schema, and never creates a missing file. Schema loading stays lazy,
+exactly as on the read-write up-to-date path, which also never reaches `migrate_up`'s eager load.
+A plain `Database(path)` open still has no sidecar; closing that would need a lazy
+`require_ui_metadata()` that remembers the migrations path, a design change, not a cleanup.
 Group columns are never annotated. `kMaxDistributionCardinality` (64) suppresses the whole
 `; values {}` clause above 64 distinct integer codes; `; enum {...}` remains present regardless
 of observed cardinality. `quote_ui_text` gives a parse-level guarantee, not substring immunity,
@@ -419,7 +421,10 @@ execution helpers remain private. Their errors name the public caller, not the h
 
 spdlog with debug/info/warn/error levels, through a **per-database logger instance** — never the
 `spdlog::` global functions. `create_database_logger` (`database.cpp`) builds a uniquely named
-logger (`quiver_database_<id>`) with stderr + file sinks, stored as `Impl::logger`:
+logger (`quiver_database_<id>`) with stderr + file sinks, stored as `Impl::logger`. The file
+sink (`<db dir>/quiver_database.log`, truncated on open) is skipped for `:memory:` and for a
+read-only open, which must leave the database's directory alone — it used to wipe the trail of
+any writer on the same database:
 ```cpp
 impl_->logger->debug("Opening database: {}", path);
 ```
@@ -755,7 +760,7 @@ Implementation conventions in `src/sandbox/`:
   `sandbox/database_update.cpp`). Adding the suffix to any of them is a deliberate, pinned text change, not a
   cleanup. `optional_from_lua<T>` is the one optional-argument
   decoder (see the optional-argument bullet below).
-- **Filesystem sandbox**: `resolve_sandboxed_path(db, operation, path)` is the single gate for
+- **Filesystem sandbox**: `resolve_sandbox_path(db, operation, path)` is the single gate for
   every file-touching Lua operation (`db:open_file`, `db:bin_to_csv`, `db:csv_to_bin`,
   `db:export_csv`, `db:import_csv`, `db:validate_migrations`, `db:read_csv`, `db:read_csv_stream`,
   `db:write_csv`, `save` on an expression or a binary file). It rejects `:memory:`
@@ -776,9 +781,36 @@ Implementation conventions in `src/sandbox/`:
   the deliberate `:memory:` and containment throws stay outside the `try` so they are not
   double-wrapped. Covered by `Sandbox_ReadCsv.DeviceNamePathIsReportedWithPrefix` and
   `LuaBinaryTest.DeviceNamePathIsReportedWithPrefix` (the latter spanning `open_file`/`bin_to_csv`/
-  `csv_to_bin`, so the shared fix cannot regress to a per-caller patch). `SandboxedPathTest`
-  (`tests/test_sandboxed_path.cpp`) calls the gate directly, without Lua, through the sol2-free
+  `csv_to_bin`, so the shared fix cannot regress to a per-caller patch). `SandboxPathTest`
+  (`tests/test_sandbox_path.cpp`) calls the gate directly, without Lua, through the sol2-free
   `path_policy.h`: containment, escapes, the root itself, `:memory:` and the device-name prefix.
+- **Write gate**: the six writers (`write_csv`, `export_csv`, `open_file` with mode `"w"`,
+  `bin_to_csv`, `csv_to_bin`, `save`) call `RunHandles::resolve_write_path(db, op, path, written)`
+  (`sandbox.cpp`) instead: `resolve_sandbox_path` first (so `:memory:` and escapes keep their
+  messages), then `Cannot <op>: database is open read-only, so scripts cannot write files` when
+  `RunHandles::read_only` (copied from `Database::Impl::read_only` in the `Sandbox` constructor,
+  through `friend class Sandbox`), then `Cannot <op>: path '<p>' is the database file or one of
+  its journals` for the db file or its `-journal`/`-wal`/`-shm`. The file is located through
+  `RunHandles::database_entries`, built in the `Sandbox` constructor from `sqlite3_db_filename`
+  (SQLite's absolute name, from which it derives the journal names; `db.path()` may be relative to
+  a working directory that has since changed) both as named and with symlinks resolved. The check
+  is on the **first** path component under the database's directory: a deeper path refuses a
+  directory named like the journal too, which `export_csv`'s `create_directories` would otherwise
+  create, after which SQLite can never open its journal and every write fails. `written` lists the
+  suffixes the writer appends (`.qvr`/`.toml` for a binary file, `.csv` for `bin_to_csv`), so a
+  database named `study.qvr` is caught too; names compare case-folded on every platform (NTFS and
+  APFS match that way, and the non-existing tail of a path keeps the script's spelling). It lives in `sandbox.cpp`,
+  not `path_policy.cpp`, which must stay a one-function file (`tests/CMakeLists.txt`). Covered by
+  `tests/test_sandbox_write_policy.cpp`.
+- **Host-owned scopes**: `Sandbox::run` sets `RunHandles::host_dry_run` / `host_transaction` (the
+  latter only outside a dry run) before the script runs, and the Lua `commit`/`rollback`/
+  `end_dry_run` are lambdas that refuse to end those scopes (root design decision). Outside `run()`
+  both flags are `true` (their initial value, and `GcGuard` restores it after its collection):
+  `lua_close` runs every pending `__gc` finalizer when the Sandbox is destroyed, with `db` still a
+  live global, so a finalizer a script planted would otherwise end a scope the host opened after
+  the last run (`FinalizerAtTeardownCannotEndAHost{Transaction,DryRun}`). Being lambdas,
+  a dot-call (`db.commit()`) fails with sol2's `expected userdata, received no value` rather than
+  the member-pointer `received nil for 'self'`; `DotCallThrowsInsteadOfCrashing` pins both.
 - **Enabled standard libraries**: `base`, `string`, `table`, `math`, `coroutine`, and `utf8`
   (pure computation only). `os`, `io`, `package`/`require`, and `debug` stay unloaded — scripts
   cannot reach the shell, the process, the environment, or the filesystem outside the db sandbox.
@@ -802,7 +834,7 @@ Implementation conventions in `src/sandbox/`:
   or `params` table was silently ignored. `optional_from_lua` has `luaL_opt` semantics: nil or a
   missing argument is absent, anything else must be a `T` or throws `Cannot <op>: <what> must be
   <expected>, got <lua type>`. It backs the `query_*` params, `db:open_file`'s metadata (decoded
-  after `resolve_sandboxed_path`, so the order stays mode, path, metadata), `db:bin_to_csv`'s
+  after `resolve_sandbox_path`, so the order stays mode, path, metadata), `db:bin_to_csv`'s
   aggregate, `file:read`'s allow_nulls and the `aggregate` / `aggregate_agents` parameter. Where
   the decode sat inside one call's argument list, it is hoisted into locals in argument order, so
   which bad argument wins no longer depends on the compiler. `relation_target_from_lua(object,
@@ -868,9 +900,10 @@ Implementation conventions in `src/sandbox/`:
   and store `llround(x)`. Do not drop or move those definitions.
 - **`SOL_ALL_SAFETIES_ON=1` and `SOL_PRINT_ERRORS=0` (`src/CMakeLists.txt`) are the backstop behind
   the explicit checks**, which own every Pattern 1 message. Release now checks string, number and
-  `self` arguments the way Debug always did, so a dot-call such as `db.commit()` raises sol2's
-  `received nil for 'self' argument` text instead of dereferencing null, and a lambda-bound
-  dot-call (`db.create_element(...)`) raises `stack index 1, expected userdata`. `SOL_PRINT_ERRORS=0`
+  `self` arguments the way Debug always did, so a dot-call to a member-pointer binding such as
+  `db.begin_transaction()` raises sol2's `received nil for 'self' argument` text instead of
+  dereferencing null, and a lambda-bound dot-call (`db.commit()`, `db.create_element(...)`) raises
+  `stack index 1, expected userdata`. `SOL_PRINT_ERRORS=0`
   keeps sol2 from printing `[sol2] An exception occurred: ...` to the host's stderr for every
   exception that crosses a binding, caught or not. `SOL_SAFE_GETTER=0` and `SOL_SAFE_STACK_CHECK=0`
   are the measured exception: with them on, a Release 100k-element `read_scalar_floats` read cost

@@ -114,7 +114,9 @@ sol::usertype<BinaryFile> bind_binary(
             if (mode.size() != 1 || (mode[0] != 'r' && mode[0] != 'w')) {
                 throw std::runtime_error("Cannot open_file: mode must be \"r\" or \"w\"");
             }
-            const auto resolved = resolve_sandbox_path(self, "open_file", path);
+            const auto resolved = mode[0] == 'w'
+                                      ? handles.resolve_write_path(self, "open_file", path, {".qvr", ".toml"})
+                                      : resolve_sandbox_path(self, "open_file", path);
             // After containment, so the order stays mode, then path, then metadata.
             const auto md = optional_from_lua<BinaryMetadata>(metadata, "open_file", "metadata", "a BinaryMetadata");
             auto file = std::make_shared<BinaryFile>(BinaryFile::open_file(resolved, mode[0], md));
@@ -122,14 +124,14 @@ sol::usertype<BinaryFile> bind_binary(
             return file;
         }
     );
-    bind.set_function("bin_to_csv", [](Database& self, const std::string& path, const sol::object& aggregate) {
+    bind.set_function("bin_to_csv", [&handles](Database& self, const std::string& path, const sol::object& aggregate) {
         // Containment first, as in every file operation, then the flag.
-        const auto resolved = resolve_sandbox_path(self, "bin_to_csv", path);
+        const auto resolved = handles.resolve_write_path(self, "bin_to_csv", path, {".csv"});
         const bool by_agent = optional_from_lua<bool>(aggregate, "bin_to_csv", "aggregate", "a boolean").value_or(true);
         CSVConverter::bin_to_csv(resolved, by_agent);
     });
-    bind.set_function("csv_to_bin", [](Database& self, const std::string& path) {
-        CSVConverter::csv_to_bin(resolve_sandbox_path(self, "csv_to_bin", path));
+    bind.set_function("csv_to_bin", [&handles](Database& self, const std::string& path) {
+        CSVConverter::csv_to_bin(handles.resolve_write_path(self, "csv_to_bin", path, {".qvr", ".toml"}));
     });
 
     state.new_usertype<BinaryMetadata>(
