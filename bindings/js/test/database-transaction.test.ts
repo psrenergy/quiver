@@ -98,3 +98,81 @@ describe("transaction control", () => {
     }
   });
 });
+
+describe("transaction and dryRun wrappers", () => {
+  test("transaction commits on success and returns fn's value", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    try {
+      const id = db.transaction((tx) => tx.createElement("AllTypes", { label: "TxnItem" }));
+      expect(db.inTransaction()).toEqual(false);
+      expect(db.readElementIds("AllTypes")).toEqual([id]);
+    } finally {
+      db.close();
+    }
+  });
+
+  test("transaction rolls back and rethrows fn's original error", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    const boom = new Error("boom");
+    try {
+      expect(() =>
+        db.transaction((tx) => {
+          tx.createElement("AllTypes", { label: "TxnItem" });
+          throw boom;
+        }),
+      ).toThrow(boom);
+      expect(db.inTransaction()).toEqual(false);
+      expect(db.readElementIds("AllTypes").length).toEqual(0);
+    } finally {
+      db.close();
+    }
+  });
+
+  test("dryRun discards writes and returns fn's value", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    try {
+      const labels = db.dryRun((tx) => {
+        tx.createElement("AllTypes", { label: "Preview" });
+        return tx.readScalarStrings("AllTypes", "label");
+      });
+      expect(labels).toEqual(["Preview"]);
+      expect(db.inDryRun()).toEqual(false);
+      expect(db.readElementIds("AllTypes").length).toEqual(0);
+    } finally {
+      db.close();
+    }
+  });
+
+  test("dryRun rethrows fn's original error and leaves no dry run active", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    const boom = new Error("boom");
+    try {
+      expect(() =>
+        db.dryRun((tx) => {
+          tx.createElement("AllTypes", { label: "Preview" });
+          throw boom;
+        }),
+      ).toThrow(boom);
+      expect(db.inDryRun()).toEqual(false);
+      expect(db.readElementIds("AllTypes").length).toEqual(0);
+    } finally {
+      db.close();
+    }
+  });
+
+  test("a failing endDryRun on the error path does not mask fn's error", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    const boom = new Error("boom");
+    try {
+      expect(() =>
+        db.dryRun((tx) => {
+          tx.endDryRun(); // the wrapper's own endDryRun now fails
+          throw boom;
+        }),
+      ).toThrow(boom);
+      expect(db.inDryRun()).toEqual(false);
+    } finally {
+      db.close();
+    }
+  });
+});

@@ -74,7 +74,11 @@ spdlog::level::level_enum to_spdlog_level(quiver::LogLevel level) {
     }
 }
 
-std::shared_ptr<spdlog::logger> create_database_logger(const std::string& db_path, quiver::LogLevel console_level) {
+std::shared_ptr<spdlog::logger> create_database_logger(
+    const std::string& db_path,
+    quiver::LogLevel console_level,
+    bool read_only
+) {
     namespace fs = std::filesystem;
 
     // Generate unique logger name for multiple Database instances
@@ -90,6 +94,12 @@ std::shared_ptr<spdlog::logger> create_database_logger(const std::string& db_pat
         const auto logger = std::make_shared<spdlog::logger>(logger_name, console_sink);
         logger->set_level(spdlog::level::debug);
         logger->warn("Database is in-memory only; no file logging will be performed.");
+        return logger;
+    } else if (read_only) {
+        // A read-only handle writes nothing to disk: the file sink would create or truncate
+        // quiver_database.log next to the database, wiping the trail of any writer on it.
+        const auto logger = std::make_shared<spdlog::logger>(logger_name, console_sink);
+        logger->set_level(spdlog::level::debug);
         return logger;
     } else {
         // File-based database: use database directory
@@ -127,7 +137,8 @@ namespace quiver {
 
 Database::Database(const std::string& path, const DatabaseOptions& options) : impl_(std::make_unique<Impl>()) {
     impl_->path = path;
-    impl_->logger = create_database_logger(path, options.console_level);
+    impl_->read_only = options.read_only;
+    impl_->logger = create_database_logger(path, options.console_level, options.read_only);
 
     impl_->logger->debug("Opening database: {}", path);
 
@@ -295,9 +306,6 @@ Database Database::from_migrations(
     const DatabaseOptions& options
 ) {
     namespace fs = std::filesystem;
-    if (options.read_only) {
-        throw std::runtime_error("Cannot from_migrations: read_only mode (use Database constructor to open existing)");
-    }
     if (!fs::exists(migrations_path)) {
         throw std::runtime_error("Migrations path not found: " + migrations_path);
     }
@@ -305,7 +313,20 @@ Database Database::from_migrations(
         throw std::runtime_error("Cannot from_migrations: path is not a directory: " + migrations_path);
     }
     auto db = Database(db_path, options);
-    db.migrate_up(migrations_path, "from_migrations");
+    if (options.read_only) {
+        // Nothing can be migrated, so the database must already be where the migrations lead; the
+        // ui/ sidecar is written for that version. The read-only open never creates a missing file.
+        const auto migrations = Migrations(migrations_path);
+        const auto current = db.current_version();
+        if (!migrations.pending(current).empty()) {
+            throw std::runtime_error(
+                "Cannot from_migrations: database is at version " + std::to_string(current) + " but migrations reach " +
+                std::to_string(migrations.latest_version()) + "; a read-only open cannot apply them"
+            );
+        }
+    } else {
+        db.migrate_up(migrations_path, "from_migrations");
+    }
     db.impl_->ui_metadata = load_ui_metadata(migrations_path, *db.impl_->logger);
     return db;
 }

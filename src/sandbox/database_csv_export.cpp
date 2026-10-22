@@ -61,16 +61,18 @@ CSVOptions parse_csv_options(const sol::object& options, const std::string& oper
     return result;
 }
 
-void bind_csv_export(sol::usertype<Database>& bind) {
+void bind_csv_export(sol::usertype<Database>& bind, RunHandles& handles) {
     bind.set_function(
         "export_csv",
-        [](Database& self,
-           const std::string& collection,
-           const std::string& group,
-           const std::string& path,
-           const sol::object& options) {
+        [&handles](
+            Database& self,
+            const std::string& collection,
+            const std::string& group,
+            const std::string& path,
+            const sol::object& options
+        ) {
             // Sandbox checks before the options table, as in db:write_csv.
-            const auto resolved = resolve_sandbox_path(self, "export_csv", path);
+            const auto resolved = handles.resolve_write_path(self, "export_csv", path);
             self.export_csv(collection, group, resolved, parse_csv_options(options, "export_csv"));
         }
     );

@@ -47,3 +47,49 @@ Database.prototype.inDryRun = function (this: Database): boolean {
   check(lib.quiver_database_in_dry_run(this._handle, outBuf));
   return new DataView(outBuf.buffer).getInt32(0, true) !== 0;
 };
+
+/**
+ * Run fn inside a transaction: commit on success and return fn's value; on a throw, roll back
+ * (best-effort) and rethrow fn's original error.
+ *
+ * fn must be synchronous: a Promise-returning fn would commit before its awaited work runs.
+ */
+Database.prototype.transaction = function <T>(this: Database, fn: (db: Database) => T): T {
+  this.beginTransaction();
+  try {
+    const result = fn(this);
+    this.commit();
+    return result;
+  } catch (e) {
+    try {
+      this.rollback();
+    } catch {
+      // Best-effort rollback; fn's error is the one that matters
+    }
+    throw e;
+  }
+};
+
+/**
+ * Run fn inside a dry run, which always rolls back, and return fn's value.
+ *
+ * If fn throws, the dry run is ended best-effort and fn's original error is rethrown; on success an
+ * endDryRun failure surfaces, since the rollback is this wrapper's whole promise.
+ * fn must be synchronous: a Promise-returning fn would end the dry run before its awaited work runs.
+ */
+Database.prototype.dryRun = function <T>(this: Database, fn: (db: Database) => T): T {
+  this.beginDryRun();
+  let result: T;
+  try {
+    result = fn(this);
+  } catch (e) {
+    try {
+      this.endDryRun();
+    } catch {
+      // Best-effort only while an error is already in flight, mirroring transaction()
+    }
+    throw e;
+  }
+  this.endDryRun();
+  return result;
+};

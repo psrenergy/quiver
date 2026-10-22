@@ -5,7 +5,58 @@ All notable changes to Quiver are recorded here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Entries that require
 callers to change something are prefixed **BREAKING** and say what to do.
 
-## [0.13.4] — unreleased
+## [0.13.6] — unreleased
+
+### Changed
+
+- **BREAKING — a Lua script cannot end a transaction or dry run its host opened.** A scope that is
+  open when `Sandbox::run` starts belongs to the host, including one an earlier `run()` left open.
+  Inside it, the script's `db:commit()` and `db:rollback()` (under a host transaction) and
+  `db:end_dry_run()` (under a host dry run) now throw `Cannot <op>: the transaction was open before
+  the script started, so it belongs to the host` (`the dry run was ...` for `end_dry_run`) instead
+  of ending it. A script that called `db:end_dry_run()` and kept writing used to commit those writes
+  for real, including under `quiver_cli --dry-run`. Under a host dry run, `db:commit()` and
+  `db:rollback()` are still absorbed as before.
+
+  *Adapt:* a transaction or dry run that one `run()` opens can no longer be closed by a later
+  `run()`; close it from the host instead — `commit()`/`rollback()` for a transaction,
+  `end_dry_run()` (`endDryRun()`) for a dry run. A host that blocked these methods with a Lua proxy
+  around `db` can drop those entries.
+
+- **BREAKING — Lua writers refuse the database file and every write on a read-only database.**
+  `db:write_csv`, `db:export_csv`, `db:open_file` with mode `"w"`, `db:bin_to_csv`, `db:csv_to_bin`
+  and `save` on a file or an expression throw `Cannot <op>: path '<p>' is the database file or one
+  of its journals` for the database file or its `-journal`/`-wal`/`-shm` — `db:write_csv("study.db")`
+  used to truncate the live database, which no rollback could restore. On a database opened with
+  `read_only`, all six throw `Cannot <op>: database is open read-only, so scripts cannot write
+  files`; reads still work.
+
+  *Adapt:* open the database read-write to let a script write files, or inside
+  `begin_dry_run`/`end_dry_run` to write files without keeping database writes.
+
+- **A read-only open creates no log file.** Opening with `read_only` no longer creates or
+  truncates `quiver_database.log` next to the database (it wiped the log of any writer on it).
+
+### Added
+
+- **`from_migrations` accepts `read_only`.** It loads the `ui/` sidecar (the labels, tooltips and
+  enum meanings `describe` shows) without applying migrations or creating a missing file, and
+  throws `Cannot from_migrations: database is at version X but migrations reach Y; a read-only open
+  cannot apply them` for a database behind its migrations. It used to refuse `read_only` outright,
+  so describing a study with labels meant opening it read-write and migrating it in place. Every
+  binding already forwards the option.
+- **JS `Database.transaction(fn)` and `Database.dryRun(fn)`**, the block wrappers Julia, Dart,
+  Python and Lua already had: commit (or always roll back) after `fn`, and on a throw undo
+  best-effort and rethrow `fn`'s error. `fn` must be synchronous.
+
+### Fixed
+
+- The Lua reference (`SANDBOX_API_REFERENCE`) said `print()` output "is captured"; it goes to the
+  host process's standard output, which the library does not capture.
+
+## [0.13.5] — released
+  
+## [0.13.4] — released
 
 ### Changed
 
@@ -1506,6 +1557,8 @@ are functionally identical to 0.10.0.
   `read_time_series_group` emits for a NULL STRING cell — so feeding a read result back with the
   mask stripped was UB. A NULL entry, or a NULL per-column data pointer, is now SQL NULL.
 
+[0.13.6]: https://github.com/psrenergy/quiver/compare/v0.13.5...v0.13.6
+[0.13.5]: https://github.com/psrenergy/quiver/compare/v0.13.4...v0.13.5
 [0.13.4]: https://github.com/psrenergy/quiver/compare/v0.13.3...v0.13.4
 [0.13.3]: https://github.com/psrenergy/quiver/compare/v0.13.2...v0.13.3
 [0.13.2]: https://github.com/psrenergy/quiver/compare/v0.13.1...v0.13.2

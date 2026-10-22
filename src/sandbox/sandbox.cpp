@@ -1,18 +1,70 @@
 #include "quiver/sandbox.h"
 
 #include "csv/csv_write.h"
+#include "database_impl.h"
 #include "quiver/binary/binary_file.h"
 #include "quiver/database.h"
 #include "sandbox/internal.h"
 
 #include <sol/sol.hpp>
 
+#include <algorithm>
+#include <cctype>
+#include <filesystem>
 #include <memory>
 #include <stdexcept>
 #include <string>
 #include <vector>
 
 namespace quiver::lua_internal {
+
+namespace {
+
+// Names are compared case-folded, because the filesystems quiver ships on (NTFS, APFS) match them
+// that way and the part of a path that does not exist yet keeps the script's spelling; on a
+// case-sensitive filesystem that only refuses a few names that would not have collided.
+std::string fold(std::string name) {
+    std::ranges::transform(name, name.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    return name;
+}
+
+}  // namespace
+
+// Every Lua writer opens its files with truncate, so containment alone is not enough: the database
+// file and its journals sit inside the sandbox root, and a rollback cannot restore a truncated one.
+std::string RunHandles::resolve_write_path(
+    const Database& db,
+    const std::string& operation,
+    const std::string& path,
+    std::initializer_list<std::string_view> written
+) const {
+    auto resolved = resolve_sandbox_path(db, operation, path);
+    if (read_only) {
+        throw std::runtime_error("Cannot " + operation + ": database is open read-only, so scripts cannot write files");
+    }
+
+    const std::filesystem::path candidate(resolved);
+    for (const auto& [directory, base] : database_entries) {
+        const auto relative = candidate.lexically_relative(directory);
+        if (relative.empty() || relative.begin()->string() == "..") {
+            continue;
+        }
+        // The first component is what the write creates in the database's directory: the file
+        // itself, or a directory export_csv creates on the way to a deeper one. A directory named
+        // like the journal would stop SQLite from ever opening its journal again.
+        const auto first = relative.begin()->string();
+        const bool is_file = std::next(relative.begin()) == relative.end();
+        for (const auto suffix : written) {
+            const auto name = fold(is_file ? first + std::string(suffix) : first);
+            if (name == base || name == base + "-journal" || name == base + "-wal" || name == base + "-shm") {
+                throw std::runtime_error(
+                    "Cannot " + operation + ": path '" + path + "' is the database file or one of its journals"
+                );
+            }
+        }
+    }
+    return resolved;
+}
 
 // True while some writer this run handed out for `resolved_path` is alive and unclosed. Two
 // writers on one path each open with ios::trunc and write from offset 0, so the second one
@@ -110,7 +162,7 @@ struct Sandbox::Impl {
         sol::table ns = lua.create_named_table("quiver");
         // The only Database usertype: registering it again would clear every method bound before.
         auto bind = lua.new_usertype<Database>("Database");
-        lua_internal::bind_database(bind);
+        lua_internal::bind_database(bind, handles);
         lua_internal::bind_create(bind);
         lua_internal::bind_read(bind);
         lua_internal::bind_update(bind);
@@ -119,18 +171,37 @@ struct Sandbox::Impl {
         lua_internal::bind_metadata(bind);
         lua_internal::bind_query(bind);
         lua_internal::bind_time_series(bind);
-        lua_internal::bind_csv_export(bind);
+        lua_internal::bind_csv_export(bind, handles);
         lua_internal::bind_csv_import(bind);
         lua_internal::bind_csv(lua, bind, handles);
         lua_internal::bind_json(bind);
         lua_internal::bind_xlsx(bind);
         auto binary_file_type = lua_internal::bind_binary(lua, bind, ns, handles);
-        lua_internal::bind_expression(lua, ns, binary_file_type, db);
+        lua_internal::bind_expression(lua, ns, binary_file_type, db, handles);
         lua["db"] = &db;
     }
 };
 
-Sandbox::Sandbox(Database& db) : impl_(std::make_unique<Impl>(db)) {}
+Sandbox::Sandbox(Database& db) : impl_(std::make_unique<Impl>(db)) {
+    namespace fs = std::filesystem;
+    auto& handles = impl_->handles;
+    handles.read_only = db.impl_->read_only;
+    // SQLite's absolute name for the file, fixed at open; db.path() may be relative to a working
+    // directory that has since changed. Empty for an in-memory database.
+    const char* file = sqlite3_db_filename(db.impl_->db, "main");
+    if (file != nullptr && *file != '\0') {
+        std::error_code ignored;
+        const fs::path named(file);
+        auto resolved = fs::weakly_canonical(named, ignored);
+        for (const auto& entry : {named, resolved.empty() ? named : resolved}) {
+            auto directory = fs::weakly_canonical(entry.parent_path(), ignored);
+            handles.database_entries.emplace_back(
+                directory.empty() ? entry.parent_path() : directory,
+                lua_internal::fold(entry.filename().string())
+            );
+        }
+    }
+}
 
 Sandbox::~Sandbox() = default;
 
@@ -160,8 +231,14 @@ std::string Sandbox::run(const std::string& script) {
         ~GcGuard() {
             impl.handles.close_open_handles();
             impl.lua.collect_garbage();
+            // Back to "every scope is the host's" for the finalizers lua_close runs later.
+            impl.handles.host_transaction = true;
+            impl.handles.host_dry_run = true;
         }
     } gc_guard{*impl_};
+
+    impl_->handles.host_dry_run = impl_->db.in_dry_run();
+    impl_->handles.host_transaction = impl_->db.in_transaction() && !impl_->handles.host_dry_run;
 
     // Text only, like load(): a precompiled chunk passed as the script would skip the same check.
     auto& lua = impl_->lua;

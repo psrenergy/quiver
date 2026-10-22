@@ -357,3 +357,121 @@ TEST_F(SandboxTest, HostDryRunWrapsWholeScript) {
     EXPECT_EQ(result, "[1]");
     EXPECT_TRUE(db.read_scalar_strings("Collection", "label").empty());
 }
+
+// --- a scope the host opened before run() belongs to the host ---
+
+TEST_F(SandboxTest, HostTransactionRefusesScriptCommitAndRollback) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+
+    quiver::Sandbox sandbox(db);
+
+    db.begin_transaction();
+    expect_sandbox_error(
+        sandbox,
+        R"(
+            db:create_element("Collection", { label = "Item 1", some_integer = 10 })
+            db:commit()
+        )",
+        "Cannot commit: the transaction was open before the script started, so it belongs to the host"
+    );
+    expect_sandbox_error(
+        sandbox,
+        "db:rollback()",
+        "Cannot rollback: the transaction was open before the script started, so it belongs to the host"
+    );
+    ASSERT_TRUE(db.in_transaction());
+    db.rollback();
+
+    EXPECT_TRUE(db.read_scalar_strings("Collection", "label").empty());
+}
+
+TEST_F(SandboxTest, HostDryRunRefusesScriptEndDryRun) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+
+    quiver::Sandbox sandbox(db);
+
+    db.begin_dry_run();
+    expect_sandbox_error(
+        sandbox,
+        R"(
+            db:end_dry_run()
+            db:create_element("Collection", { label = "Item 1", some_integer = 10 })
+        )",
+        "Cannot end_dry_run: the dry run was open before the script started, so it belongs to the host"
+    );
+    ASSERT_TRUE(db.in_dry_run());
+    db.end_dry_run();
+
+    EXPECT_TRUE(db.read_scalar_strings("Collection", "label").empty());
+}
+
+TEST_F(SandboxTest, HostDryRunStillAbsorbsExplicitTransactionControl) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+
+    quiver::Sandbox sandbox(db);
+
+    db.begin_dry_run();
+    auto result = sandbox.run(R"(
+        db:begin_transaction()
+        db:create_element("Collection", { label = "Item 1", some_integer = 10 })
+        db:commit()
+        db:rollback()
+        return db:read_element_ids("Collection")
+    )");
+    db.end_dry_run();
+
+    EXPECT_EQ(result, "[1]");
+    EXPECT_TRUE(db.read_scalar_strings("Collection", "label").empty());
+}
+
+TEST_F(SandboxTest, TransactionLeftOpenByEarlierRunBelongsToTheHost) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+
+    quiver::Sandbox sandbox(db);
+
+    sandbox.run("db:begin_transaction()");
+    expect_sandbox_error(sandbox, "db:commit()", "Cannot commit: the transaction was open before the script started");
+    ASSERT_TRUE(db.in_transaction());
+    db.rollback();
+}
+
+// Lua still runs after the last run(): lua_close calls every pending __gc finalizer when the
+// Sandbox is destroyed. Outside run(), every open scope is the host's.
+TEST_F(SandboxTest, FinalizerAtTeardownCannotEndAHostTransaction) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+
+    {
+        quiver::Sandbox sandbox(db);
+        sandbox.run(R"(
+            keep = setmetatable({}, { __gc = function()
+                pcall(db.commit, db)
+                pcall(db.rollback, db)
+            end })
+        )");
+        db.begin_transaction();
+        db.create_element("Collection", quiver::Element().set("label", "Item 1").set("some_integer", int64_t{10}));
+    }
+
+    ASSERT_TRUE(db.in_transaction());
+    db.rollback();
+    EXPECT_TRUE(db.read_scalar_strings("Collection", "label").empty());
+}
+
+TEST_F(SandboxTest, FinalizerAtTeardownCannotEndAHostDryRun) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    db.create_element("Configuration", quiver::Element().set("label", "Config"));
+
+    {
+        quiver::Sandbox sandbox(db);
+        sandbox.run("keep = setmetatable({}, { __gc = function() pcall(db.end_dry_run, db) end })");
+        db.begin_dry_run();
+    }
+
+    ASSERT_TRUE(db.in_dry_run());
+    db.end_dry_run();
+}

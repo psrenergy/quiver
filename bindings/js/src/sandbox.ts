@@ -18,8 +18,8 @@ export class Sandbox {
   /**
    * Runs a script and returns its return value encoded as JSON, or "" if it returned nothing.
    *
-   * To execute a script without keeping its writes, wrap the call in
-   * `db.beginDryRun()` / `db.endDryRun()`.
+   * To execute a script without keeping its writes, wrap the call in a dry run:
+   * `db.dryRun(() => sandbox.run(script))`.
    */
   run(script: string): string {
     this.ensureOpen();

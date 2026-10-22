@@ -95,6 +95,25 @@ describe("Database lifecycle", () => {
     }).toThrow(QuiverError);
   });
 
+  test("fromMigrations readOnly rejects a database behind its migrations", () => {
+    expect(() => {
+      Database.fromMigrations(":memory:", MIGRATIONS_PATH, { readOnly: true });
+    }).toThrow("a read-only open cannot apply them");
+  });
+
+  test("fromMigrations readOnly opens an up-to-date database file", () => {
+    const dir = makeTempDir();
+    const dbPath = join(dir, "test.db");
+    Database.fromMigrations(dbPath, MIGRATIONS_PATH).close();
+
+    const db = Database.fromMigrations(dbPath, MIGRATIONS_PATH, { readOnly: true });
+    try {
+      expect(db.currentVersion()).toBe(3);
+    } finally {
+      db.close();
+    }
+  });
+
   test("validateMigrations succeeds for a valid migrations directory", () => {
     // Should not throw
     Database.validateMigrations(MIGRATIONS_PATH);

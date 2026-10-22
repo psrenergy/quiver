@@ -29,7 +29,9 @@ public:
     /// returned nothing. Only the first returned value is encoded.
     ///
     /// To execute a script without keeping its writes, wrap the call in
-    /// Database::begin_dry_run / Database::end_dry_run.
+    /// Database::begin_dry_run / Database::end_dry_run. A transaction or dry run open when run()
+    /// starts belongs to the caller: the script's db:commit / db:rollback / db:end_dry_run refuse
+    /// to end it. On a database opened read-only, the script cannot write files.
     std::string run(const std::string& script);
 
 private:

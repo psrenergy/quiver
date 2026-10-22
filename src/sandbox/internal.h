@@ -12,6 +12,8 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <filesystem>
+#include <initializer_list>
 #include <iterator>
 #include <map>
 #include <memory>
@@ -61,6 +63,31 @@ struct RunHandles {
     // write registry until the Sandbox is destroyed. Pruned and cleared like open_writers.
     std::vector<std::weak_ptr<BinaryFile>> open_binary_files;
 
+    // Copied from the Database once, when the Sandbox is built: an open handle never changes mode.
+    bool read_only = false;
+
+    // Where the database file sits, as (canonical directory, case-folded file name): once as SQLite
+    // named it at open, which its journals extend with -journal/-wal/-shm, and once with symlinks
+    // resolved. Fixed when the Sandbox is built, so a later change of the working directory cannot
+    // point the write gate at another file. Empty for an in-memory database.
+    std::vector<std::pair<std::filesystem::path, std::string>> database_entries;
+
+    // Taken at each run()'s entry. A scope already open then belongs to the host (including one an
+    // earlier run() left open), so the Lua commit/rollback/end_dry_run refuse to end it. Outside
+    // run() both are true: the __gc finalizers lua_close runs when the Sandbox is destroyed are
+    // script code too, and every scope open then is the host's.
+    bool host_transaction = true;
+    bool host_dry_run = true;
+
+    // The write half of the file sandbox: resolve_sandbox_path, then refuse a read-only database
+    // and the database file or one of its journals. `written` are the suffixes the operation appends
+    // to `path` for the files it creates (".qvr"/".toml" for a binary file).
+    std::string resolve_write_path(
+        const Database& db,
+        const std::string& operation,
+        const std::string& path,
+        std::initializer_list<std::string_view> written = {""}
+    ) const;
     bool path_has_open_writer(const std::string& resolved_path) const;
     void add_writer(const std::string& resolved_path, const std::shared_ptr<quiver::csv_write::Writer>& writer);
     void add_binary_file(const std::shared_ptr<BinaryFile>& file);
@@ -347,7 +374,7 @@ struct GroupColumn {
     size_t count = 0;
 };
 
-void bind_database(sol::usertype<Database>& bind);
+void bind_database(sol::usertype<Database>& bind, RunHandles& handles);
 void bind_create(sol::usertype<Database>& bind);
 void bind_read(sol::usertype<Database>& bind);
 void bind_update(sol::usertype<Database>& bind);
@@ -356,7 +383,7 @@ void bind_describe(sol::usertype<Database>& bind);
 void bind_metadata(sol::usertype<Database>& bind);
 void bind_query(sol::usertype<Database>& bind);
 void bind_time_series(sol::usertype<Database>& bind);
-void bind_csv_export(sol::usertype<Database>& bind);
+void bind_csv_export(sol::usertype<Database>& bind, RunHandles& handles);
 void bind_csv_import(sol::usertype<Database>& bind);
 void bind_csv(sol::state& state, sol::usertype<Database>& bind, RunHandles& handles);
 void bind_json(sol::usertype<Database>& bind);
@@ -367,7 +394,13 @@ sol::usertype<BinaryFile> bind_binary(
     sol::table& ns,
     RunHandles& handles
 );
-void bind_expression(sol::state& state, sol::table& ns, sol::usertype<BinaryFile>& binary_file_type, Database& db);
+void bind_expression(
+    sol::state& state,
+    sol::table& ns,
+    sol::usertype<BinaryFile>& binary_file_type,
+    Database& db,
+    RunHandles& handles
+);
 
 std::string encode_return_json(const sol::object& value);
 

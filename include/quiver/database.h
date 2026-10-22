@@ -27,6 +27,8 @@ public:
     Database(Database&& other) noexcept;
     Database& operator=(Database&& other) noexcept;
 
+    // Applies pending migrations and loads the ui/ sidecar. With options.read_only it applies
+    // nothing and creates nothing: a database with pending migrations is refused.
     static Database from_migrations(
         const std::string& db_path,
         const std::string& migrations_path,
@@ -352,6 +354,10 @@ public:
 private:
     struct Impl;
     std::unique_ptr<Impl> impl_;
+
+    // Reads whether the handle was opened read-only, which its Lua file sandbox enforces; a public
+    // accessor would have to be bound in every layer for a policy that lives only in the Sandbox.
+    friend class Sandbox;
 
     // Internal methods
     void set_version(int64_t version);
