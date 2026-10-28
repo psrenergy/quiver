@@ -269,13 +269,13 @@ export class Database {
     collection: string,
     group: string,
     id: number,
-    row: Record<string, number | bigint | string | boolean>,
+    row: Record<string, number | bigint | string | boolean | null>,
   ) => void;
   declare upsertTimeSeriesRowByLabel: (
     collection: string,
     group: string,
     label: string,
-    row: Record<string, number | bigint | string | boolean>,
+    row: Record<string, number | bigint | string | boolean | null>,
   ) => void;
   declare hasTimeSeriesFiles: (collection: string) => boolean;
   declare listTimeSeriesFilesColumns: (collection: string) => string[];

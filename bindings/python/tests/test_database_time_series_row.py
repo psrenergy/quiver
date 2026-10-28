@@ -98,6 +98,30 @@ class TestUpsertTimeSeriesRow:
         assert result["load"] == [500.0]
         assert result["flag"] == [0]
 
+    def test_upsert_time_series_row_patch_preserves_unnamed_column(self, multi_dim_ts_db: Database) -> None:
+        """On a PK conflict an unnamed value column keeps its value instead of being nulled."""
+        eid = multi_dim_ts_db.create_element("Resource", label="R1")
+        multi_dim_ts_db.upsert_time_series_row(
+            "Resource", "load", eid, date_time="2024-01-01", block=1, load=500.0, flag=1
+        )
+        multi_dim_ts_db.upsert_time_series_row("Resource", "load", eid, date_time="2024-01-01", block=1, load=99.0)
+
+        result = multi_dim_ts_db.read_time_series_group("Resource", "load", eid)
+        assert result["load"] == [99.0]
+        assert result["flag"] == [1]
+
+    def test_upsert_time_series_row_none_clears_named_column(self, multi_dim_ts_db: Database) -> None:
+        """A named column with None writes an explicit SQL NULL."""
+        eid = multi_dim_ts_db.create_element("Resource", label="R1")
+        multi_dim_ts_db.upsert_time_series_row(
+            "Resource", "load", eid, date_time="2024-01-01", block=1, load=500.0, flag=1
+        )
+        multi_dim_ts_db.upsert_time_series_row("Resource", "load", eid, date_time="2024-01-01", block=1, flag=None)
+
+        result = multi_dim_ts_db.read_time_series_group("Resource", "load", eid)
+        assert result["load"] == [500.0]
+        assert result["flag"] == [None]
+
     def test_upsert_time_series_row_int_for_real_and_omitted_columns(self, multi_dim_ts_db: Database) -> None:
         """An int is accepted for a REAL column; a value column left out of kwargs is stored as NULL."""
         eid = multi_dim_ts_db.create_element("Resource", label="R1")

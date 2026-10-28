@@ -338,11 +338,10 @@ Notes:
   \`{ x = nil }\` is identical to \`{}\`; an update/create table that ends up with no attributes
   **throws** (\`...must have at least one scalar attribute\` on create, \`...at least one attribute
   to update\` on update). To leave a column unchanged, omit the key — you cannot set a scalar to
-  NULL via the element table — nor via \`update_time_series_files\`, keyed by column name too,
-  where an omitted column keeps its current value. (\`nil\` → NULL is accepted by
-  \`update_relation\` and in query params (not a trailing one), and as a cell in the group writers;
-  \`upsert_time_series_row\` replaces the whole row, so a column you leave out (or set to \`nil\`,
-  the same thing) is cleared — see Time series.)
+  NULL via the element table — nor via \`update_time_series_files\` or
+  \`upsert_time_series_row\`, both keyed by column name too, where an omitted column keeps its
+  current value. (\`nil\` → NULL is accepted by \`update_relation\` and in query params (not a
+  trailing one), and as a cell in the group writers, \`update_time_series_group\` included.)
 - **\`update_relation\` points one scalar foreign-key relation at another element**, named by the
   target's label. The column is derived from the naming convention —
   \`lowercase(collection_to) .. "_" .. relation_type\`, so
@@ -536,10 +535,10 @@ Each value of the top-level table must be an **array**, not a scalar.
 - The element id must exist; the \`_by_label\` form takes a label in its place, with
   \`update_element_by_label\`'s resolution and miss semantics. Every rule above applies to both.
 
-### Append/upsert a single row (\`upsert_time_series_row\` — ROW-oriented, the one exception)
+### Append/patch a single row (\`upsert_time_series_row\` — ROW-oriented, the one exception)
 
 Unlike the column-oriented group update above, this takes **one row table of scalars** (dimension
-column + value column(s)), and upserts that single row:
+column + value column(s)), and inserts or patches that single row:
 
 \`\`\`lua
 db:upsert_time_series_row("Items", "data", id, {
@@ -553,12 +552,15 @@ db:upsert_time_series_row_by_label("Items", "data", "Item 1", {
 })
 \`\`\`
 
+Only the columns you name are written. If a row with the same dimension key already exists,
+its other value columns keep their current values (naming nothing but the dimension columns
+is a no-op); if it does not, there is nothing to keep, so the unnamed columns take their
+DEFAULT (NULL if none) — name every \`NOT NULL\` column without a DEFAULT, or the call throws.
+Since \`{ x = nil }\` is \`{}\` in Lua, a column cannot be set to NULL through this call —
+rewrite the group with \`update_time_series_group\`, where a \`nil\` cell does write NULL.
+
 The element id must exist; the \`_by_label\` form takes a label in its place, with
 \`update_element_by_label\`'s resolution and miss semantics.
-
-An existing row with the same dimension key is **replaced whole**: every value column you leave
-out (or set to \`nil\`) is reset to NULL (or its DEFAULT). To change one value, pass every value
-column of the row.
 
 ---
 

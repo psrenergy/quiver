@@ -5,6 +5,27 @@ All notable changes to Quiver are recorded here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Entries that require
 callers to change something are prefixed **BREAKING** and say what to do.
 
+## [0.13.6] — unreleased
+
+### Changed
+
+- **BREAKING — `upsert_time_series_row()` patches a row instead of replacing it.** It used
+  `INSERT OR REPLACE`, so every value column you did not name was reset to NULL. Now only the
+  columns you name are written; an unnamed column keeps its value, and a named null still clears
+  it. With no existing row the unnamed columns take their DEFAULT (NULL if none) as before, so
+  name every `NOT NULL` column without a DEFAULT when the row may not exist yet. Applies to
+  `upsert_time_series_row_by_label()` too.
+
+  *Adapt:* if you relied on omission to clear a column, name it with a null value (`nothing` /
+  `None` / `null`; through the C API, a NULL `column_data[c]`). Julia, Python, Dart and JS now
+  accept that null in both upserts; they used to reject it. **Lua cannot do this** —
+  `{ x = nil }` is `{}`, so omission now means *preserve*; clear it with
+  `update_time_series_group`, where a `nil` cell writes NULL.
+
+  Also: a row is now addressed by its primary key only, so a second UNIQUE constraint on a
+  time-series table raises instead of replacing; and a row naming only dimension columns leaves
+  an existing row untouched (it used to null every value column, or raise on a `NOT NULL` one).
+
 ## [0.13.4] — unreleased
 
 ### Changed
@@ -1506,6 +1527,7 @@ are functionally identical to 0.10.0.
   `read_time_series_group` emits for a NULL STRING cell — so feeding a read result back with the
   mask stripped was UB. A NULL entry, or a NULL per-column data pointer, is now SQL NULL.
 
+[0.13.6]: https://github.com/psrenergy/quiver/compare/v0.13.5...v0.13.6
 [0.13.4]: https://github.com/psrenergy/quiver/compare/v0.13.3...v0.13.4
 [0.13.3]: https://github.com/psrenergy/quiver/compare/v0.13.2...v0.13.3
 [0.13.2]: https://github.com/psrenergy/quiver/compare/v0.13.1...v0.13.2

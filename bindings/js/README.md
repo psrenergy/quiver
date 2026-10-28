@@ -143,7 +143,7 @@ bun run example.ts
   label
 - `readTimeSeriesRow(collection, group, attribute, dateTime)` -- One value per element: the last
   non-null value at or before `dateTime`, or `null` if there is none
-- `upsertTimeSeriesRow(collection, group, id, row)` -- Insert or replace one row, keyed by its
+- `upsertTimeSeriesRow(collection, group, id, row)` -- Insert or patch one row, keyed by its
   dimension value
 - `upsertTimeSeriesRowByLabel(collection, group, label, row)` -- Same, addressing the element by label
 - `hasTimeSeriesFiles(collection)` -- Check whether the collection has a time series files table

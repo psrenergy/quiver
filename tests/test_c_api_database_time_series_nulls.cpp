@@ -594,6 +594,90 @@ TEST(DatabaseCApi, UpsertTimeSeriesRowNullStringCell) {
     quiver_database_close(db);
 }
 
+TEST(DatabaseCApi, UpsertTimeSeriesRowNullDataWritesNullAndPatchPreservesUnnamed) {
+    int64_t id = 0;
+    quiver_database_t* db = open_nullable_ts_db(&id);
+
+    {
+        const char* names[] = {"date_time", "temperature", "counter"};
+        int types[] = {QUIVER_DATA_TYPE_STRING, QUIVER_DATA_TYPE_FLOAT, QUIVER_DATA_TYPE_INTEGER};
+        const char* dts[] = {"2024-01-01"};
+        double temps[] = {20.0};
+        int64_t counters[] = {5};
+        const void* data[] = {dts, temps, counters};
+        ASSERT_EQ(
+            quiver_database_upsert_time_series_row(db, "Sensor", "readings", id, names, types, data, 3),
+            QUIVER_OK
+        );
+    }
+
+    // Same PK, naming only `temperature`: the unnamed `counter` must keep its value.
+    {
+        const char* names[] = {"date_time", "temperature"};
+        int types[] = {QUIVER_DATA_TYPE_STRING, QUIVER_DATA_TYPE_FLOAT};
+        const char* dts[] = {"2024-01-01"};
+        double temps[] = {21.5};
+        const void* data[] = {dts, temps};
+        ASSERT_EQ(
+            quiver_database_upsert_time_series_row(db, "Sensor", "readings", id, names, types, data, 2),
+            QUIVER_OK
+        );
+    }
+
+    // Same PK, naming `counter` with a NULL data pointer: an explicit NULL clears that column.
+    // `temperature` (unnamed) survives.
+    {
+        const char* names[] = {"date_time", "counter"};
+        int types[] = {QUIVER_DATA_TYPE_STRING, QUIVER_DATA_TYPE_INTEGER};
+        const char* dts[] = {"2024-01-01"};
+        const void* data[] = {dts, nullptr};
+        ASSERT_EQ(
+            quiver_database_upsert_time_series_row(db, "Sensor", "readings", id, names, types, data, 2),
+            QUIVER_OK
+        );
+    }
+
+    char** out_col_names = nullptr;
+    int* out_col_types = nullptr;
+    void** out_col_data = nullptr;
+    uint8_t** out_col_has_value = nullptr;
+    size_t col_count = 0;
+    size_t row_count = 0;
+    ASSERT_EQ(
+        quiver_database_read_time_series_group(
+            db,
+            "Sensor",
+            "readings",
+            id,
+            &out_col_names,
+            &out_col_types,
+            &out_col_data,
+            &out_col_has_value,
+            &col_count,
+            &row_count
+        ),
+        QUIVER_OK
+    );
+    ASSERT_EQ(row_count, 1);
+    ASSERT_EQ(col_count, 4);
+
+    // temperature (col 1) took the second write's value and survived the third.
+    EXPECT_EQ(out_col_has_value[1][0], 1);
+    EXPECT_DOUBLE_EQ(static_cast<double*>(out_col_data[1])[0], 21.5);
+    // counter (col 2) was cleared by the NULL data pointer, not left at 5.
+    EXPECT_EQ(out_col_has_value[2][0], 0);
+
+    quiver_database_free_time_series_data(
+        out_col_names,
+        out_col_types,
+        out_col_data,
+        out_col_has_value,
+        col_count,
+        row_count
+    );
+    quiver_database_close(db);
+}
+
 TEST(DatabaseCApi, FreeTimeSeriesDataNull) {
     // Free with all NULLs and 0 counts - should succeed without crashing
     auto err = quiver_database_free_time_series_data(nullptr, nullptr, nullptr, nullptr, 0, 0);

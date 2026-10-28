@@ -273,9 +273,13 @@ public:
         const std::vector<std::map<std::string, Value>>& rows
     );
 
-    // Add (or upsert) a single time series row. Inserts a new row identified by id +
-    // every dimension column from the schema PK; if a row with the same PK already
-    // exists, value columns are overwritten. Validation matches update_time_series_group:
+    // Add (or patch) a single time series row. Inserts a new row identified by id +
+    // every dimension column from the schema PK; if a row with the same PK already exists,
+    // only the *named* value columns are written - one named with a null Value is cleared,
+    // one the caller left out keeps its current value, and a row naming nothing but the
+    // dimension columns has nothing to write and is a no-op. A new row has nothing to
+    // preserve, so its unnamed columns take the column DEFAULT (NULL if none). A row is addressed
+    // by its primary key only. Validation matches update_time_series_group:
     // every dimension column must be present, unknown columns or type mismatches throw
     // "Cannot upsert_time_series_row: ..." (canonical Pattern 1). Participates in the
     // existing nest-aware TransactionGuard.

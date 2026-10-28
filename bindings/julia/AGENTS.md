@@ -115,9 +115,10 @@ Project.toml      # Deps: Artifacts, CEnum, Dates, Libdl; julia 1.11 compat
 - **One marshaller for every row upsert**: `_upsert_row_columns(db, upsert, ...)`
   (`src/database_update.jl`) is its row-shaped sibling — every kwarg is a scalar wrapped in a
   1-element typed array — so `upsert_time_series_row!` and `upsert_time_series_row_by_label!` are
-  one-line wrappers over it, with the same `key::Union{Int64, String}` note. Kept separate from
-  `_update_group_columns` because the row-upsert C signature carries no per-cell NULL mask, and
-  that helper writes a zeroed placeholder for a masked cell.
+  one-line wrappers over it, with the same `key::Union{Int64, String}` note. `nothing` is sent as
+  a NULL data pointer, which the C API writes as an explicit SQL NULL (an unnamed kwarg keeps its
+  current value). Kept separate from `_update_group_columns` because the row-upsert C signature
+  carries no per-cell NULL mask, and that helper writes a zeroed placeholder for a masked cell.
 - **The whole-group readers call the native C readers**: `read_vector_group_by_id` /
   `read_set_group_by_id` are one-line wrappers over `_read_group_rows(db, read_group, ...)`
   (`src/database_read.jl`), which takes the C entry point as `_update_group_columns` does, decodes

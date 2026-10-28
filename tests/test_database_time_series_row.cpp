@@ -641,6 +641,137 @@ TEST(Database, UpsertTimeSeriesRowPartialValueColumns) {
     EXPECT_EQ(std::get<int64_t>(rows[1]["flag"]), 5);
 }
 
+namespace {
+
+// One Resource with a single (2024-01-01, block 1) row holding both value columns.
+struct PatchFixture {
+    quiver::Database db;
+    int64_t id;
+
+    PatchFixture()
+        : db(quiver::Database::from_schema(
+              ":memory:",
+              VALID_SCHEMA("multi_dim_time_series.sql"),
+              {.read_only = false, .console_level = quiver::LogLevel::Off}
+          )) {
+        db.create_element("Configuration", quiver::Element().set("label", std::string("Test Config")));
+        id = db.create_element("Resource", quiver::Element().set("label", std::string("Resource 1")));
+        db.upsert_time_series_row(
+            "Resource",
+            "load",
+            id,
+            {{"date_time", std::string("2024-01-01")}, {"block", int64_t{1}}, {"load", 10.0}, {"flag", int64_t{1}}}
+        );
+    }
+};
+
+}  // namespace
+
+TEST(Database, UpsertTimeSeriesRowConflictPatchPreservesUnnamedColumn) {
+    PatchFixture f;
+
+    // Conflict on the same PK naming only `load` - `flag` must survive, not be reset to NULL.
+    f.db.upsert_time_series_row(
+        "Resource",
+        "load",
+        f.id,
+        {{"date_time", std::string("2024-01-01")}, {"block", int64_t{1}}, {"load", 99.0}}
+    );
+
+    auto rows = f.db.read_time_series_group("Resource", "load", f.id);
+    ASSERT_EQ(rows.size(), 1);
+    EXPECT_DOUBLE_EQ(std::get<double>(rows[0]["load"]), 99.0);
+    EXPECT_EQ(std::get<int64_t>(rows[0]["flag"]), 1);
+}
+
+TEST(Database, UpsertTimeSeriesRowConflictExplicitNullClearsNamedColumn) {
+    PatchFixture f;
+
+    // A *named* column always takes the caller's value, so a null Value clears it - while the
+    // unnamed `load` is untouched.
+    f.db.upsert_time_series_row(
+        "Resource",
+        "load",
+        f.id,
+        {{"date_time", std::string("2024-01-01")}, {"block", int64_t{1}}, {"flag", quiver::Value{nullptr}}}
+    );
+
+    auto rows = f.db.read_time_series_group("Resource", "load", f.id);
+    ASSERT_EQ(rows.size(), 1);
+    EXPECT_DOUBLE_EQ(std::get<double>(rows[0]["load"]), 10.0);
+    EXPECT_TRUE(std::holds_alternative<std::nullptr_t>(rows[0]["flag"]));
+}
+
+TEST(Database, UpsertTimeSeriesRowConflictDimensionOnlyIsNoOp) {
+    PatchFixture f;
+
+    // Nothing but dimension columns leaves nothing to write, and the row already exists: a
+    // harmless no-op rather than a throw.
+    f.db.upsert_time_series_row(
+        "Resource",
+        "load",
+        f.id,
+        {{"date_time", std::string("2024-01-01")}, {"block", int64_t{1}}}
+    );
+
+    auto rows = f.db.read_time_series_group("Resource", "load", f.id);
+    ASSERT_EQ(rows.size(), 1);
+    EXPECT_DOUBLE_EQ(std::get<double>(rows[0]["load"]), 10.0);
+    EXPECT_EQ(std::get<int64_t>(rows[0]["flag"]), 1);
+}
+
+TEST(Database, UpsertTimeSeriesRowConflictPatchPreservesNotNullColumn) {
+    auto db = quiver::Database::from_schema(
+        ":memory:",
+        VALID_SCHEMA("mixed_time_series.sql"),
+        {.read_only = false, .console_level = quiver::LogLevel::Off}
+    );
+    db.create_element("Configuration", quiver::Element().set("label", std::string("Test Config")));
+    auto id = db.create_element("Sensor", quiver::Element().set("label", std::string("Sensor 1")));
+    db.upsert_time_series_row(
+        "Sensor",
+        "readings",
+        id,
+        {{"date_time", std::string("2024-01-01")},
+         {"temperature", 20.0},
+         {"humidity", int64_t{60}},
+         {"status", std::string("ok")}}
+    );
+
+    // Every value column here is NOT NULL, so the patch has to address the existing row: a
+    // statement that proposes a whole row is rejected before SQLite ever sees the conflict.
+    db.upsert_time_series_row(
+        "Sensor",
+        "readings",
+        id,
+        {{"date_time", std::string("2024-01-01")}, {"temperature", 25.0}}
+    );
+
+    auto rows = db.read_time_series_group("Sensor", "readings", id);
+    ASSERT_EQ(rows.size(), 1);
+    EXPECT_DOUBLE_EQ(std::get<double>(rows[0]["temperature"]), 25.0);
+    EXPECT_EQ(std::get<int64_t>(rows[0]["humidity"]), 60);
+    EXPECT_EQ(std::get<std::string>(rows[0]["status"]), "ok");
+}
+
+TEST(Database, UpsertTimeSeriesRowDimensionOnlyOnAFreshKeyInsertsTheRow) {
+    PatchFixture f;
+
+    // No row to leave alone at this key, so the dimension-only row is created with every value
+    // column at its DEFAULT.
+    f.db.upsert_time_series_row(
+        "Resource",
+        "load",
+        f.id,
+        {{"date_time", std::string("2024-01-02")}, {"block", int64_t{1}}}
+    );
+
+    auto rows = f.db.read_time_series_group("Resource", "load", f.id);
+    ASSERT_EQ(rows.size(), 2);
+    EXPECT_TRUE(std::holds_alternative<std::nullptr_t>(rows[1]["load"]));
+    EXPECT_TRUE(std::holds_alternative<std::nullptr_t>(rows[1]["flag"]));
+}
+
 TEST(Database, UpsertTimeSeriesRowErrors) {
     auto db = quiver::Database::from_schema(
         ":memory:",

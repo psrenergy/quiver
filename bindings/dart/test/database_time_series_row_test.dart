@@ -86,6 +86,59 @@ void main() {
       }
     });
 
+    test('conflict patches only the named columns', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'multi_dim_time_series.sql'),
+      );
+      try {
+        db.createElement('Configuration', {'label': 'Test Config'});
+        final id = db.createElement('Resource', {'label': 'Resource 1'});
+
+        db.upsertTimeSeriesRow('Resource', 'load', id, {
+          'date_time': '2024-01-01T00:00:00',
+          'block': 1,
+          'load': 42.5,
+          'flag': 1,
+        });
+
+        // Naming only `load`: the unnamed `flag` keeps its value.
+        db.upsertTimeSeriesRow('Resource', 'load', id, {
+          'date_time': '2024-01-01T00:00:00',
+          'block': 1,
+          'load': 99.0,
+        });
+
+        var result = db.readTimeSeriesGroup('Resource', 'load', id);
+        expect(result['load']![0], equals(99.0));
+        expect(result['flag']![0], equals(1));
+
+        // Naming `flag` as null writes an explicit SQL NULL; `load` survives.
+        db.upsertTimeSeriesRow('Resource', 'load', id, {
+          'date_time': '2024-01-01T00:00:00',
+          'block': 1,
+          'flag': null,
+        });
+
+        result = db.readTimeSeriesGroup('Resource', 'load', id);
+        expect(result['load']![0], equals(99.0));
+        expect(result['flag']![0], isNull);
+
+        // A new row has nothing to preserve: the unnamed `flag` is NULL.
+        db.upsertTimeSeriesRow('Resource', 'load', id, {
+          'date_time': '2024-01-02T00:00:00',
+          'block': 1,
+          'load': 1.0,
+        });
+
+        result = db.readTimeSeriesGroup('Resource', 'load', id);
+        expect(result['load']![1], equals(1.0));
+        expect(result['flag']![1], isNull);
+      } finally {
+        db.close();
+      }
+    });
+
     test('upsertTimeSeriesRowByLabel writes only the labelled element', () {
       final db = Database.fromSchema(
         ':memory:',

@@ -549,14 +549,18 @@ QUIVER_C_API quiver_error_t quiver_database_update_time_series_group_by_label(
     size_t row_count
 );
 
-// Add (or upsert) a single time series row with multi-column typed data
+// Add (or patch) a single time series row with multi-column typed data
 // column_names[]: column names (must include every dimension column from the schema PK)
 // column_types[]: quiver_data_type_t per column
 // column_data[c]: pointer to one typed value (int64_t* for INTEGER, double* for FLOAT, const char** for
-// STRING/DATE_TIME) Upserts on the time-series PK (id + every dimension column); calling twice with the same PK
-// overwrites value columns Errors surface canonical "Cannot upsert_time_series_row: ..." messages via
-// quiver_get_last_error
-// A NULL column_data[c], or a NULL char* entry for a string column, inserts SQL NULL
+// STRING/DATE_TIME)
+// A named column is written as SQL NULL when its column_data[c] is NULL, or (for a string column)
+// when its char* entry is NULL - that is how a caller clears one
+// Addressed by the time-series PK (id + every dimension column). On an existing row only the
+// *named* columns are written: an unnamed one keeps its current value, a named one takes the
+// caller's value (explicit NULL included), and naming only dimension columns leaves the row
+// alone. A new row has nothing to preserve, so its unnamed columns take their DEFAULT (NULL if none)
+// Errors surface canonical "Cannot upsert_time_series_row: ..." messages via quiver_get_last_error
 // The _by_label form takes a label in place of the id and reports
 // "Element not found: label '...' in collection '...'" on a miss.
 QUIVER_C_API quiver_error_t quiver_database_upsert_time_series_row(
