@@ -151,7 +151,7 @@ TEST_F(BinaryCApiFixture, WriteReadRoundTrip) {
         EXPECT_DOUBLE_EQ(out_data[0], 1.5);
         EXPECT_DOUBLE_EQ(out_data[1], 2.5);
 
-        quiver_binary_file_free_float_array(out_data);
+        quiver_database_free_float_array(out_data);
         quiver_binary_file_close(binary_file);
     }
 }
@@ -188,12 +188,12 @@ TEST_F(BinaryCApiFixture, WriteReadMultiplePositions) {
         int64_t dims1[] = {1, 1};
         quiver_binary_file_read(binary_file, dim_names, dims1, 2, 0, &out_data, &out_count);
         EXPECT_DOUBLE_EQ(out_data[0], 1.0);
-        quiver_binary_file_free_float_array(out_data);
+        quiver_database_free_float_array(out_data);
 
         int64_t dims2[] = {2, 2};
         quiver_binary_file_read(binary_file, dim_names, dims2, 2, 0, &out_data, &out_count);
         EXPECT_DOUBLE_EQ(out_data[0], 3.0);
-        quiver_binary_file_free_float_array(out_data);
+        quiver_database_free_float_array(out_data);
 
         quiver_binary_file_close(binary_file);
     }
@@ -222,7 +222,7 @@ TEST_F(BinaryCApiFixture, GetMetadata) {
     char* unit = nullptr;
     quiver_binary_metadata_get_unit(read_md, &unit);
     EXPECT_STREQ(unit, "MW");
-    quiver_binary_metadata_free_string(unit);
+    quiver_database_free_string(unit);
 
     size_t dim_count = 0;
     quiver_binary_metadata_get_dimension_count(read_md, &dim_count);
@@ -240,7 +240,7 @@ TEST_F(BinaryCApiFixture, GetFilePath) {
     char* file_path = nullptr;
     EXPECT_EQ(quiver_binary_file_get_file_path(binary_file, &file_path), QUIVER_OK);
     EXPECT_STREQ(file_path, path.c_str());
-    quiver_binary_file_free_string(file_path);
+    quiver_database_free_string(file_path);
 
     quiver_binary_file_close(binary_file);
     quiver_binary_metadata_free(md);
@@ -377,7 +377,7 @@ TEST_F(BinaryCApiFixture, WriteReadSpecialFloatValues) {
         EXPECT_TRUE(std::isinf(out_data[0]) && out_data[0] > 0);
         EXPECT_TRUE(std::isinf(out_data[1]) && out_data[1] < 0);
 
-        quiver_binary_file_free_float_array(out_data);
+        quiver_database_free_float_array(out_data);
         quiver_binary_file_close(binary_file);
     }
 }
@@ -411,7 +411,7 @@ TEST_F(BinaryCApiFixture, WriteReadLargeSmallValues) {
         EXPECT_DOUBLE_EQ(out_data[0], std::numeric_limits<double>::max());
         EXPECT_DOUBLE_EQ(out_data[1], std::numeric_limits<double>::min());
 
-        quiver_binary_file_free_float_array(out_data);
+        quiver_database_free_float_array(out_data);
         quiver_binary_file_close(binary_file);
     }
 }
@@ -421,7 +421,7 @@ TEST_F(BinaryCApiFixture, WriteReadLargeSmallValues) {
 // ============================================================================
 
 TEST_F(BinaryCApiFixture, FreeFloatArrayNull) {
-    EXPECT_EQ(quiver_binary_file_free_float_array(nullptr), QUIVER_OK);
+    EXPECT_EQ(quiver_database_free_float_array(nullptr), QUIVER_OK);
 }
 
 // ============================================================================
@@ -498,7 +498,7 @@ TEST_F(BinaryCApiFixture, HourlyUnderMonthlyFromNonMidnightStart) {
         if (out_count == 1u) {
             EXPECT_DOUBLE_EQ(out_data[0], static_cast<double>(cell[0] * 1000 + cell[1]));
         }
-        quiver_binary_file_free_float_array(out_data);
+        quiver_database_free_float_array(out_data);
     }
     quiver_binary_file_close(reader);
 }
@@ -560,7 +560,7 @@ TEST_F(BinaryCApiFixture, ReadAllowNulls) {
     ASSERT_EQ(out_count, 2u);
     EXPECT_TRUE(std::isnan(out_data[0]));
     EXPECT_TRUE(std::isnan(out_data[1]));
-    quiver_binary_file_free_float_array(out_data);
+    quiver_database_free_float_array(out_data);
 
     quiver_binary_file_close(binary_file);
 }

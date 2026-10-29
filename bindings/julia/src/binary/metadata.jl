@@ -63,7 +63,7 @@ function get_unit(md::Metadata)
     out = Ref{Ptr{Cchar}}(C_NULL)
     check(C.quiver_binary_metadata_get_unit(md.ptr, out))
     result = unsafe_string(out[])
-    C.quiver_binary_metadata_free_string(out[])
+    C.quiver_database_free_string(out[])
     return result
 end
 
@@ -71,7 +71,7 @@ function get_version(md::Metadata)
     out = Ref{Ptr{Cchar}}(C_NULL)
     check(C.quiver_binary_metadata_get_version(md.ptr, out))
     result = unsafe_string(out[])
-    C.quiver_binary_metadata_free_string(out[])
+    C.quiver_database_free_string(out[])
     return result
 end
 
@@ -79,7 +79,7 @@ function get_initial_datetime(md::Metadata)
     out = Ref{Ptr{Cchar}}(C_NULL)
     check(C.quiver_binary_metadata_get_initial_datetime(md.ptr, out))
     result = unsafe_string(out[])
-    C.quiver_binary_metadata_free_string(out[])
+    C.quiver_database_free_string(out[])
     return result
 end
 
@@ -95,7 +95,7 @@ function get_labels(md::Metadata)
 
     ptrs = unsafe_wrap(Array, out[], count)
     result = [unsafe_string(ptr) for ptr in ptrs]
-    C.quiver_binary_metadata_free_string_array(out[], count)
+    C.quiver_database_free_string_array(out[], count)
     return result
 end
 
@@ -137,6 +137,6 @@ function to_toml(md::Metadata)
     out = Ref{Ptr{Cchar}}(C_NULL)
     check(C.quiver_binary_metadata_to_toml(md.ptr, out))
     result = unsafe_string(out[])
-    C.quiver_binary_metadata_free_string(out[])
+    C.quiver_database_free_string(out[])
     return result
 end

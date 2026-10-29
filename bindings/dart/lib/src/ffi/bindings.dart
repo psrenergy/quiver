@@ -3379,19 +3379,6 @@ class QuiverDatabaseBindings {
       .asFunction<
         int Function(ffi.Pointer<quiver_sandbox_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Pointer<ffi.Char>>)
       >();
-
-  int quiver_sandbox_free_string(
-    ffi.Pointer<ffi.Char> str,
-  ) {
-    return _quiver_sandbox_free_string(
-      str,
-    );
-  }
-
-  late final _quiver_sandbox_free_stringPtr =
-      _lookup<ffi.NativeFunction<ffi.UnsignedInt Function(ffi.Pointer<ffi.Char>)>>('quiver_sandbox_free_string');
-  late final _quiver_sandbox_free_string = _quiver_sandbox_free_stringPtr
-      .asFunction<int Function(ffi.Pointer<ffi.Char>)>();
 }
 
 sealed class quiver_error_t {

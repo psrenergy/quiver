@@ -561,10 +561,6 @@ function quiver_sandbox_run(sandbox, script, out_result)
     @ccall libquiver_c.quiver_sandbox_run(sandbox::Ptr{quiver_sandbox_t}, script::Ptr{Cchar}, out_result::Ptr{Ptr{Cchar}})::quiver_error_t
 end
 
-function quiver_sandbox_free_string(str)
-    @ccall libquiver_c.quiver_sandbox_free_string(str::Ptr{Cchar})::quiver_error_t
-end
-
 @cenum quiver_time_frequency_t::UInt32 begin
     QUIVER_TIME_FREQUENCY_YEARLY = 0
     QUIVER_TIME_FREQUENCY_MONTHLY = 1
@@ -634,14 +630,6 @@ function quiver_binary_metadata_get_dimension(md, index, out)
     @ccall libquiver_c.quiver_binary_metadata_get_dimension(md::Ptr{quiver_binary_metadata_t}, index::Csize_t, out::Ptr{quiver_dimension_t})::quiver_error_t
 end
 
-function quiver_binary_metadata_free_string(str)
-    @ccall libquiver_c.quiver_binary_metadata_free_string(str::Ptr{Cchar})::quiver_error_t
-end
-
-function quiver_binary_metadata_free_string_array(strs, count)
-    @ccall libquiver_c.quiver_binary_metadata_free_string_array(strs::Ptr{Ptr{Cchar}}, count::Csize_t)::quiver_error_t
-end
-
 function quiver_binary_metadata_free_dimension(dim)
     @ccall libquiver_c.quiver_binary_metadata_free_dimension(dim::Ptr{quiver_dimension_t})::quiver_error_t
 end
@@ -672,14 +660,6 @@ end
 
 function quiver_binary_file_get_file_path(binary_file, out)
     @ccall libquiver_c.quiver_binary_file_get_file_path(binary_file::Ptr{quiver_binary_file_t}, out::Ptr{Ptr{Cchar}})::quiver_error_t
-end
-
-function quiver_binary_file_free_string(str)
-    @ccall libquiver_c.quiver_binary_file_free_string(str::Ptr{Cchar})::quiver_error_t
-end
-
-function quiver_binary_file_free_float_array(data)
-    @ccall libquiver_c.quiver_binary_file_free_float_array(data::Ptr{Cdouble})::quiver_error_t
 end
 
 function quiver_csv_converter_bin_to_csv(path, aggregate_time_dimensions)

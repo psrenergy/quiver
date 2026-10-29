@@ -56,7 +56,7 @@ function read(file::File; allow_nulls::Bool = false, dims...)
     end
 
     result = [unsafe_load(out_data[], i) for i in 1:count]
-    C.quiver_binary_file_free_float_array(out_data[])
+    C.quiver_database_free_float_array(out_data[])
     return result
 end
 
@@ -87,6 +87,6 @@ function get_file_path(file::File)
     out = Ref{Ptr{Cchar}}(C_NULL)
     check(C.quiver_binary_file_get_file_path(file.ptr, out))
     result = unsafe_string(out[])
-    C.quiver_binary_file_free_string(out[])
+    C.quiver_database_free_string(out[])
     return result
 end

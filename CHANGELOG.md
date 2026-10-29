@@ -74,6 +74,13 @@ callers to change something are prefixed **BREAKING** and say what to do.
   `quiver_binary_file_open` are gone from the C API, and `Binary.File(path)` and `Binary.open!`
   from Julia. *Adapt:* open in one call with `quiver_binary_file_open_file(path, mode, md, &out)`
   in C or `Binary.open_file(path; mode, metadata)` in Julia.
+- **BREAKING (C API only) — the per-entity copies of the string and array frees.**
+  `quiver_binary_file_free_string`, `quiver_binary_file_free_float_array`,
+  `quiver_binary_metadata_free_string`, `quiver_binary_metadata_free_string_array` and
+  `quiver_sandbox_free_string` are gone; each did exactly what its `quiver_database_free_*`
+  counterpart does. *Adapt:* free those results with `quiver_database_free_string`,
+  `quiver_database_free_string_array` or `quiver_database_free_float_array` (declared in
+  `database.h`, which `binary/binary_metadata.h` now includes).
 
 ### Fixed
 

@@ -399,7 +399,6 @@ ffi.cdef("""
     quiver_error_t quiver_sandbox_new(quiver_database_t* db, quiver_sandbox_t** out_runner);
     quiver_error_t quiver_sandbox_free(quiver_sandbox_t* runner);
     quiver_error_t quiver_sandbox_run(quiver_sandbox_t* runner, const char* script, char** out_result);
-    quiver_error_t quiver_sandbox_free_string(char* str);
 """)
 
 _lib = None

@@ -38,8 +38,8 @@ src/c/
   element.cpp             # Element builder C API
   sandbox.cpp          # Sandbox C API (errors via quiver_get_last_error); run returns the
                           # script's JSON result via char** out_result (NULLed before anything can
-                          # fail, so a caller that frees unconditionally is safe) + its own
-                          # free_string. run passes the script through unchanged and the core
+                          # fail, so a caller that frees unconditionally is safe; freed with
+                          # quiver_database_free_string). run passes the script through unchanged and the core
                           # loads it as text only, so a precompiled (bytecode) chunk fails like
                           # any script error: `Failed to run Lua script: ... attempt to load a
                           # binary chunk (mode is 't')` through quiver_get_last_error. The sol2
@@ -107,35 +107,31 @@ and CSV alike).
 
 ## Memory Management
 
-`new`/`delete`, provide matching `quiver_{entity}_free_*` functions:
+`new`/`delete`. A handle has its own close/free; a plain string, string array or float array from
+**any** entity (database, element, sandbox, binary file, binary metadata) is freed with the shared
+`quiver_database_free_*` deallocator — there is no per-entity copy:
 ```cpp
 // Factory functions return error code, use out-parameter for handle
 quiver_error_t quiver_database_from_schema(..., quiver_database_t** out_db);
 quiver_error_t quiver_database_close(quiver_database_t* db);
 
-// Database entity free functions (arrays, vectors, metadata, time series)
+// Shared deallocators (every entity's arrays and strings, incl. quiver_sandbox_run's JSON result,
+// binary file paths/reads and binary metadata strings/labels)
 quiver_database_free_integer_array(int64_t*)
 quiver_database_free_float_array(double*)
 quiver_database_free_string_array(char**, size_t)
-
-// Single string cleanup (strings returned by query/read-by-id/element operations)
 quiver_database_free_string(char*)
-
-// Lua script result (JSON returned by quiver_sandbox_run)
-quiver_sandbox_free_string(char*)
 
 // Binary metadata lifecycle (no incremental builder: from_toml / from_element build a handle,
 // quiver_binary_file_get_metadata / quiver_expression_get_metadata return a copy; free releases each)
 quiver_binary_metadata_from_toml/from_element/free
-quiver_binary_metadata_free_string(char*)
-quiver_binary_metadata_free_string_array(char**, size_t)
 quiver_binary_metadata_free_dimension(quiver_dimension_t*)
 
 // Binary file lifecycle
 quiver_binary_file_open_file/close
-quiver_binary_file_free_string(char*)
-quiver_binary_file_free_float_array(double*)
 ```
+`binary/binary_metadata.h` includes `database.h` so the shared deallocators are declared for a
+binary-only consumer.
 
 Conventions that keep the error paths safe:
 - In the **multi-column time series read path** (where marshaling can fail mid-column), out-arrays

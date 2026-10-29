@@ -141,8 +141,8 @@ bunfig.toml       # coverageSkipTestFiles = true (Bun 1.3 reports test/ otherwis
   `fn`'s error surfaces; on success an `endDryRun` failure is thrown (no `finally`). Synchronous
   only — a Promise-returning `fn` would close the scope before its awaited work ran.
 - **`Sandbox.run` owns its result**: `quiver_sandbox_run` takes a `char** out_result` and the
-  JSON string must be freed with `quiver_sandbox_free_string` — *not* `quiver_database_free_string`
-  (both are in `loader.ts`, hand-maintained). `decodeStringFromBuf` returns `""` for a NULL pointer,
+  JSON string is freed with the shared `quiver_database_free_string` (`loader.ts`,
+  hand-maintained). `decodeStringFromBuf` returns `""` for a NULL pointer,
   which is also what the C API leaves there on failure, and `check()` throws before the decode.
   The script must be Lua source text: the core loads it in text mode, so a precompiled (bytecode)
   chunk is rejected with `Failed to run Lua script: ...` and surfaces like any other script error.

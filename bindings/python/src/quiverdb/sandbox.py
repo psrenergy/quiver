@@ -59,7 +59,7 @@ class Sandbox:
             return decode_string(out_result[0])
         finally:
             # In a finally so a decode failure cannot leak the native JSON buffer.
-            lib.quiver_sandbox_free_string(out_result[0])
+            lib.quiver_database_free_string(out_result[0])
 
     def __enter__(self) -> Sandbox:
         return self

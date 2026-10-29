@@ -46,10 +46,6 @@ QUIVER_C_API quiver_error_t quiver_binary_file_get_metadata(
 );
 QUIVER_C_API quiver_error_t quiver_binary_file_get_file_path(quiver_binary_file_t* binary_file, char** out);
 
-// Free
-QUIVER_C_API quiver_error_t quiver_binary_file_free_string(char* str);
-QUIVER_C_API quiver_error_t quiver_binary_file_free_float_array(double* data);
-
 #ifdef __cplusplus
 }
 #endif

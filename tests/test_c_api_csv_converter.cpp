@@ -143,7 +143,7 @@ TEST_F(BinaryCApiCSVFixture, RoundTrip) {
         EXPECT_EQ(out_data[0], 0.1 + 0.2);  // exact: EXPECT_DOUBLE_EQ tolerates the 1-ULP loss
         EXPECT_EQ(out_data[1], 99.5);
 
-        quiver_binary_file_free_float_array(out_data);
+        quiver_database_free_float_array(out_data);
         quiver_binary_file_close(binary_file);
     }
 }
@@ -242,7 +242,7 @@ TEST_F(BinaryCApiCSVFixture, RoundTripAllPositions) {
                 ASSERT_EQ(out_count, 2u);
                 EXPECT_DOUBLE_EQ(out_data[0], r * 100.0 + c);
                 EXPECT_DOUBLE_EQ(out_data[1], r * 100.0 + c + 0.5);
-                quiver_binary_file_free_float_array(out_data);
+                quiver_database_free_float_array(out_data);
             }
         }
         quiver_binary_file_close(binary_file);

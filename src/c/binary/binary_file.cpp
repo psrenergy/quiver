@@ -132,16 +132,4 @@ QUIVER_C_API quiver_error_t quiver_binary_file_get_file_path(quiver_binary_file_
     return QUIVER_OK;
 }
 
-// Free
-
-QUIVER_C_API quiver_error_t quiver_binary_file_free_string(char* str) {
-    delete[] str;
-    return QUIVER_OK;
-}
-
-QUIVER_C_API quiver_error_t quiver_binary_file_free_float_array(double* data) {
-    delete[] data;
-    return QUIVER_OK;
-}
-
 }  // extern "C"
