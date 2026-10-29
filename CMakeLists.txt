@@ -60,11 +60,11 @@ endif()
 
 # Source files for the format target (recursive, matching CI's clang-format check)
 file(GLOB_RECURSE ALL_SOURCE_FILES
-    ${CMAKE_SOURCE_DIR}/include/*.h
-    ${CMAKE_SOURCE_DIR}/src/*.cpp
-    ${CMAKE_SOURCE_DIR}/src/*.h
-    ${CMAKE_SOURCE_DIR}/tests/*.cpp
-    ${CMAKE_SOURCE_DIR}/tests/*.h
+    ${PROJECT_SOURCE_DIR}/include/*.h
+    ${PROJECT_SOURCE_DIR}/src/*.cpp
+    ${PROJECT_SOURCE_DIR}/src/*.h
+    ${PROJECT_SOURCE_DIR}/tests/*.cpp
+    ${PROJECT_SOURCE_DIR}/tests/*.h
 )
 
 # Format target

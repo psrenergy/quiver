@@ -58,7 +58,7 @@ add_executable(quiver_tests
     # resolve_sandbox_path is internal to quiver (hidden, not exported), so SandboxPathTest
     # compiles its own copy. Keep path_policy.cpp to that one function: anything else the library
     # also uses would be defined twice in a static (QUIVER_BUILD_SHARED=OFF) link.
-    ${CMAKE_SOURCE_DIR}/src/sandbox/path_policy.cpp
+    ${PROJECT_SOURCE_DIR}/src/sandbox/path_policy.cpp
 )
 
 target_link_libraries(quiver_tests
@@ -70,7 +70,7 @@ target_link_libraries(quiver_tests
 )
 
 # path_policy.cpp and the test include "sandbox/path_policy.h".
-target_include_directories(quiver_tests PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_include_directories(quiver_tests PRIVATE ${PROJECT_SOURCE_DIR}/src)
 
 gtest_discover_tests(quiver_tests
     WORKING_DIRECTORY $<TARGET_FILE_DIR:quiver_tests>

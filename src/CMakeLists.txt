@@ -70,7 +70,7 @@ endif()
 # Include directories
 target_include_directories(quiver
     PUBLIC
-        ${CMAKE_SOURCE_DIR}/include
+        ${PROJECT_SOURCE_DIR}/include
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}
 )
@@ -154,7 +154,7 @@ if(QUIVER_BUILD_C_API)
 
     target_include_directories(quiver_c
         PUBLIC
-            ${CMAKE_SOURCE_DIR}/include
+            ${PROJECT_SOURCE_DIR}/include
         PRIVATE
             ${CMAKE_CURRENT_SOURCE_DIR}
     )
