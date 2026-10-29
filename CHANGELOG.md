@@ -55,7 +55,7 @@ callers to change something are prefixed **BREAKING** and say what to do.
   host process's standard output, which the library does not capture.
 
 ## [0.13.5] — released
-  
+
 ## [0.13.4] — released
 
 ### Changed

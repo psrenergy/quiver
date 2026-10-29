@@ -84,6 +84,30 @@ TEST_F(SandboxWritePolicyTest, JournalNameAsADirectoryIsRefused) {
     EXPECT_TRUE(fs::exists(sandbox_path / "sub" / "test.db-journal"));
 }
 
+// Win32 opens "x." and "x " as x and "x::$DATA" as x's own data, and "x::$INDEX_ALLOCATION" makes
+// directory x, so on Windows these spellings would create the journal (or a directory in its place).
+TEST_F(SandboxWritePolicyTest, WindowsSpellingsOfTheJournalAreRefused) {
+    seed();
+    auto db = quiver::Database(db_path());
+    quiver::Sandbox sandbox(db);
+    for (
+        const std::string name :
+        {"test.db-journal.",
+         "test.db-wal ",
+         "test.db-journal::$DATA",
+         "test.db-journal./x.csv",
+         "test.db-journal::$INDEX_ALLOCATION/x.csv"}
+    ) {
+        expect_sandbox_error(
+            sandbox,
+            "db:export_csv('Collection', '', '" + name + "')",
+            "is the database file or one of its journals"
+        );
+    }
+    EXPECT_FALSE(fs::exists(sandbox_path / "test.db-journal"));
+    EXPECT_FALSE(fs::exists(sandbox_path / "test.db-wal"));
+}
+
 // NTFS and APFS match names case-insensitively, so the check folds case on every platform.
 TEST_F(SandboxWritePolicyTest, DatabaseFileMatchIgnoresCase) {
     seed();

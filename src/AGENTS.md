@@ -799,7 +799,9 @@ Implementation conventions in `src/sandbox/`:
   create, after which SQLite can never open its journal and every write fails. `written` lists the
   suffixes the writer appends (`.qvr`/`.toml` for a binary file, `.csv` for `bin_to_csv`), so a
   database named `study.qvr` is caught too; names compare case-folded on every platform (NTFS and
-  APFS match that way, and the non-existing tail of a path keeps the script's spelling). It lives in `sandbox.cpp`,
+  APFS match that way, and the non-existing tail of a path keeps the script's spelling), and as
+  Win32 opens them: cut at the first `:` (an NTFS stream, `x::$DATA` is x and `x::$INDEX_ALLOCATION`
+  makes directory x) and stripped of trailing dots and spaces (`test.db-journal.` creates the journal). It lives in `sandbox.cpp`,
   not `path_policy.cpp`, which must stay a one-function file (`tests/CMakeLists.txt`). Covered by
   `tests/test_sandbox_write_policy.cpp`.
 - **Host-owned scopes**: `Sandbox::run` sets `RunHandles::host_dry_run` / `host_transaction` (the

@@ -89,17 +89,15 @@ std::shared_ptr<spdlog::logger> create_database_logger(
     auto console_sink = std::make_shared<spdlog::sinks::stderr_color_sink_mt>();
     console_sink->set_level(to_spdlog_level(console_level));
 
-    if (db_path == ":memory:") {
-        // In-memory database: no file logging
+    // No file logging in memory, nor for a read-only handle, which writes nothing to disk: the file
+    // sink would create or truncate quiver_database.log next to the database, wiping the trail of
+    // any writer on it.
+    if (db_path == ":memory:" || read_only) {
         const auto logger = std::make_shared<spdlog::logger>(logger_name, console_sink);
         logger->set_level(spdlog::level::debug);
-        logger->warn("Database is in-memory only; no file logging will be performed.");
-        return logger;
-    } else if (read_only) {
-        // A read-only handle writes nothing to disk: the file sink would create or truncate
-        // quiver_database.log next to the database, wiping the trail of any writer on it.
-        const auto logger = std::make_shared<spdlog::logger>(logger_name, console_sink);
-        logger->set_level(spdlog::level::debug);
+        if (db_path == ":memory:") {
+            logger->warn("Database is in-memory only; no file logging will be performed.");
+        }
         return logger;
     } else {
         // File-based database: use database directory

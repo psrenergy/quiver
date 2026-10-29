@@ -20,10 +20,16 @@ namespace quiver::lua_internal {
 
 namespace {
 
-// Names are compared case-folded, because the filesystems quiver ships on (NTFS, APFS) match them
-// that way and the part of a path that does not exist yet keeps the script's spelling; on a
-// case-sensitive filesystem that only refuses a few names that would not have collided.
+// A name as the filesystems quiver ships on (NTFS, APFS) match it, because the part of a path that
+// does not exist yet keeps the script's spelling: case-folded, and spelled the way Win32 opens it --
+// a name ends at its first ':' ("x::$DATA" is x's own data, "x::$INDEX_ALLOCATION" makes directory
+// x) and loses trailing dots and spaces ("x." and "x " open x). Elsewhere that only refuses a few
+// names that would not have collided.
 std::string fold(std::string name) {
+    name.resize(std::min(name.find(':'), name.size()));
+    while (!name.empty() && (name.back() == '.' || name.back() == ' ')) {
+        name.pop_back();
+    }
     std::ranges::transform(name, name.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
     return name;
 }

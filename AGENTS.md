@@ -117,7 +117,7 @@ Settled questions — don't relitigate without the user; each was decided delibe
   refuses two more things. One is the database file and its `-journal`/`-wal`/`-shm` (each writer
   opens with truncate, so `db:write_csv("study.db")` zeroed the live database under a host
   transaction a rollback could not undo; the file is located by SQLite's own absolute name, names
-  compare case-folded, a binary writer checks the files it creates, `path` + `.qvr`/`.toml`/`.csv`,
+  compare case-folded and spelled as Win32 opens them (cut at `:`, trailing dots/spaces dropped), a binary writer checks the files it creates, `path` + `.qvr`/`.toml`/`.csv`,
   and a directory named like the journal is refused too, since SQLite could then never open it). The other is any write at all when the host
   opened the database read-only: the flag is read through `friend class Sandbox` in `database.h`,
   deliberately not a public accessor that every layer would have to bind. Reads stay available.
