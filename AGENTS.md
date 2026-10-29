@@ -20,7 +20,7 @@ tests/                    # C++/C API suites + shared SQL schemas               
 .github/                  # CI + release/publish workflows, composite actions    -> .github/AGENTS.md
 scripts/                  # build-all/test-all/clean-all.bat, format.bat, tidy.bat,
                           # generator.bat (runs all three FFI generators),
-                          # assert_version.py (check + bump), validate_wheel*.py + test-wheel*.bat,
+                          # assert_version.py (check + bump), validate_wheel*.py + test-wheel-install.bat,
                           # ci/{dispatch_workflow.sh, native_s3.sh}, julia/generate_artifacts.jl
 cmake/                    # CompilerOptions.cmake, Dependencies.cmake, Platform.cmake, quiverConfig.cmake.in
 docs/                     # User-facing docs: introduction, rules, attributes, migrations, time_series

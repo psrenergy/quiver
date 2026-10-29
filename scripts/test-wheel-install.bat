@@ -1,7 +1,7 @@
 @echo off
 setlocal enabledelayedexpansion
 
-:: Build a Python wheel, install it in a clean venv, and verify bundled library loading.
+:: Build a Python wheel, check its contents, install it in a clean venv, and verify bundled library loading.
 :: Run from repo root: scripts\test-wheel-install.bat
 :: Requires: uv (Python package manager)
 ::
@@ -54,7 +54,18 @@ echo.
 echo Found wheel: !WHEEL_FILE!
 echo.
 
-:: ---- Step 2: Create a clean temporary venv ----
+:: ---- Step 2: Validate wheel contents ----
+echo Validating wheel contents...
+echo.
+uv run --no-project python "%SCRIPT_DIR%validate_wheel.py" "!WHEEL_FILE!"
+if !errorlevel! neq 0 (
+    echo FAIL: Wheel contents validation failed
+    set "EXIT_CODE=1"
+    goto :cleanup
+)
+echo.
+
+:: ---- Step 3: Create a clean temporary venv ----
 echo Creating clean virtual environment at %TEMP_VENV%...
 uv venv "%TEMP_VENV%"
 if !errorlevel! neq 0 (
@@ -63,7 +74,7 @@ if !errorlevel! neq 0 (
 )
 echo.
 
-:: ---- Step 3: Install the wheel (no PATH setup for build/bin/) ----
+:: ---- Step 4: Install the wheel (no PATH setup for build/bin/) ----
 echo Installing wheel into clean venv...
 uv pip install --python "%VENV_PYTHON%" "!WHEEL_FILE!"
 if !errorlevel! neq 0 (
@@ -73,7 +84,7 @@ if !errorlevel! neq 0 (
 )
 echo.
 
-:: ---- Step 4: Run import validation ----
+:: ---- Step 5: Run import validation ----
 echo Running import validation...
 echo.
 "%VENV_PYTHON%" "%SCRIPT_DIR%validate_wheel_install.py"
@@ -85,7 +96,7 @@ if !errorlevel! neq 0 (
 )
 echo.
 
-:: ---- Step 5: Install pytest and run the full test suite ----
+:: ---- Step 6: Install pytest and run the full test suite ----
 echo Installing pytest into venv...
 uv pip install --python "%VENV_PYTHON%" pytest
 if !errorlevel! neq 0 (
@@ -107,7 +118,7 @@ if !errorlevel! neq 0 (
 )
 
 :cleanup
-:: ---- Step 6: Clean up ----
+:: ---- Step 7: Clean up ----
 echo.
 echo Cleaning up...
 if exist "%DIST_DIR%" rmdir /s /q "%DIST_DIR%"
@@ -117,6 +128,7 @@ echo.
 if !EXIT_CODE! equ 0 (
     echo ============================================================
     echo  SUCCESS: Wheel install validation passed
+    echo  - wheel contents are correct
     echo  - import quiverdb works without PATH setup
     echo  - _load_source = bundled
     echo  - Full test suite passed

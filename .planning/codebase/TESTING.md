@@ -239,7 +239,7 @@ bun test test --coverage --coverage-reporter=lcov
 - Preserve intentional coverage scope: binary/expression are core/C ABI/Julia/Lua; relation-map convenience is Julia-only; boolean readers exist in the four host bindings; standalone CSV/XLSX reader and CSV writer methods are Lua-only (`AGENTS.md`, `tests/AGENTS.md`).
 - Match regression layers to the boundary affected: Boolean input needs Lua and all host wrappers, whereas there is no bool setter in C++/C ABI to test (`tests/AGENTS.md`, `bindings/python/tests/test_database_boolean.py`).
 - Native CI builds Debug and Release on Ubuntu x64, Ubuntu ARM64, Windows and macOS. Bun has Ubuntu x64/ARM64 and Windows test legs (`.github/workflows/ci.yml`).
-- Python wheel CI uses cibuildwheel and runs the shared pytest suite against built wheels; local validators live in `scripts/test-wheel.bat` and `scripts/test-wheel-install.bat` (`bindings/python/pyproject.toml`, `.github/workflows/publish-python.yml`).
+- Python wheel CI uses cibuildwheel and runs the shared pytest suite against built wheels; local validators run from `scripts/test-wheel-install.bat` (`bindings/python/pyproject.toml`, `.github/workflows/publish-python.yml`).
 
 **E2E Tests:**
 
