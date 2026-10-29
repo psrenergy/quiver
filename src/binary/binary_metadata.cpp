@@ -148,9 +148,6 @@ BinaryMetadata build_metadata(
 
 }  // namespace
 
-BinaryMetadata::BinaryMetadata() = default;
-BinaryMetadata::~BinaryMetadata() = default;
-
 int64_t BinaryMetadata::number_of_time_dimensions() const {
     int64_t count = 0;
     for (const auto& dim : dimensions) {

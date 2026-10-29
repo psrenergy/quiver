@@ -500,11 +500,11 @@ TEST(DatabaseCSV, ExportCSV_DateTimeFormat_NonDateColumnsUnaffected) {
 }
 
 // ============================================================================
-// export_csv: Default options factory
+// export_csv: Default options
 // ============================================================================
 
-TEST(DatabaseCSV, ExportCSV_DefaultOptionsFactory) {
-    auto options = quiver::default_csv_options();
+TEST(DatabaseCSV, ExportCSV_DefaultOptions) {
+    const quiver::CSVOptions options{};
     EXPECT_TRUE(options.enum_labels.empty());
     EXPECT_TRUE(options.date_time_format.empty());
 }

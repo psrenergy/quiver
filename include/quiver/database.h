@@ -322,13 +322,13 @@ public:
         const std::string& collection,
         const std::string& group,
         const std::string& path,
-        const CSVOptions& options = default_csv_options()
+        const CSVOptions& options = {}
     );
     void import_csv(
         const std::string& collection,
         const std::string& group,
         const std::string& path,
-        const CSVOptions& options = default_csv_options()
+        const CSVOptions& options = {}
     );
 
     // Query methods - execute SQL and return first row's first column

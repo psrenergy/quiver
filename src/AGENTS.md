@@ -11,7 +11,7 @@ patterns, schema conventions, design decisions) live in the root `AGENTS.md`.
 include/quiver/           # C++ public headers
   database.h              # Database class - main API
   attribute_metadata.h    # ScalarMetadata, GroupMetadata types
-  options.h               # DatabaseOptions, CSVOptions types and factories
+  options.h               # DatabaseOptions, CSVOptions types (default-construct for defaults)
   element.h               # Element builder for create operations
   sandbox.h            # Lua scripting support
   value.h                 # Value variant (nullptr/int64/double/string)
@@ -342,7 +342,7 @@ Binary subsystem: `BinaryFile` uses Pimpl (hides file I/O dependencies). `CSVCon
 
 Expression subsystem: `Expression` is `final` and derives, as `BinaryFile` (Pimpl) does, from the stateless polymorphic `AbstractExpression` (virtual destructor, protected copy and move, so nothing slices through a base reference). It is a plain value type wrapping `shared_ptr<ExpressionNode>` — no Pimpl. `ExpressionNode` is an abstract base with virtual `metadata()` / `compute_row()`; concrete subclasses are exposed via `QUIVER_API` and use Rule of Zero. Polymorphism is justified by the recursive tree shape (operand-owning nodes hold child `shared_ptr<ExpressionNode>`).
 
-Classes with no private dependencies (`Element`, `Row`, `GroupMetadata`, `ScalarMetadata`, `CSVOptions`, `Dimension`, `TimeProperties`, `Expression`) are plain value types — direct members, no Pimpl, Rule of Zero (compiler-generated copy/move/destructor). `BinaryMetadata` is the one deviation: it user-declares its default constructor and destructor (defaulted out-of-line), which suppresses compiler-generated moves — moves silently fall back to copies.
+Classes with no private dependencies (`Element`, `Row`, `GroupMetadata`, `ScalarMetadata`, `CSVOptions`, `BinaryMetadata`, `Dimension`, `TimeProperties`, `Expression`) are plain value types — direct members, no Pimpl, Rule of Zero (compiler-generated copy/move/destructor).
 
 ## Transactions
 

@@ -61,6 +61,8 @@ callers to change something are prefixed **BREAKING** and say what to do.
   `Migrations` classes are gone; discovery is internal to `Database`. *Adapt:* use
   `Database::from_migrations` to apply a migrations directory and `Database::validate_migrations`
   to check one.
+- **BREAKING (C++ only) — `quiver::default_csv_options()`.** It only returned `{}`. *Adapt:* use
+  `quiver::CSVOptions{}`.
 
 ### Fixed
 

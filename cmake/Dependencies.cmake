@@ -49,7 +49,7 @@ FetchContent_MakeAvailable(spdlog)
 # `FetchContent_Declare(... EXCLUDE_FROM_ALL)`, which is CMake >= 3.28; the project floor is 3.26.
 set(LUA_TESTS "None" CACHE STRING "" FORCE)
 # Skips the find_package(Readline)/find_package(Editline) probes, which exist only to give
-# lua_bin a line editor. Unlike the two options above, this one does exist upstream.
+# lua_bin a line editor. Unlike the LUA_BUILD_* options named above, this one does exist upstream.
 set(LUA_LINE_EDITOR "None" CACHE STRING "" FORCE)
 FetchContent_Declare(lua
     GIT_REPOSITORY https://gitlab.com/codelibre/lua/lua-cmake.git

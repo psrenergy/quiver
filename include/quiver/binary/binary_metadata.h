@@ -19,9 +19,6 @@ struct QUIVER_API BinaryMetadata {
     std::vector<std::string> labels;
     std::string version;
 
-    BinaryMetadata();
-    ~BinaryMetadata();
-
     // Derived from dimensions: count of entries carrying time properties
     int64_t number_of_time_dimensions() const;
 
