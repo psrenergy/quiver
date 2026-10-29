@@ -39,7 +39,7 @@ src/                      # C++ implementation
   database_csv_export.cpp / database_csv_import.cpp
   schema.h / schema.cpp   # Schema/TableDefinition introspection (from_database), table classification,
                           # group_names, group table name helpers
-  schema_validator.h / schema_validator.cpp  # SchemaValidator - schema convention checks
+  schema_validator.h / schema_validator.cpp  # validate_schema - schema convention checks
   type_validator.h / type_validator.cpp      # Scalar/array type validation (free functions,
                                              # caller-threaded Pattern 1 messages)
   element.cpp / row.cpp / result.cpp
@@ -596,12 +596,12 @@ impl_->logger->debug("Opening database: {}", path);
 - **Schema metadata loads lazily** (`Impl::require_schema`): the `Database(path, options)`
   constructor does not read it, so the first metadata/CRUD call does. `schema` is `mutable` (const
   readers trigger the load), and `load_schema_metadata()` publishes it only after
-  `SchemaValidator::validate()` passes, so a failed lazy load leaves no half-loaded state for the
+  `validate_schema()` passes, so a failed lazy load leaves no half-loaded state for the
   next call: `require_schema` loads only while `schema` is null, so a schema published early would
   never be validated again. Rationale in the root design decisions.
 - **Every group table's parent is checked by one helper** (`schema_validator.cpp`,
-  `validate_group_parent`, called from `validate()` for vector, set and time-series tables after
-  their structural checks): the prefix must name an existing collection and `id` must reference
+  `validate_group_parent`, called from `validate_schema()` for vector, set and time-series tables
+  after their structural checks): the prefix must name an existing collection and `id` must reference
   it with ON DELETE CASCADE ON UPDATE CASCADE — `delete_element` is a bare `DELETE` on the
   collection and relies on that cascade. `validate_foreign_keys` then applies one action rule to
   every FK in every table. Sets and time series used to skip the parent check, and time series

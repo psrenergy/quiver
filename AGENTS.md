@@ -711,7 +711,7 @@ CREATE TABLE Items_time_series_files (
 ```
 
 ### Foreign Keys
-Always use `ON DELETE CASCADE ON UPDATE CASCADE` for parent references. `SchemaValidator` enforces
+Always use `ON DELETE CASCADE ON UPDATE CASCADE` for parent references. `validate_schema` enforces
 it for every vector, set and time-series table: the table's prefix must name an existing
 collection, and its `id` must reference that collection with both actions. Every other foreign
 key, in any table, must use `ON UPDATE CASCADE` with `ON DELETE CASCADE` or `ON DELETE SET NULL`
