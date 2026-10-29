@@ -21,7 +21,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, ubuntu-24.04-arm, windows-latest, macos-latest]
+        os: [ubuntu-24.04, ubuntu-24.04-arm, windows-latest, macos-latest]
         build_type: [Release, Debug]
 
     steps:
@@ -46,7 +46,7 @@ jobs:
 
   cpp-coverage:
     name: C++ Coverage
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - uses: actions/checkout@v7
@@ -81,7 +81,7 @@ jobs:
 
   julia-coverage:
     name: Julia Coverage
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     strategy:
       fail-fast: false
@@ -123,7 +123,7 @@ jobs:
 
   dart-coverage:
     name: Dart Coverage
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - uses: actions/checkout@v7
@@ -162,7 +162,7 @@ jobs:
 
   python-coverage:
     name: Python Coverage
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - uses: actions/checkout@v7
@@ -196,7 +196,7 @@ jobs:
 
   clang-format:
     name: Code Formatting
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - uses: actions/checkout@v7
@@ -211,7 +211,7 @@ jobs:
 
   actionlint:
     name: Lint Workflows
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - uses: actions/checkout@v7
@@ -235,7 +235,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, ubuntu-24.04-arm, windows-latest]
+        os: [ubuntu-24.04, ubuntu-24.04-arm, windows-latest]
 
     steps:
       - uses: actions/checkout@v7
@@ -270,7 +270,7 @@ jobs:
           bun test test
 
       - name: Upload to Codecov
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-24.04'
         uses: codecov/codecov-action@v7
         with:
           files: bindings/js/coverage/lcov.info
