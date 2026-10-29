@@ -73,6 +73,7 @@ src/                      # C++ implementation
   utils/datetime.h        # ISO 8601 parse/format helpers
   utils/number.h          # quiver::utils::append_number (std::to_chars shortest round-trip) and
                           # parse_float (its whole-cell, host-locale-proof reader)
+  utils/file.h            # quiver::utils::read_file: whole file, binary mode, nullopt on open/read failure
 src/csv/                    # Standalone CSV file reader/writer (see below)
   csv_read.h / csv_read.cpp   # Internal CSV reader (csv-parser, Pimpl'd) behind db:read_csv /
                               # db:read_csv_stream and import_csv -- no include/quiver/ counterpart
@@ -221,8 +222,8 @@ iteration itself failing) logs one warning from the outer catch and degrades to 
 `UiMetadata`; a file that cannot be read or parsed logs its own warning through the per-database
 logger and costs only that file — `from_migrations` still succeeds in every case. Both passes go
 through one `parse_toml_file(path)` helper so their failure behaviour cannot drift: it throws
-Pattern 3 on a failed open **and on a failed read** (`ifstream::bad()` after the slurp), the second
-because a truncated TOML prefix is usually still syntactically valid, so a half-read sidecar would
+Pattern 3 when `utils::read_file` fails to open **or to read** the file, the second because a
+truncated TOML prefix is usually still syntactically valid, so a half-read sidecar would
 otherwise have parsed as a complete one and silently lost every attribute past the cut. Two things
 in that loop are deliberately spelled the way they are: `directory_entry::is_regular_file` takes
 the **`std::error_code` overload**, because that test sits outside the per-file `try` and the

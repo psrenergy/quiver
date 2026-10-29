@@ -1,12 +1,12 @@
 #include "ui_metadata.h"
 
+#include "utils/file.h"
+
 #include <toml++/toml.hpp>
 
 #include <filesystem>
-#include <fstream>
 #include <map>
 #include <optional>
-#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <system_error>
@@ -19,23 +19,16 @@ namespace {
 namespace fs = std::filesystem;
 
 // The one file read in this translation unit, shared by the vocabulary pass and the collection
-// pass so their failure behaviour cannot drift. `ostringstream << rdbuf()` is the house idiom
-// (`Migration::up_sql`, src/migration.cpp) and is the reason the stream state is checked *after*
-// the read as well as before it: an `istreambuf_iterator` slurp stops on a read error exactly as
-// it stops at EOF, and a truncated TOML prefix is usually still syntactically valid -- so a
-// half-read sidecar would have parsed as a complete one and silently lost every attribute past
-// the cut. Both throws land in the caller's per-file catch and become one warning.
+// pass so their failure behaviour cannot drift. A failed open or read throws rather than parsing
+// what was read: a truncated TOML prefix is usually still syntactically valid, so a half-read
+// sidecar would silently lose every attribute past the cut. The throw lands in the caller's
+// per-file catch and becomes one warning.
 toml::table parse_toml_file(const fs::path& path) {
-    std::ifstream file(path);
-    if (!file.is_open()) {
-        throw std::runtime_error("Failed to open UI metadata file: " + path.string());
-    }
-    std::ostringstream buffer;
-    buffer << file.rdbuf();
-    if (file.bad()) {
+    const auto content = utils::read_file(path);
+    if (!content) {
         throw std::runtime_error("Failed to read UI metadata file: " + path.string());
     }
-    return toml::parse(buffer.str());
+    return toml::parse(*content, path.string());
 }
 
 // Serves label, tooltip and each enum.toml entry's own label: a plain string is used

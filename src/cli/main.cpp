@@ -1,26 +1,25 @@
+#include "../utils/file.h"
+
 #include <argparse/argparse.hpp>
 #include <quiver/database.h>
 #include <quiver/sandbox.h>
 
 #include <filesystem>
-#include <fstream>
 #include <iostream>
 #include <string>
 
 static std::string read_script_file(const std::string& path) {
-    std::ifstream file(path, std::ios::binary);
-    if (!file.is_open()) {
+    auto content = quiver::utils::read_file(path);
+    if (!content) {
         throw std::runtime_error("Failed to read script file: " + path);
     }
 
-    std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-
     // Strip UTF-8 BOM if present
-    if (content.size() >= 3 && content[0] == '\xEF' && content[1] == '\xBB' && content[2] == '\xBF') {
-        content.erase(0, 3);
+    if (content->starts_with("\xEF\xBB\xBF")) {
+        content->erase(0, 3);
     }
 
-    return content;
+    return *content;
 }
 
 static quiver::LogLevel parse_log_level(const std::string& level) {

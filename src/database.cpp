@@ -2,6 +2,7 @@
 #include "quiver/migrations.h"
 #include "quiver/result.h"
 #include "ui_metadata.h"
+#include "utils/file.h"
 #include "utils/string.h"
 
 #include <spdlog/sinks/basic_file_sink.h>
@@ -11,10 +12,8 @@
 
 #include <atomic>
 #include <filesystem>
-#include <fstream>
 #include <mutex>
 #include <optional>
-#include <sstream>
 #include <stdexcept>
 
 namespace {
@@ -540,16 +539,11 @@ void Database::migrate_down(const std::string& migrations_path) {
 }
 
 void Database::apply_schema(const std::string& schema_path) {
-    std::ifstream file(schema_path);
-    if (!file.is_open()) {
+    const auto schema_sql = utils::read_file(schema_path);
+    if (!schema_sql) {
         throw std::runtime_error("Failed to from_schema: could not open file: " + schema_path);
     }
-
-    std::stringstream buffer;
-    buffer << file.rdbuf();
-    const auto schema_sql = buffer.str();
-
-    if (schema_sql.empty()) {
+    if (schema_sql->empty()) {
         throw std::runtime_error("Cannot from_schema: schema file is empty: " + schema_path);
     }
 
@@ -557,7 +551,7 @@ void Database::apply_schema(const std::string& schema_path) {
 
     try {
         Impl::TransactionGuard txn(*impl_);
-        impl_->execute_raw(schema_sql);
+        impl_->execute_raw(*schema_sql);
         impl_->load_schema_metadata();
         txn.commit();
     } catch (const std::exception& e) {

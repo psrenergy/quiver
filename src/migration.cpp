@@ -1,8 +1,8 @@
 #include "quiver/migration.h"
 
+#include "utils/file.h"
+
 #include <filesystem>
-#include <fstream>
-#include <sstream>
 
 namespace quiver {
 
@@ -19,35 +19,11 @@ const std::string& Migration::path() const {
 }
 
 std::string Migration::up_sql() const {
-    auto sql_path = fs::path(path_) / "up.sql";
-    if (!fs::exists(sql_path)) {
-        return "";
-    }
-
-    std::ifstream file(sql_path);
-    if (!file.is_open()) {
-        return "";
-    }
-
-    std::ostringstream buffer;
-    buffer << file.rdbuf();
-    return buffer.str();
+    return utils::read_file(fs::path(path_) / "up.sql").value_or("");
 }
 
 std::string Migration::down_sql() const {
-    const auto sql_path = fs::path(path_) / "down.sql";
-    if (!fs::exists(sql_path)) {
-        return "";
-    }
-
-    std::ifstream file(sql_path);
-    if (!file.is_open()) {
-        return "";
-    }
-
-    std::ostringstream buffer;
-    buffer << file.rdbuf();
-    return buffer.str();
+    return utils::read_file(fs::path(path_) / "down.sql").value_or("");
 }
 
 std::strong_ordering Migration::operator<=>(const Migration& other) const {
