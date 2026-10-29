@@ -91,7 +91,7 @@ The core is a library rather than a server. `src/CMakeLists.txt` builds `quiver`
 
 - Julia: `bindings/julia/src/Quiver.jl` includes procedural wrappers and generated `C` module; mutation uses `!`; binary/expression wrappers share `AbstractExpression`.
 - Dart: `bindings/dart/lib/src/database.dart` owns the handle and includes `part` files containing extensions; `bindings/dart/lib/src/ffi/library_loader.dart` supplies native bindings.
-- Python: `bindings/python/src/quiverdb/database.py` owns the handle and includes CSV behavior through two mixins; CFFI ABI declarations are hand-maintained in `_c_api.py`; public element writes accept keyword arguments.
+- Python: `bindings/python/src/quiverdb/database.py` owns the handle, CSV export/import included; CFFI ABI declarations are hand-maintained in `_c_api.py`; public element writes accept keyword arguments.
 - Bun: `bindings/js/src/index.ts` imports operation modules that attach implementations to `Database.prototype`; `bindings/js/src/database.ts` owns lifecycle and typed declarations; `loader.ts` contains the hand-written FFI table.
 - Keep adapters thin; existing DateTime, Boolean, composite and transaction helpers are deliberate conveniences (`AGENTS.md`, binding-local `AGENTS.md` files).
 

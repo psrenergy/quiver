@@ -60,16 +60,3 @@ def load_library(ffi: FFI):
         raise RuntimeError(
             f"Cannot load native libraries. Searched: {_LIBS_DIR} (not found), system PATH. Missing: {_LIB_C_API}"
         ) from None
-
-
-if __name__ == "__main__":
-    from quiverdb._c_api import ffi
-
-    try:
-        load_library(ffi)
-        print(f"OK: loaded via '{_load_source}'")
-        print(f"  _libs dir: {_LIBS_DIR}")
-        print(f"  _libs exists: {_LIBS_DIR.is_dir()}")
-    except RuntimeError as e:
-        print(f"FAIL: {e}")
-        raise SystemExit(1)

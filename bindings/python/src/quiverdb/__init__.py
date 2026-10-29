@@ -24,7 +24,8 @@ __all__ = [
 
 def version() -> str:
     """Return the Quiver C library version string."""
-    from quiverdb._c_api import ffi, get_lib
+    from quiverdb._c_api import get_lib
+    from quiverdb._helpers import decode_string
 
     lib = get_lib()
-    return ffi.string(lib.quiver_version()).decode("utf-8")
+    return decode_string(lib.quiver_version())

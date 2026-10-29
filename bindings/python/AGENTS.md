@@ -10,8 +10,7 @@ through `uv` (see root Build & Test).
 src/quiverdb/
   __init__.py     # Public exports: Database, QuiverError, Sandbox, CSVOptions, DataType,
                   # LogLevel, ScalarMetadata, GroupMetadata, version()
-  database.py     # Database class (inherits the CSV mixins below)
-  database_csv_export.py / database_csv_import.py  # export_csv / import_csv mixins
+  database.py     # Database class
   database_options.py  # CSVOptions-to-C marshaling
   sandbox.py   # Sandbox class
   metadata.py     # DataType/LogLevel (IntEnums), CSVOptions, ScalarMetadata, GroupMetadata
@@ -48,7 +47,7 @@ ruff.toml         # Lint/format config; lint is isort only (select = ["I"])
   use-after-destroy guard (a destroyed `Element` holds `ffi.NULL`, which the C API rejects as
   `Null argument: element`). Properties are
   regular methods, not `@property` (design decision). `LogLevel` is an `IntEnum` exported from
-  `__init__.py`; internal mixin classes are not exported.
+  `__init__.py`.
 - **Every `**kwargs` method marks its leading parameters positional-only (`/`).** Without it, a
   kwarg that shares a parameter's name binds to the parameter and raises `TypeError: got multiple
   values for argument '<name>'` before the FFI call. All five follow it: `create_element(collection,
@@ -178,5 +177,5 @@ ruff.toml         # Lint/format config; lint is isort only (select = ["I"])
   the wheel tag uses `macosx_13_0` because macOS tags omit minor versions after 10.x. Keep the
   default delocate repair for library relocation and signing. Every wheel runs the bundled-load
   validator before pytest. CI publish flow in `.github/AGENTS.md`.
-- Local wheel checks: `scripts/test-wheel.bat`, `scripts/test-wheel-install.bat`,
+- Local wheel checks: `scripts/test-wheel-install.bat` (runs both validators),
   `scripts/validate_wheel.py`, `scripts/validate_wheel_install.py`.

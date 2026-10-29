@@ -113,7 +113,7 @@ quiver1/
 **`bindings/python/`:**
 
 - Purpose: CFFI ABI-mode package and native-wheel packaging.
-- Contains: Public Database/Sandbox/metadata, internal Element, hand-maintained C declarations, native loader and CSV mixins.
+- Contains: Public Database/Sandbox/metadata, internal Element, hand-maintained C declarations, native loader and CSV options marshaling.
 - Key files: `bindings/python/src/quiverdb/__init__.py`, `bindings/python/src/quiverdb/database.py`, `bindings/python/src/quiverdb/_c_api.py`, `bindings/python/src/quiverdb/_loader.py`, `bindings/python/pyproject.toml`, `bindings/python/AGENTS.md`.
 
 **`bindings/js/`:**
