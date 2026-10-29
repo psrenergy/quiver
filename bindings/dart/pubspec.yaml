@@ -13,7 +13,6 @@ dependencies:
   native_toolchain_cmake: ^0.3.0
 
 dev_dependencies:
-  coverage: ^1.15.1
   ffigen: ^20.1.1
   lints: ^6.1.0
   path: ^1.9.1
