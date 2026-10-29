@@ -124,11 +124,12 @@ bunfig.toml       # coverageSkipTestFiles = true (Bun 1.3 reports test/ otherwis
   TypedArray has no pointer in Bun (`ptr()` of one *returns* a `TypeError` object instead of
   throwing), so a parameterless query never builds a buffer at all.
 - **Bulk and per-cell NULLs**: `readScalarIntegers`/`readScalarFloats` read a parallel `uint8_t*` mask
-  (`new Uint8Array(toArrayBuffer(...))`) and gate `mask[i] ? v : null` → `(number | null)[]` — never
+  (`decodeMask` in `ffi-helpers.ts`) and gate `mask[i] ? v : null` → `(number | null)[]` — never
   `Number()` a masked slot (would turn NULL into 0). The vector/set readers do the same per cell:
-  `readByIdIntegers`/`readByIdFloats` take a flat mask (`quiver_database_free_mask`), while
-  `readBulkIntegers`/`readBulkFloats` take a nested one — `decodePtrArray` over the outer pointer,
-  then a `Uint8Array` per element sized by `sizes[i]`, freed by `quiver_database_free_masks`. Every
+  `readByIdNumbers` takes a flat mask (`quiver_database_free_mask`), while `readBulkNumbers` takes
+  a nested one — `decodePtrArray` over the outer pointer, then `decodeMask` per element sized by
+  `sizes[i]`, freed by `quiver_database_free_masks`. Both serve integers and floats; the caller
+  passes the decoder and the values' free function. Every
   string reader (scalar, `readBulkStrings`, `readByIdStrings`) reads pointer-by-pointer with
   `decodePtrArray` + a NULL guard — **never `decodeStringArray`**, which turns a NULL `char*` into
   `""`. `loader.ts` carries the mask args on the eight numeric vector/set symbols and on

@@ -1,15 +1,14 @@
-import { CString, type Pointer, toArrayBuffer } from "bun:ffi";
+import { CString } from "bun:ffi";
 import { integerToBoolean } from "./boolean.ts";
 import { Database } from "./database.ts";
 import { check } from "./errors.ts";
 import {
   allocPtrOut,
-  allocUint64Out,
   decodeFloat64Array,
   decodeInt64Array,
+  decodeMask,
   decodePtrArray,
   decodeStringFromBuf,
-  decodeUint64Array,
   readPtrOut,
   readUint64Out,
   toCString,
@@ -29,7 +28,7 @@ Database.prototype.readScalarIntegers = function (
   const attrBuf = toCString(attribute);
   const outValues = allocPtrOut();
   const outMask = allocPtrOut();
-  const outCount = allocUint64Out();
+  const outCount = allocPtrOut();
   check(
     lib.quiver_database_read_scalar_integers(
       this._handle,
@@ -46,7 +45,7 @@ Database.prototype.readScalarIntegers = function (
   const maskPtr = readPtrOut(outMask);
   const vals = decodeInt64Array(arrPtr, count);
   // mask[i] === 0 means SQL NULL; gate to null (never Number(placeholder)).
-  const mask = new Uint8Array(toArrayBuffer(maskPtr as Pointer, 0, count));
+  const mask = decodeMask(maskPtr, count);
   const result = vals.map((v, i) => (mask[i] ? v : null));
   lib.quiver_database_free_integer_array(arrPtr);
   lib.quiver_database_free_mask(maskPtr);
@@ -73,7 +72,7 @@ Database.prototype.readScalarFloats = function (
   const attrBuf = toCString(attribute);
   const outValues = allocPtrOut();
   const outMask = allocPtrOut();
-  const outCount = allocUint64Out();
+  const outCount = allocPtrOut();
   check(
     lib.quiver_database_read_scalar_floats(
       this._handle,
@@ -89,7 +88,7 @@ Database.prototype.readScalarFloats = function (
   const arrPtr = readPtrOut(outValues);
   const maskPtr = readPtrOut(outMask);
   const vals = decodeFloat64Array(arrPtr, count);
-  const mask = new Uint8Array(toArrayBuffer(maskPtr as Pointer, 0, count));
+  const mask = decodeMask(maskPtr, count);
   const result = vals.map((v, i) => (mask[i] ? v : null));
   lib.quiver_database_free_float_array(arrPtr);
   lib.quiver_database_free_mask(maskPtr);
@@ -105,7 +104,7 @@ Database.prototype.readScalarStrings = function (
   const collBuf = toCString(collection);
   const attrBuf = toCString(attribute);
   const outValues = allocPtrOut();
-  const outCount = allocUint64Out();
+  const outCount = allocPtrOut();
   check(
     lib.quiver_database_read_scalar_strings(
       this._handle,
@@ -225,7 +224,7 @@ Database.prototype.readElementIds = function (this: Database, collection: string
   const lib = getSymbols();
   const collBuf = toCString(collection);
   const outIds = allocPtrOut();
-  const outCount = allocUint64Out();
+  const outCount = allocPtrOut();
   check(lib.quiver_database_read_element_ids(this._handle, collBuf.buf, outIds.buf, outCount.buf));
   const count = readUint64Out(outCount);
   if (count === 0) return [];
@@ -245,10 +244,13 @@ Database.prototype.numberOfElements = function (this: Database, collection: stri
 
 // --- Vector bulk reads ---
 
-function readBulkIntegers(
+/** Integer and float vector/set bulk reads differ only in the decoder and the free function. */
+function readBulkNumbers(
   lib: ReturnType<typeof getSymbols>,
   handle: NativePointer,
   fn: string,
+  decode: (p: NativePointer, count: number) => number[],
+  freeVectors: (vectors: NativePointer, sizes: NativePointer, count: bigint) => number,
   collection: string,
   attribute: string,
 ): (number | null)[][] {
@@ -257,7 +259,7 @@ function readBulkIntegers(
   const outVectors = allocPtrOut();
   const outMasks = allocPtrOut();
   const outSizes = allocPtrOut();
-  const outCount = allocUint64Out();
+  const outCount = allocPtrOut();
   check(
     (lib as Record<string, Function>)[fn](
       handle,
@@ -276,65 +278,18 @@ function readBulkIntegers(
   const sizesPtr = readPtrOut(outSizes);
   const vectorPtrs = decodePtrArray(vectorsPtr, count);
   const maskPtrs = decodePtrArray(masksPtr, count);
-  const sizes = decodeUint64Array(sizesPtr, count);
+  const sizes = decodeInt64Array(sizesPtr, count, true);
   const result: (number | null)[][] = new Array(count);
   for (let i = 0; i < count; i++) {
     if (sizes[i] === 0) {
       result[i] = [];
       continue;
     }
-    const values = decodeInt64Array(vectorPtrs[i], sizes[i]);
-    const mask = new Uint8Array(toArrayBuffer(maskPtrs[i] as Pointer, 0, sizes[i]));
+    const values = decode(vectorPtrs[i], sizes[i]);
+    const mask = decodeMask(maskPtrs[i], sizes[i]);
     result[i] = values.map((v, j) => (mask[j] ? v : null));
   }
-  lib.quiver_database_free_integer_vectors(vectorsPtr, sizesPtr, BigInt(count));
-  lib.quiver_database_free_masks(masksPtr, BigInt(count));
-  return result;
-}
-
-function readBulkFloats(
-  lib: ReturnType<typeof getSymbols>,
-  handle: NativePointer,
-  fn: string,
-  collection: string,
-  attribute: string,
-): (number | null)[][] {
-  const collBuf = toCString(collection);
-  const attrBuf = toCString(attribute);
-  const outVectors = allocPtrOut();
-  const outMasks = allocPtrOut();
-  const outSizes = allocPtrOut();
-  const outCount = allocUint64Out();
-  check(
-    (lib as Record<string, Function>)[fn](
-      handle,
-      collBuf.buf,
-      attrBuf.buf,
-      outVectors.buf,
-      outMasks.buf,
-      outSizes.buf,
-      outCount.buf,
-    ),
-  );
-  const count = readUint64Out(outCount);
-  if (count === 0) return [];
-  const vectorsPtr = readPtrOut(outVectors);
-  const masksPtr = readPtrOut(outMasks);
-  const sizesPtr = readPtrOut(outSizes);
-  const vectorPtrs = decodePtrArray(vectorsPtr, count);
-  const maskPtrs = decodePtrArray(masksPtr, count);
-  const sizes = decodeUint64Array(sizesPtr, count);
-  const result: (number | null)[][] = new Array(count);
-  for (let i = 0; i < count; i++) {
-    if (sizes[i] === 0) {
-      result[i] = [];
-      continue;
-    }
-    const values = decodeFloat64Array(vectorPtrs[i], sizes[i]);
-    const mask = new Uint8Array(toArrayBuffer(maskPtrs[i] as Pointer, 0, sizes[i]));
-    result[i] = values.map((v, j) => (mask[j] ? v : null));
-  }
-  lib.quiver_database_free_float_vectors(vectorsPtr, sizesPtr, BigInt(count));
+  freeVectors(vectorsPtr, sizesPtr, BigInt(count));
   lib.quiver_database_free_masks(masksPtr, BigInt(count));
   return result;
 }
@@ -350,7 +305,7 @@ function readBulkStrings(
   const attrBuf = toCString(attribute);
   const outVectors = allocPtrOut();
   const outSizes = allocPtrOut();
-  const outCount = allocUint64Out();
+  const outCount = allocPtrOut();
   check(
     (lib as Record<string, Function>)[fn](
       handle,
@@ -366,7 +321,7 @@ function readBulkStrings(
   const vectorsPtr = readPtrOut(outVectors);
   const sizesPtr = readPtrOut(outSizes);
   const vectorPtrs = decodePtrArray(vectorsPtr, count);
-  const sizes = decodeUint64Array(sizesPtr, count);
+  const sizes = decodeInt64Array(sizesPtr, count, true);
   const result: (string | null)[][] = new Array(count);
   for (let i = 0; i < count; i++) {
     // A NULL cell is a NULL char* entry, so decode the pointer array and map NULL -> null
@@ -387,10 +342,12 @@ Database.prototype.readVectorIntegers = function (
   collection: string,
   attribute: string,
 ): (number | null)[][] {
-  return readBulkIntegers(
+  return readBulkNumbers(
     getSymbols(),
     this._handle,
     "quiver_database_read_vector_integers",
+    decodeInt64Array,
+    getSymbols().quiver_database_free_integer_vectors,
     collection,
     attribute,
   );
@@ -410,10 +367,12 @@ Database.prototype.readVectorFloats = function (
   collection: string,
   attribute: string,
 ): (number | null)[][] {
-  return readBulkFloats(
+  return readBulkNumbers(
     getSymbols(),
     this._handle,
     "quiver_database_read_vector_floats",
+    decodeFloat64Array,
+    getSymbols().quiver_database_free_float_vectors,
     collection,
     attribute,
   );
@@ -436,10 +395,12 @@ Database.prototype.readSetIntegers = function (
   collection: string,
   attribute: string,
 ): (number | null)[][] {
-  return readBulkIntegers(
+  return readBulkNumbers(
     getSymbols(),
     this._handle,
     "quiver_database_read_set_integers",
+    decodeInt64Array,
+    getSymbols().quiver_database_free_integer_vectors,
     collection,
     attribute,
   );
@@ -459,10 +420,12 @@ Database.prototype.readSetFloats = function (
   collection: string,
   attribute: string,
 ): (number | null)[][] {
-  return readBulkFloats(
+  return readBulkNumbers(
     getSymbols(),
     this._handle,
     "quiver_database_read_set_floats",
+    decodeFloat64Array,
+    getSymbols().quiver_database_free_float_vectors,
     collection,
     attribute,
   );
@@ -483,10 +446,13 @@ Database.prototype.readSetStrings = function (
 
 // --- By-ID reads ---
 
-function readByIdIntegers(
+/** Integer and float vector/set by-id reads differ only in the decoder and the free function. */
+function readByIdNumbers(
   lib: ReturnType<typeof getSymbols>,
   handle: NativePointer,
   fn: string,
+  decode: (p: NativePointer, count: number) => number[],
+  freeArray: (values: NativePointer) => number,
   collection: string,
   attribute: string,
   id: number,
@@ -495,7 +461,7 @@ function readByIdIntegers(
   const attrBuf = toCString(attribute);
   const outValues = allocPtrOut();
   const outMask = allocPtrOut();
-  const outCount = allocUint64Out();
+  const outCount = allocPtrOut();
   check(
     (lib as Record<string, Function>)[fn](
       handle,
@@ -511,46 +477,10 @@ function readByIdIntegers(
   if (count === 0) return [];
   const arrPtr = readPtrOut(outValues);
   const maskPtr = readPtrOut(outMask);
-  const values = decodeInt64Array(arrPtr, count);
-  const mask = new Uint8Array(toArrayBuffer(maskPtr as Pointer, 0, count));
+  const values = decode(arrPtr, count);
+  const mask = decodeMask(maskPtr, count);
   const result = values.map((v, i) => (mask[i] ? v : null));
-  lib.quiver_database_free_integer_array(arrPtr);
-  lib.quiver_database_free_mask(maskPtr);
-  return result;
-}
-
-function readByIdFloats(
-  lib: ReturnType<typeof getSymbols>,
-  handle: NativePointer,
-  fn: string,
-  collection: string,
-  attribute: string,
-  id: number,
-): (number | null)[] {
-  const collBuf = toCString(collection);
-  const attrBuf = toCString(attribute);
-  const outValues = allocPtrOut();
-  const outMask = allocPtrOut();
-  const outCount = allocUint64Out();
-  check(
-    (lib as Record<string, Function>)[fn](
-      handle,
-      collBuf.buf,
-      attrBuf.buf,
-      BigInt(id),
-      outValues.buf,
-      outMask.buf,
-      outCount.buf,
-    ),
-  );
-  const count = readUint64Out(outCount);
-  if (count === 0) return [];
-  const arrPtr = readPtrOut(outValues);
-  const maskPtr = readPtrOut(outMask);
-  const values = decodeFloat64Array(arrPtr, count);
-  const mask = new Uint8Array(toArrayBuffer(maskPtr as Pointer, 0, count));
-  const result = values.map((v, i) => (mask[i] ? v : null));
-  lib.quiver_database_free_float_array(arrPtr);
+  freeArray(arrPtr);
   lib.quiver_database_free_mask(maskPtr);
   return result;
 }
@@ -566,7 +496,7 @@ function readByIdStrings(
   const collBuf = toCString(collection);
   const attrBuf = toCString(attribute);
   const outValues = allocPtrOut();
-  const outCount = allocUint64Out();
+  const outCount = allocPtrOut();
   check(
     (lib as Record<string, Function>)[fn](
       handle,
@@ -595,10 +525,12 @@ Database.prototype.readVectorIntegersById = function (
   attribute: string,
   id: number,
 ): (number | null)[] {
-  return readByIdIntegers(
+  return readByIdNumbers(
     getSymbols(),
     this._handle,
     "quiver_database_read_vector_integers_by_id",
+    decodeInt64Array,
+    getSymbols().quiver_database_free_integer_array,
     collection,
     attribute,
     id,
@@ -620,10 +552,12 @@ Database.prototype.readVectorFloatsById = function (
   attribute: string,
   id: number,
 ): (number | null)[] {
-  return readByIdFloats(
+  return readByIdNumbers(
     getSymbols(),
     this._handle,
     "quiver_database_read_vector_floats_by_id",
+    decodeFloat64Array,
+    getSymbols().quiver_database_free_float_array,
     collection,
     attribute,
     id,
@@ -650,10 +584,12 @@ Database.prototype.readSetIntegersById = function (
   attribute: string,
   id: number,
 ): (number | null)[] {
-  return readByIdIntegers(
+  return readByIdNumbers(
     getSymbols(),
     this._handle,
     "quiver_database_read_set_integers_by_id",
+    decodeInt64Array,
+    getSymbols().quiver_database_free_integer_array,
     collection,
     attribute,
     id,
@@ -675,10 +611,12 @@ Database.prototype.readSetFloatsById = function (
   attribute: string,
   id: number,
 ): (number | null)[] {
-  return readByIdFloats(
+  return readByIdNumbers(
     getSymbols(),
     this._handle,
     "quiver_database_read_set_floats_by_id",
+    decodeFloat64Array,
+    getSymbols().quiver_database_free_float_array,
     collection,
     attribute,
     id,

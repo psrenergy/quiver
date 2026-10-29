@@ -1,16 +1,15 @@
-import { CString, type Pointer, ptr, read, toArrayBuffer } from "bun:ffi";
+import { CString, type Pointer, ptr, read } from "bun:ffi";
 import { Database } from "./database.ts";
 import { check, QuiverError } from "./errors.ts";
 import {
   allocNativeFloat64,
   allocNativeInt64,
   allocNativePtrTable,
-  allocNativeString,
   allocNativeStringArray,
   allocPtrOut,
-  allocUint64Out,
   decodeFloat64Array,
   decodeInt64Array,
+  decodeMask,
   decodeStringArray,
   readPtrOut,
   readUint64Out,
@@ -55,7 +54,7 @@ Database.prototype.readTimeSeriesRow = function (
   const outDataType = new Uint8Array(4);
   const outValues = allocPtrOut();
   const outMask = allocPtrOut();
-  const outCount = allocUint64Out();
+  const outCount = allocPtrOut();
 
   check(
     lib.quiver_database_read_time_series_row(
@@ -77,7 +76,7 @@ Database.prototype.readTimeSeriesRow = function (
 
   // mask[i] === 0: no data at or before dateTime; the data slot is a placeholder, never read.
   const maskPtr = readPtrOut(outMask);
-  const mask = new Uint8Array(toArrayBuffer(maskPtr as Pointer, 0, count));
+  const mask = decodeMask(maskPtr, count);
   const dataType = new DataView(outDataType.buffer).getInt32(0, true);
   switch (dataType) {
     case DATA_TYPE_INTEGER: {
@@ -292,7 +291,7 @@ Database.prototype.listTimeSeriesFilesColumns = function (
   const lib = getSymbols();
   const collBuf = toCString(collection);
   const outColumns = allocPtrOut();
-  const outCount = allocUint64Out();
+  const outCount = allocPtrOut();
   check(
     lib.quiver_database_list_time_series_files_columns(
       this._handle,
@@ -317,7 +316,7 @@ Database.prototype.readTimeSeriesFiles = function (
   const collBuf = toCString(collection);
   const outColumns = allocPtrOut();
   const outPaths = allocPtrOut();
-  const outCount = allocUint64Out();
+  const outCount = allocPtrOut();
   check(
     lib.quiver_database_read_time_series_files(
       this._handle,
@@ -367,7 +366,7 @@ Database.prototype.updateTimeSeriesFiles = function (
 
   const pathPtrs: (Pointer | null)[] = entries.map(([, value]) => {
     if (value === null) return null;
-    const p = allocNativeString(value);
+    const p = toCString(value);
     keepalive.push(p);
     return p.ptr;
   });

@@ -6,9 +6,9 @@ import {
   allocNativePtrTable,
   allocNativeStringArray,
   allocPtrOut,
-  allocUint64Out,
   decodeFloat64Array,
   decodeInt64Array,
+  decodeMask,
   decodePtrArray,
   decodeStringArray,
   readPtrOut,
@@ -258,8 +258,8 @@ export function readGroupColumns(
   const outTypes = allocPtrOut();
   const outData = allocPtrOut();
   const outHasValue = allocPtrOut();
-  const outColCount = allocUint64Out();
-  const outRowCount = allocUint64Out();
+  const outColCount = allocPtrOut();
+  const outRowCount = allocPtrOut();
 
   check(
     readGroup(
@@ -298,7 +298,7 @@ export function readGroupColumns(
     for (let c = 0; c < colCount; c++) {
       const colName = colNames[c];
       const maskPtr = maskPtrs[c];
-      const mask = maskPtr ? new Uint8Array(toArrayBuffer(maskPtr as Pointer, 0, rowCount)) : null;
+      const mask = maskPtr ? decodeMask(maskPtr, rowCount) : null;
       switch (types[c]) {
         case DATA_TYPE_INTEGER: {
           const vals = decodeInt64Array(dataPtrs[c], rowCount);
