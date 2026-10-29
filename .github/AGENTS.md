@@ -10,20 +10,22 @@ before either platform's native tests. The strict check compiles the actual JS b
 
 | Workflow | Trigger | Purpose |
 |---|---|---|
-| `ci.yml` | push/PR to master | Build matrix (ubuntu/ubuntu-arm/windows/macos × Release/Debug) + ctest + artifact upload; four coverage jobs uploading to Codecov with flags `cpp`, `julia`, `dart`, `python`; plus `clang-format` check (22.1.8 wheel via `uvx`), `actionlint`, and a `bun-test` matrix (ubuntu+ubuntu-arm+windows) whose `ubuntu-latest` leg uploads flag `js` |
+| `ci.yml` | push/PR to master | Build matrix (ubuntu/ubuntu-arm/windows/macos × Release/Debug) + ctest + artifact upload; four coverage jobs uploading to Codecov (through the `codecov` composite action) with flags `cpp`, `julia`, `dart`, `python`; plus `clang-format` check (22.1.8 wheel via `uvx`), `actionlint`, and a `bun-test` matrix (ubuntu+ubuntu-arm+windows) whose `ubuntu-latest` leg uploads flag `js` |
 | `bump-version.yml` | `workflow_dispatch` / `workflow_call` (`part`: major/minor/patch) | Runs `scripts/assert_version.py bump <part>` and opens a PR with the five manifests rewritten (see below) |
 | `publish.yml` | `workflow_dispatch` (`bump`: patch/minor/major; default patch) | Release orchestrator with reusable Bump Version (see below) |
 | `publish-s3.yml` | `workflow_dispatch` (usually from publish.yml) | Builds native libs for `linux-x86_64`, `linux-aarch64`, `macos-aarch64`, `windows-x86_64` and stages them on S3 (via `scripts/ci/native_s3.sh upload`) |
 | `publish-julia.yml` | `workflow_dispatch` | Mirrors `bindings/julia` into psrenergy/Quiver.jl (see below) |
 | `publish-python.yml` | push/PR to master + `workflow_dispatch` | cibuildwheel on a ubuntu+ubuntu-arm+windows+macos matrix (targets in `bindings/python/AGENTS.md`); validates wheel contents and tests bundled loading before pytest; the PyPI publish job runs only on `workflow_dispatch` and requires all four platform wheels (trusted publishing, `skip-existing: true`, `environment: pypi`) |
 | `publish-js.yml` | `workflow_dispatch` | npm publish with bundled native libs (see below) |
+| `resolve-version.yml` | `workflow_call` (`ref`) | Reusable: checks out `ref` and outputs `version` from `scripts/assert_version.py`; the `version` job of `publish-s3.yml` and `publish-julia.yml` |
 
 The Python publish gate quotes its required glob patterns and counts matching files in an
 array under `nullglob`. Do not use `ls` to detect missing matches: an unmatched glob disappears,
 so `ls` would list the current directory and report success.
 
-**Codecov uploads send exactly the one file they name.** Every `codecov-action` step sets
-`disable_search: true`, and the C++ one also sets `plugins: noop`. With the defaults, the CLI runs
+**Codecov uploads send exactly the one file they name.** Every upload goes through
+`.github/actions/codecov`, which sets `disable_search: true` (and `fail_ci_if_error: true`); the C++
+one also passes `plugins: noop`. With the defaults, the CLI runs
 its gcov plugin over every `.gcno` in `build/` and adds whatever else its search finds, which put
 all of `tests/*.cpp` into the report behind lcov's `--remove` filter (62% of the measured lines,
 reading 96.7% where the source was at 93.6%). Two related traps: in `codecov.yml`, `dir/**/*`
@@ -50,6 +52,9 @@ Composite actions in `.github/actions/`:
   uses it for all three OSes, in every job that loads the native library except `dart-coverage`,
   whose `dart test` builds the library through the Dart hook (`bindings/dart/hook/build.dart`) and
   never reads `build/`. Do not add it back.
+- `codecov` — the one `codecov/codecov-action` step every coverage job uploads through: inputs
+  `files`, `flags`, `plugins` (empty = the CLI's default set) and `token` (a composite action
+  cannot read `secrets`, so the caller passes `secrets.CODECOV_TOKEN`).
 
 **glibc floor for the published Linux native libs (`publish-s3.yml`):** the `linux-x86_64` native
 libs are NOT built via `build-cpp` on a bare `ubuntu-latest` runner — that binds `GLIBC_2.28`..`2.34`
@@ -102,7 +107,8 @@ The publish workflows read the version by inlining `python3 scripts/assert_versi
 script prints to stdout, so both the no-arg and the `bump` form emit the bare version and nothing
 else — everything the callers `$( )` depend on.
 The child publish workflows take no `version` input: each resolves it from its checkout via
-`scripts/assert_version.py`; `ref` is their only override.
+`scripts/assert_version.py` (`publish-s3.yml` and `publish-julia.yml` through the reusable
+`resolve-version.yml`); `ref` is their only override.
 
 ## Release Pipeline
 
@@ -133,7 +139,8 @@ Publish releases its triggering commit while preparing a version-bump PR for a f
   `scripts/assert_version.py` + assert tag `v<version>` is absent or already at the release sha →
   dispatch `publish-s3.yml` and wait → create tag + GitHub release (`ncipollo/release-action`,
   `skipIfReleaseExists`) → dispatch `publish-julia.yml` / `publish-python.yml` / `publish-js.yml`
-  **in parallel on the new tag** and wait for all three.
+  **in parallel on the new tag** and wait for all three (one `publish-bindings` matrix job,
+  `fail-fast: false` so one failing publish does not cancel the other two).
 - The four child publish workflows are dispatched as top-level `workflow_dispatch` runs via
   `scripts/ci/dispatch_workflow.sh`
   (dispatch → correlate run id by workflow+ref+created-after → poll to completion), NOT as

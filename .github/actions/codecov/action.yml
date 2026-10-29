@@ -1,0 +1,24 @@
+name: Upload to Codecov
+description: Upload exactly the one coverage report named, with the settings every coverage job shares.
+
+inputs:
+  files:
+    description: Coverage report to upload.
+  flags:
+    description: Codecov flag for the report.
+  plugins:
+    description: CLI plugins to run (empty keeps the CLI's default set).
+  token:
+    description: Codecov token (a composite action cannot read secrets).
+
+runs:
+  using: composite
+  steps:
+    - uses: codecov/codecov-action@v7
+      with:
+        files: ${{ inputs.files }}
+        flags: ${{ inputs.flags }}
+        fail_ci_if_error: true
+        disable_search: true
+        plugins: ${{ inputs.plugins }}
+        token: ${{ inputs.token }}
