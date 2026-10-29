@@ -72,7 +72,7 @@ src/                      # C++ implementation
   utils/datetime.h        # ISO 8601 parse/format helpers
   utils/number.h          # quiver::utils::append_number (std::to_chars shortest round-trip) and
                           # parse_float (its whole-cell, host-locale-proof reader)
-  utils/file.h            # quiver::utils::read_file: whole file, binary mode, nullopt on open/read failure
+  utils/file.h            # quiver::utils::read_file: whole file, binary mode, nullopt unless read in full
 src/csv/                    # Standalone CSV file reader/writer (see below)
   csv_read.h / csv_read.cpp   # Internal CSV reader (csv-parser, Pimpl'd) behind db:read_csv /
                               # db:read_csv_stream and import_csv -- no include/quiver/ counterpart

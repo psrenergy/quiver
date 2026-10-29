@@ -4,24 +4,26 @@
 #include <filesystem>
 #include <fstream>
 #include <optional>
-#include <sstream>
 #include <string>
+#include <system_error>
 
 namespace quiver::utils {
 
-// The whole file, read in binary mode (as toml++'s parse_file reads it); nullopt when it cannot be
-// opened or the read fails, so a half-read file is never mistaken for a complete one.
+// The whole file, read in binary mode (as toml++'s parse_file reads it); nullopt when it is not a
+// regular file, cannot be opened or the read fails. The read asks for the file's full size, so a
+// short read (a read error, a byte-range lock) fails it and is never mistaken for EOF.
 inline std::optional<std::string> read_file(const std::filesystem::path& path) {
+    std::error_code ec;
+    if (!std::filesystem::is_regular_file(path, ec)) {
+        return std::nullopt;
+    }
+    const auto size = std::filesystem::file_size(path, ec);
     std::ifstream file(path, std::ios::binary);
-    if (!file.is_open()) {
+    std::string content(ec ? 0 : static_cast<size_t>(size), '\0');
+    if (ec || !file.read(content.data(), static_cast<std::streamsize>(content.size()))) {
         return std::nullopt;
     }
-    std::ostringstream buffer;
-    buffer << file.rdbuf();
-    if (file.bad()) {
-        return std::nullopt;
-    }
-    return buffer.str();
+    return content;
 }
 
 }  // namespace quiver::utils

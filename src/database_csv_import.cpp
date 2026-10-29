@@ -4,6 +4,7 @@
 #include "quiver/options.h"
 #include "schema.h"
 #include "utils/datetime.h"
+#include "utils/file.h"
 #include "utils/number.h"
 #include "utils/string.h"
 
@@ -11,7 +12,6 @@
 #include <cctype>
 #include <ctime>
 #include <filesystem>
-#include <fstream>
 #include <iomanip>
 #include <optional>
 #include <set>
@@ -105,12 +105,11 @@ static csv_read::Options sniff_csv_file(const std::string& path) {
     std::string content;
     std::error_code ec;
     if (std::filesystem::is_regular_file(path, ec)) {
-        const auto size = std::filesystem::file_size(path, ec);
-        std::ifstream file(path, std::ios::binary);
-        content.resize(ec ? 0 : static_cast<size_t>(size));
-        if (ec || !file.read(content.data(), static_cast<std::streamsize>(content.size()))) {
+        auto whole = utils::read_file(path);
+        if (!whole) {
             throw std::runtime_error("Cannot import_csv: cannot read file '" + path + "'");
         }
+        content = std::move(*whole);
     }
     std::string_view text = content;
     if (text.starts_with("\xEF\xBB\xBF")) {
