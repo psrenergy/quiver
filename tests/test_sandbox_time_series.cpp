@@ -655,7 +655,9 @@ TEST_F(SandboxTest, UpsertTimeSeriesRowMultiDim) {
     EXPECT_EQ(std::get<int64_t>(rows[0].at("flag")), 1);
 }
 
-TEST_F(SandboxTest, UpsertTimeSeriesRowReplacesTheWholeRow) {
+TEST_F(SandboxTest, UpsertTimeSeriesRowConflictPatchPreservesUnnamedColumn) {
+    // Lua cannot spell an explicit NULL here - `{ flag = nil }` is `{}` - so omission is its only
+    // signal and it now means *preserve*. That is exactly what this pins.
     auto db = quiver::Database::from_schema(":memory:", VALID_SCHEMA("multi_dim_time_series.sql"));
     db.create_element("Configuration", quiver::Element().set("label", "Config"));
     int64_t id = db.create_element("Resource", quiver::Element().set("label", "Resource 1"));
@@ -673,7 +675,7 @@ TEST_F(SandboxTest, UpsertTimeSeriesRowReplacesTheWholeRow) {
     auto rows = db.read_time_series_group("Resource", "load", id);
     ASSERT_EQ(rows.size(), 1);
     EXPECT_DOUBLE_EQ(std::get<double>(rows[0].at("load")), 50.0);
-    EXPECT_TRUE(std::holds_alternative<std::nullptr_t>(rows[0].at("flag")));  // left out -> cleared
+    EXPECT_EQ(std::get<int64_t>(rows[0].at("flag")), 1);  // left out -> kept
 }
 
 TEST_F(SandboxTest, UpsertTimeSeriesRowMissingDimErrors) {

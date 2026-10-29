@@ -182,12 +182,17 @@ bunfig.toml       # coverageSkipTestFiles = true (Bun 1.3 reports test/ otherwis
   `Number.isInteger` and tags the column FLOAT, and `setFloat64` would convert it with no error:
   `"abc"` to NaN, which SQLite stores as NULL, and `"2"` to 2. A string column is not checked, so
   a mixed `['a', true]` column still writes the text `"true"`. `upsertRowColumns`'s last
-  branch is `typeof value === "number"`, not an untyped `else` — `Number(null)` is 0 and anything
-  else is NaN, both of which used to be written with no error. **`GroupColumns` is the write type and
+  branch is `typeof value === "number"`, not an untyped `else` — `Number()` of a non-number is
+  NaN, which used to be written with no error. (`null` is not in that set: it is a deliberate
+  SQL NULL, sent as a NULL data pointer ahead of the dispatch.) **`GroupColumns` is the write type and
   `TimeSeriesData` the read type** (both in `group-columns.ts`) — they are otherwise identical, but
   only the former admits `bigint` and `boolean`, since no group reader produces either and its
   return type should not claim them. The four `updateTimeSeriesGroup*`/group writers therefore
   take `GroupColumns`.
+- **`upsertTimeSeriesRow` does *not* go through `group-columns.ts`** — `src/time-series.ts`
+  hand-rolls the type dispatch, because `quiver_database_upsert_time_series_row` has no
+  `row_count` and no mask (a `null` is a NULL data pointer) and takes one scalar per column, which
+  the per-*call* `updateGroupColumns` cannot express.
 - **Typecheck/test/lint/format**: `bun run typecheck`, `bun test test`, `bun run lint`,
   `bun run format` (biome, project-pinned
   version). No permission flags needed (Bun has none — don't carry over Deno habits). There is

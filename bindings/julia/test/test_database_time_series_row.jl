@@ -83,6 +83,58 @@ include("fixture.jl")
             Quiver.close!(db)
         end
 
+        # Test 3b — patch semantics: on a PK conflict only the named columns are written
+        @testset "Conflict Patches Named Columns Only" begin
+            path_schema = joinpath(tests_path(), "schemas", "valid", "multi_dim_time_series.sql")
+            db = Quiver.from_schema(":memory:", path_schema)
+
+            Quiver.create_element!(db, "Configuration"; label = "Test Config")
+            id = Quiver.create_element!(db, "Resource"; label = "Resource 1")
+
+            Quiver.upsert_time_series_row!(db, "Resource", "load", id;
+                date_time = DateTime(2024, 1, 1),
+                block = 1,
+                load = 100.0,
+                flag = 1,
+            )
+
+            # Naming only `load`: the unnamed `flag` keeps its value.
+            Quiver.upsert_time_series_row!(db, "Resource", "load", id;
+                date_time = DateTime(2024, 1, 1),
+                block = 1,
+                load = 99.0,
+            )
+
+            result = Quiver.read_time_series_group(db, "Resource", "load", id)
+            @test result["load"][1] == 99.0
+            @test result["flag"][1] == 1
+
+            # Naming `flag` as `nothing` writes an explicit SQL NULL, while
+            # the unnamed `load` survives.
+            Quiver.upsert_time_series_row!(db, "Resource", "load", id;
+                date_time = DateTime(2024, 1, 1),
+                block = 1,
+                flag = nothing,
+            )
+
+            result = Quiver.read_time_series_group(db, "Resource", "load", id)
+            @test result["load"][1] == 99.0
+            @test result["flag"][1] === nothing
+
+            # A brand new row has nothing to preserve: the unnamed `flag` is NULL.
+            Quiver.upsert_time_series_row!(db, "Resource", "load", id;
+                date_time = DateTime(2024, 1, 2),
+                block = 1,
+                load = 1.0,
+            )
+
+            result = Quiver.read_time_series_group(db, "Resource", "load", id)
+            @test result["load"][2] == 1.0
+            @test result["flag"][2] === nothing
+
+            Quiver.close!(db)
+        end
+
         # Test 4 — missing-dim error: omitting required date_time kwarg
         @testset "Missing Dim Error" begin
             path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")

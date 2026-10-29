@@ -222,8 +222,10 @@ function update_set_group_by_label!(db::Database, collection::String, group::Str
 end
 
 # Shared marshalling for the row-oriented time-series upserts: each kwarg is a scalar wrapped in
-# a 1-element typed C array. `upsert` is the C entry point. Separate from _update_group_columns:
-# this signature has no NULL mask, and that helper would zero-fill a masked cell instead of NULL.
+# a 1-element typed C array; `nothing` is a NULL data pointer, which the C API writes as an explicit
+# SQL NULL (an unnamed column keeps its current value). `upsert` is the C entry point. Separate from
+# _update_group_columns: this signature has no NULL mask, and that helper would zero-fill a masked
+# cell instead of NULL.
 function _upsert_row_columns(
     db::Database,
     upsert::Function,
@@ -242,7 +244,11 @@ function _upsert_row_columns(
         col_name = String(k)
         push!(col_names_strs, col_name)
 
-        if v isa DateTime
+        if isnothing(v)
+            # A NULL data pointer is SQL NULL; the type is never read.
+            push!(col_types, Cint(C.QUIVER_DATA_TYPE_FLOAT))
+            push!(col_data_ptrs, C_NULL)
+        elseif v isa DateTime
             # DateTime scalar -> format to string, build 1-element Cstring array
             str_val = date_time_to_string(v)
             cstr = Base.cconvert(Cstring, str_val)

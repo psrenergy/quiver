@@ -163,9 +163,10 @@ ruff.toml         # Lint/format config; lint is isort only (select = ["I"])
   keeps its own loop (columns, dimension-only parsing).
 - **`_marshal_row_columns` is its row-shaped sibling**, serving `upsert_time_series_row` and its
   `_by_label` form — each kwarg is a scalar wrapped in a 1-element typed array (a `datetime` is
-  formatted by `format_datetime` first). Kept separate because the row-upsert C signature carries
-  no per-cell mask: the group marshaller's zeroed placeholder for a `None` cell would be written as
-  data instead of NULL (a `None` kwarg raises `TypeError` here).
+  formatted by `format_datetime` first). `None` is sent as a NULL data pointer, which the C API
+  writes as an explicit SQL NULL (an unnamed kwarg keeps its current value). Kept separate because
+  the row-upsert C signature carries no per-cell mask: the group marshaller's zeroed placeholder
+  for a `None` cell would be written as data instead of NULL.
 
 ## Packaging
 

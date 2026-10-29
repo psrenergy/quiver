@@ -2,6 +2,7 @@
 #include "database_internal.h"
 #include "utils/datetime.h"
 
+#include <algorithm>
 #include <set>
 
 namespace quiver {
@@ -248,25 +249,49 @@ void Database::upsert_time_series_row(
         row
     );
 
+    // Patch, not replace: an unnamed column is not a written column, so the row is addressed
+    // directly rather than rebuilt. A single INSERT ... ON CONFLICT DO UPDATE is no substitute:
+    // it proposes a whole row, so SQLite checks NOT NULL before it detects the conflict and an
+    // unnamed NOT NULL column aborts a patch that would have been legal.
+    std::string key_clause = " WHERE id = ?";
+    std::vector<Value> key_parameters;
+    key_parameters.emplace_back(id);
+    for (const auto& dim_col : dim_cols) {
+        key_clause += " AND " + dim_col + " = ?";
+        key_parameters.emplace_back(row.at(dim_col));
+    }
+
     Impl::TransactionGuard txn(*impl_);
 
-    // INSERT OR REPLACE: if the PK already matches an existing row, REPLACE
-    // deletes it and inserts the new one (upsert semantic). Any value column
-    // omitted from the caller's row is not listed in the INSERT, so SQLite
-    // leaves it as the column DEFAULT (NULL for nullable value columns).
-    std::string insert_sql = "INSERT OR REPLACE INTO " + table_def.name + " (id";
-    std::string placeholders = "?";
-    std::vector<Value> parameters;
-    parameters.emplace_back(id);
-
-    for (const auto& [col_name, value] : row) {
-        insert_sql += ", " + col_name;
-        placeholders += ", ?";
-        parameters.emplace_back(value);
+    if (impl_->execute("SELECT 1 FROM " + table_def.name + key_clause, key_parameters).empty()) {
+        // Nothing to preserve: the caller's columns are written, the rest take the column DEFAULT.
+        std::string insert_sql = "INSERT INTO " + table_def.name + " (id";
+        std::string placeholders = "?";
+        std::vector<Value> parameters;
+        parameters.emplace_back(id);
+        for (const auto& [col_name, value] : row) {
+            insert_sql += ", " + col_name;
+            placeholders += ", ?";
+            parameters.emplace_back(value);
+        }
+        impl_->execute(insert_sql + ") VALUES (" + placeholders + ")", parameters);
+    } else {
+        // A named column takes the caller's value, explicit NULL included; the dimensions address
+        // the row rather than being written, so a row naming only dimensions leaves it alone.
+        std::string set_clause;
+        std::vector<Value> parameters;
+        for (const auto& [col_name, value] : row) {
+            if (std::find(dim_cols.begin(), dim_cols.end(), col_name) != dim_cols.end()) {
+                continue;
+            }
+            set_clause += (set_clause.empty() ? "" : ", ") + col_name + " = ?";
+            parameters.emplace_back(value);
+        }
+        if (!set_clause.empty()) {
+            parameters.insert(parameters.end(), key_parameters.begin(), key_parameters.end());
+            impl_->execute("UPDATE " + table_def.name + " SET " + set_clause + key_clause, parameters);
+        }
     }
-    insert_sql += ") VALUES (" + placeholders + ")";
-
-    impl_->execute(insert_sql, parameters);
 
     txn.commit();
     impl_->logger->debug("Upserted time series row {}.{} for id {}", collection, group, id);

@@ -163,7 +163,9 @@ type UpsertRowFn<Key extends number | string> = (
 /**
  * Marshal a single row of scalars and forward it to one of the row-oriented time-series upsert
  * C functions. Shared by upsertTimeSeriesRow / upsertTimeSeriesRowByLabel: they differ only in
- * which C entry point they call and whether `key` is an id or a label.
+ * which C entry point they call and whether `key` is an id or a label. A `null` cell is a NULL
+ * data pointer, which the C API writes as an explicit SQL NULL; an unnamed column keeps its
+ * current value.
  */
 function upsertRowColumns<Key extends number | string>(
   handle: NativePointer,
@@ -172,7 +174,7 @@ function upsertRowColumns<Key extends number | string>(
   collection: string,
   group: string,
   key: Key,
-  row: Record<string, number | bigint | string | boolean>,
+  row: Record<string, number | bigint | string | boolean | null>,
 ): void {
   const collBuf = toCString(collection);
   const grpBuf = toCString(group);
@@ -197,7 +199,11 @@ function upsertRowColumns<Key extends number | string>(
     // the INTEGER condition below, because Number.isInteger(true) is false — a boolean otherwise
     // reaches allocNativeFloat64 and lands in the column as FLOAT 1.0, silently the wrong type.
     const value = typeof raw === "boolean" ? (raw ? 1 : 0) : raw;
-    if (typeof value === "string") {
+    if (value === null) {
+      // A NULL data pointer is SQL NULL; the type is never read.
+      typesDv.setInt32(c * 4, DATA_TYPE_FLOAT, true);
+      dataPtrs.push(null);
+    } else if (typeof value === "string") {
       typesDv.setInt32(c * 4, DATA_TYPE_STRING, true);
       const { table, keepalive: strPtrs } = allocNativeStringArray([value]);
       keepalive.push(table, ...strPtrs);
@@ -213,8 +219,9 @@ function upsertRowColumns<Key extends number | string>(
       keepalive.push(p);
       dataPtrs.push(p.ptr);
     } else {
-      // Mirrors updateGroupColumns: never let null/undefined/an object fall through to the FLOAT
-      // branch, where Number(null) is 0 and anything else is NaN — both written with no error.
+      // Mirrors updateGroupColumns: never let undefined or an object fall through to the FLOAT
+      // branch, where Number() of it is NaN — written with no error. A `null` is a deliberate SQL
+      // NULL and took the first branch.
       throw new QuiverError(
         `Cannot ${caller}: column '${colName}' has unsupported value type ${typeof value}`,
       );
@@ -245,7 +252,7 @@ Database.prototype.upsertTimeSeriesRow = function (
   collection: string,
   group: string,
   id: number,
-  row: Record<string, number | bigint | string | boolean>,
+  row: Record<string, number | bigint | string | boolean | null>,
 ): void {
   upsertRowColumns(
     this._handle,
@@ -264,7 +271,7 @@ Database.prototype.upsertTimeSeriesRowByLabel = function (
   collection: string,
   group: string,
   label: string,
-  row: Record<string, number | bigint | string | boolean>,
+  row: Record<string, number | bigint | string | boolean | null>,
 ): void {
   upsertRowColumns(
     this._handle,

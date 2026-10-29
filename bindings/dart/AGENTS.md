@@ -90,7 +90,9 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
   and their `ByLabel` forms) marshal the whole payload through `_marshalGroupColumns(Arena, Map)`
   (empty map → NULL arrays; jagged columns → `ArgumentError` naming the column), which calls the
   per-column `_marshalGroupColumn(Arena, String, List<Object?>)`. The two row upserts call
-  `_marshalGroupColumn` directly (no mask in the row C signature); query parameters
+  `_marshalGroupColumn` directly, wrapping each cell in a one-element list (no mask in the row C
+  signature: a `null` in their `Map<String, Object?>` is sent as a NULL data pointer, which the C
+  API writes as an explicit SQL NULL; an unnamed column keeps its current value); query parameters
   go through `_marshalParams`. Both `_marshalGroupColumn` and `Element._setMixedList` take the family
   (numeric, String, DateTime) from the first non-null cell and the numeric type from all of them: a
   numeric column is INTEGER unless some cell is a `double`, which widens it to FLOAT (the rule
