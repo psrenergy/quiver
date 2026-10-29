@@ -37,8 +37,6 @@ set(QUIVER_SOURCES
     sandbox/path_policy.cpp
     sandbox/path_policy.h
     sandbox/return_json.cpp
-    result.cpp
-    row.cpp
     schema.cpp
     schema_validator.cpp
     type_validator.cpp

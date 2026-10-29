@@ -2,8 +2,8 @@
 #define QUIVER_DATABASE_INTERNAL_H
 
 #include "quiver/attribute_metadata.h"
-#include "quiver/result.h"
 #include "quiver/value.h"
+#include "result.h"
 #include "schema.h"
 
 #include <optional>

@@ -63,6 +63,10 @@ callers to change something are prefixed **BREAKING** and say what to do.
   to check one.
 - **BREAKING (C++ only) — `quiver::default_csv_options()`.** It only returned `{}`. *Adapt:* use
   `quiver::CSVOptions{}`.
+- **BREAKING (C++ only) — `quiver/result.h` and `quiver/row.h` are no longer public headers.**
+  `Result` and `Row` are internal now: they were reachable only by including those headers
+  directly, and no public signature used them. *Adapt:* read through the typed `Database` readers
+  and `query_*`.
 
 ### Fixed
 

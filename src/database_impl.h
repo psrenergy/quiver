@@ -2,7 +2,7 @@
 #define QUIVER_DATABASE_IMPL_H
 
 #include "quiver/database.h"
-#include "quiver/result.h"
+#include "result.h"
 #include "schema.h"
 #include "schema_validator.h"
 #include "type_validator.h"

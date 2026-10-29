@@ -16,7 +16,6 @@ include/quiver/           # C++ public headers
   sandbox.h            # Lua scripting support
   value.h                 # Value variant (nullptr/int64/double/string)
   data_type.h             # DataType enum, data_type_to_string, is_date_time_column
-  row.h / result.h        # Row and Result query-result types
   export.h / quiver.h     # Export macro, umbrella header
 include/quiver/binary/      # Binary subsystem headers (binary file I/O)
   binary_file.h               # BinaryFile class (Pimpl) - open_file, read, write, get_metadata
@@ -42,7 +41,8 @@ src/                      # C++ implementation
   schema_validator.h / schema_validator.cpp  # validate_schema - schema convention checks
   type_validator.h / type_validator.cpp      # Scalar/array type validation (free functions,
                                              # caller-threaded Pattern 1 messages)
-  element.cpp / row.cpp / result.cpp
+  element.cpp
+  row.h / result.h        # Row and Result query-result types (internal, header-only)
   sandbox/             # Sandbox (sol2): database*.cpp bindings, plus csv, xlsx, binary, expression
     sandbox.cpp        # Sandbox::Impl (ctor order, the one Database usertype), RunHandles bodies, run()/GcGuard
     internal.h            # quiver::lua_internal: RunHandles, binder decls, converters, read adapters, option walk, group-decoder decls, metadata templates, parse_csv_options decl
@@ -607,7 +607,7 @@ impl_->logger->debug("Opening database: {}", path);
   every FK in every table. Sets and time series used to skip the parent check, and time series
   the action rule too, so a schema could leave orphan set rows or make `delete_element` fail on a
   time-series table with SQLite's `FOREIGN KEY constraint failed`.
-- **`Row::get_float` widens an int64** (`row.cpp`): the one place the int64-for-REAL policy is
+- **`Row::get_float` widens an int64** (`row.h`): the one place the int64-for-REAL policy is
   implemented for reads, since `read_column_values_nullable<double>`,
   `read_grouped_values_all<double>`, `read_single_value<double>` and `query_float` all funnel
   through it. Don't re-add a widening branch at a call site.

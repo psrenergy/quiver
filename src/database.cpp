@@ -1,5 +1,5 @@
 #include "database_impl.h"
-#include "quiver/result.h"
+#include "result.h"
 #include "ui_metadata.h"
 #include "utils/file.h"
 #include "utils/string.h"
