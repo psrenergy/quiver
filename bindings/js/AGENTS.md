@@ -135,6 +135,10 @@ bunfig.toml       # coverageSkipTestFiles = true (Bun 1.3 reports test/ otherwis
   `quiver_database_read_time_series_row`, plus both free functions (hand-maintained, no
   generator). `readTimeSeriesRow` gates every column type on its mask the same way (mask 0 = no
   data at or before the date → `null`) and builds a `CString` only for an unmasked slot.
+- **`transaction(fn)` / `dryRun(fn)`** (`transaction.ts`) mirror Dart's wrappers exactly: commit
+  inside the `try`; on a throw a best-effort rollback / `endDryRun` whose own failure is swallowed so
+  `fn`'s error surfaces; on success an `endDryRun` failure is thrown (no `finally`). Synchronous
+  only — a Promise-returning `fn` would close the scope before its awaited work ran.
 - **`Sandbox.run` owns its result**: `quiver_sandbox_run` takes a `char** out_result` and the
   JSON string must be freed with `quiver_sandbox_free_string` — *not* `quiver_database_free_string`
   (both are in `loader.ts`, hand-maintained). `decodeStringFromBuf` returns `""` for a NULL pointer,

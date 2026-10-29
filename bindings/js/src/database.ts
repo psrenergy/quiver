@@ -210,6 +210,8 @@ export class Database {
   declare beginDryRun: () => void;
   declare endDryRun: () => void;
   declare inDryRun: () => boolean;
+  declare transaction: <T>(fn: (db: Database) => T) => T;
+  declare dryRun: <T>(fn: (db: Database) => T) => T;
 
   // --- Metadata (implemented in metadata.ts) ---
   declare getScalarMetadata: (collection: string, attribute: string) => ScalarMetadata;

@@ -264,7 +264,8 @@ TEST_F(Sandbox_ImportCSV, InsideTransactionThrows) {
 
     // The caller's transaction must survive intact
     sandbox.run(R"(assert(db:in_transaction(), "expected transaction to survive import_csv failure"))");
-    sandbox.run("db:rollback()");
+    // Opened by an earlier run(), so it is the host's to close.
+    db.rollback();
 }
 
 // --- db-directory sandbox ---

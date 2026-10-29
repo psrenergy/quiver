@@ -395,7 +395,9 @@ TEST_F(SandboxTest, DotCallThrowsInsteadOfCrashing) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     quiver::Sandbox sandbox(db);
 
-    expect_sandbox_error(sandbox, "db.commit()", "received nil for 'self' argument");
+    // A method bound as a member pointer and one bound as a lambda (commit) word it differently.
+    expect_sandbox_error(sandbox, "db.begin_transaction()", "received nil for 'self' argument");
+    expect_sandbox_error(sandbox, "db.commit()", "expected userdata, received no value");
     EXPECT_THROW(sandbox.run("db.create_element('Collection', { label = 'x' })"), std::runtime_error);
 }
 

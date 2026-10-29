@@ -98,6 +98,36 @@ void main() {
         throwsA(isA<DatabaseException>()),
       );
     });
+
+    test('readOnly throws when the database is behind its migrations', () {
+      expect(
+        () => Database.fromMigrations(':memory:', migrationsPath, readOnly: true),
+        throwsA(
+          isA<DatabaseException>().having(
+            (e) => e.message,
+            'message',
+            contains('a read-only open cannot apply them'),
+          ),
+        ),
+      );
+    });
+
+    test('readOnly opens a database already at its migrations version', () {
+      final tempDir = Directory.systemTemp.createTempSync('quiver_test_');
+      final dbPath = path.join(tempDir.path, 'test.db');
+      try {
+        Database.fromMigrations(dbPath, migrationsPath).close();
+
+        final reopened = Database.fromMigrations(dbPath, migrationsPath, readOnly: true);
+        try {
+          expect(reopened.currentVersion(), equals(3));
+        } finally {
+          reopened.close();
+        }
+      } finally {
+        tempDir.deleteSync(recursive: true);
+      }
+    });
   });
 
   group('Database validateMigrations', () {

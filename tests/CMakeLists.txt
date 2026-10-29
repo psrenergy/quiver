@@ -53,6 +53,7 @@ add_executable(quiver_tests
     test_sandbox_transaction.cpp
     test_sandbox_update.cpp
     test_sandbox_write_csv.cpp
+    test_sandbox_write_policy.cpp
     test_schema_validator.cpp
     # resolve_sandbox_path is internal to quiver (hidden, not exported), so SandboxPathTest
     # compiles its own copy. Keep path_policy.cpp to that one function: anything else the library

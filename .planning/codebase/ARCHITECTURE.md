@@ -208,7 +208,7 @@ The core is a library rather than a server. `src/CMakeLists.txt` builds `quiver`
 
 **Lua runtime:** `src/sandbox/sandbox.cpp`; invoked through `Sandbox::run`, exposes the borrowed database as `db` and metadata/expression helpers under `quiver`.
 
-**CLI:** `src/cli/main.cpp`; parses database/script paths, schema or migration creation, read-only options and dry-run scope, then prints returned JSON.
+**CLI:** `src/cli/main.cpp`; parses database/script paths, schema or migration creation, read-only option, then prints returned JSON.
 
 ## Architectural Constraints
 

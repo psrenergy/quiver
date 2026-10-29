@@ -289,6 +289,42 @@ TEST_F(TempFileFixture, FromMigrationsSetsCurrentVersion) {
     quiver_database_close(db);
 }
 
+TEST_F(TempFileFixture, FromMigrationsReadOnlyRejectsPendingMigrations) {
+    auto options = quiver::test::quiet_options();
+    options.read_only = 1;
+    quiver_database_t* db = nullptr;
+    EXPECT_EQ(
+        quiver_database_from_migrations(":memory:", SCHEMA_PATH("schemas/migrations").c_str(), &options, &db),
+        QUIVER_ERROR
+    );
+    EXPECT_NE(std::string(quiver_get_last_error()).find("a read-only open cannot apply them"), std::string::npos)
+        << quiver_get_last_error();
+}
+
+TEST_F(TempFileFixture, FromMigrationsReadOnlyOpensMigratedFile) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(
+        quiver_database_from_migrations(path.c_str(), SCHEMA_PATH("schemas/migrations").c_str(), &options, &db),
+        QUIVER_OK
+    ) << quiver_get_last_error();
+    quiver_database_close(db);
+
+    options.read_only = 1;
+    db = nullptr;
+    ASSERT_EQ(
+        quiver_database_from_migrations(path.c_str(), SCHEMA_PATH("schemas/migrations").c_str(), &options, &db),
+        QUIVER_OK
+    ) << quiver_get_last_error();
+    ASSERT_NE(db, nullptr);
+
+    int64_t version = -1;
+    EXPECT_EQ(quiver_database_current_version(db, &version), QUIVER_OK);
+    EXPECT_EQ(version, 3);
+
+    EXPECT_EQ(quiver_database_close(db), QUIVER_OK);
+}
+
 // ============================================================================
 // Migration round-trip tests
 // ============================================================================

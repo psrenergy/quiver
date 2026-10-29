@@ -112,6 +112,15 @@ Settled questions — don't relitigate without the user; each was decided delibe
   resolves relative paths against the directory containing the database file and rejects — reads
   and writes alike — anything that escapes it (subdirectories OK; checked via `weakly_canonical`
   with strict containment). In-memory databases (`:memory:`) reject all file operations.
+  The six writers (`db:write_csv`, `db:export_csv`, `db:open_file` with mode `"w"`, `db:bin_to_csv`,
+  `db:csv_to_bin`, `save`) go through `RunHandles::resolve_write_path` on top of that, which
+  refuses two more things. One is the database file and its `-journal`/`-wal`/`-shm` (each writer
+  opens with truncate, so `db:write_csv("study.db")` zeroed the live database under a host
+  transaction a rollback could not undo; the file is located by SQLite's own absolute name, names
+  compare case-folded and spelled as Win32 opens them (cut at `:`, trailing dots/spaces dropped), a binary writer checks the files it creates, `path` + `.qvr`/`.toml`/`.csv`,
+  and a directory named like the journal is refused too, since SQLite could then never open it). The other is any write at all when the host
+  opened the database read-only: the flag is read through `friend class Sandbox` in `database.h`,
+  deliberately not a public accessor that every layer would have to bind. Reads stay available.
   `dofile`/`loadfile` are removed from the Lua environment. String-form `load` stays for text chunks
   only: it always loads with mode `"t"`, so a precompiled binary chunk is refused, because Lua does
   not verify bytecode. The script given to `Sandbox::run` is loaded with mode `"t"` too, so a host
@@ -120,7 +129,7 @@ Settled questions — don't relitigate without the user; each was decided delibe
   Raw SQL cannot bypass the sandbox either: `query_*` is read-only in every layer (see below), so
   `ATTACH`, `VACUUM INTO` and transaction control through SQL are refused.
   Julia's standalone `open_file` is unaffected — this is Sandbox policy
-  (`resolve_sandboxed_path` in `src/sandbox/path_policy.cpp`), not binary-subsystem policy.
+  (`resolve_sandbox_path` in `src/sandbox/path_policy.cpp`), not binary-subsystem policy.
 - **One scalar typing policy lives in C++**: an int64 is accepted for INTEGER and REAL columns
   (int-for-REAL coercion), a double only for REAL (a float into an INTEGER column is rejected), a
   string for TEXT / DATE_TIME, and an FK label for an INTEGER foreign key wherever
@@ -183,6 +192,22 @@ Settled questions — don't relitigate without the user; each was decided delibe
   is read-only, but `end_dry_run` keeps guarding on `sqlite3_get_autocommit` instead of throwing,
   as defense. A per-table changeset (SQLite session extension)
   was skipped — a script that wants a change count already has `SELECT total_changes()`.
+- **A script cannot end a scope the host opened.** `Sandbox::run` snapshots, at entry, whether a
+  dry run is open and whether a plain transaction is; a scope open then is the host's, including
+  one an earlier `run()` left open. The Lua `db:commit()`/`db:rollback()` throw Pattern 1 under a
+  host transaction (`Cannot commit: the transaction was open before the script started, so it
+  belongs to the host`) and `db:end_dry_run()` under a host dry run. Under a host dry run
+  `commit`/`rollback` still reach `Database` and are absorbed, as the decision above requires. This
+  is the same escape 0.13.4 closed for a raw `COMMIT` through `query_*`, through the typed API:
+  the host-dry-run pattern was escapable with `db:end_dry_run()`, and
+  both agent hosts (harness, claw) wrapped `db` in a Lua table proxy to block it. Only ending is
+  refused; a nested `db:begin_transaction()`/`db:transaction(fn)` under a host transaction still
+  throws `transaction already active` — absorbing it (a committing sibling of `begin_dry_run`)
+  would touch this decision and the no-SAVEPOINTs one, so it is the maintainer's call. A snapshot
+  rather than tracking who opened the scope: tracking goes stale when the host ends a script's
+  transaction through FFI and opens its own. Outside `run()` every scope counts as the host's,
+  because Lua still runs then: `lua_close` calls the script's `__gc` finalizers when the Sandbox is
+  destroyed. The FFI `commit`/`rollback` are untouched.
 - **Writers check everything before their first write, and there are no SAVEPOINTs.**
   `Impl::TransactionGuard` no-ops inside a caller-owned transaction or a dry run, so it cannot roll
   back a failed call there. Every writer that can run inside one therefore resolves and validates
@@ -382,7 +407,7 @@ Settled questions — don't relitigate without the user; each was decided delibe
   exposed too, symmetric in kind but streaming-only: `db:write_csv(path, opts)` returns a handle,
   `w:write_row(row)` appends one row, and `w:close()` finishes it — no whole-file form, since a
   second code path is a second thing that can diverge. Like the reader, the writer is Lua-only
-  with no C++ header, no C API, and no FFI binding; it shares the same `resolve_sandboxed_path`
+  with no C++ header, no C API, and no FFI binding; it shares the same `resolve_sandbox_path`
   gate, truncates an existing file at open with no overwrite guard, takes the same two options
   (`separator` and `header`) and no more, and formats numbers via `std::to_chars`'s shortest
   round-trip form — a `nil` cell and an empty-string cell are indistinguishable after the round
@@ -713,7 +738,12 @@ Public Database methods follow `verb_[category_]type[_by_id]`:
 - **Examples:** `create_element`, `read_vector_floats_by_id`, `get_scalar_metadata`, `list_time_series_groups`
 
 ### Database Class
-- Factory methods: `from_schema()`, `from_migrations()` — `DatabaseOptions` (`read_only`, `console_level`) exposed as optional parameters in every binding
+- Factory methods: `from_schema()`, `from_migrations()` — `DatabaseOptions` (`read_only`, `console_level`) exposed as optional parameters in every binding.
+  `from_migrations` with `read_only` applies nothing and creates nothing: it loads the `ui/`
+  sidecar for a database with no pending migrations, and throws Pattern 1
+  (`... a read-only open cannot apply them`) for one behind them; `from_schema` refuses
+  `read_only`. A read-only open creates no `quiver_database.log`, and a Sandbox over it writes no
+  files; the host's own `export_csv` on that handle still writes, as the host asked.
 - `validate_migrations(migrations_path)` — validates a migrations directory (up then down) against a
   throwaway in-memory database; no out-parameter, returns nothing. Bound in every layer, including
   Lua (`db:validate_migrations`, db-scoped and sandboxed — see the design decision above). A directory
@@ -1011,12 +1041,15 @@ positional index of its related element. A documented Julia-only convenience for
 modeling tooling — a deliberate exception to the thin-bindings rule, kept in the binding
 because only Julia consumers use it.
 
-**Transaction block wrappers (Julia, Dart, Python, and Lua):**
+**Transaction block wrappers (Julia, Dart, Python, JS, and Lua):**
 
-| Julia | Dart | Python | Lua | Wraps |
-|-------|------|--------|-----|-------|
-| `transaction(db) do db...end` | `db.transaction((db) {...})` | `with db.transaction():` | `db:transaction(function(db)...end)` | begin + fn + commit/rollback |
-| `dry_run(db) do db...end` | `db.dryRun((db) {...})` | `with db.dry_run():` | `db:dry_run(function(db)...end)` | begin_dry_run + fn + end_dry_run |
+| Julia | Dart | Python | JS | Lua | Wraps |
+|-------|------|--------|----|-----|-------|
+| `transaction(db) do db...end` | `db.transaction((db) {...})` | `with db.transaction():` | `db.transaction((db) => ...)` | `db:transaction(function(db)...end)` | begin + fn + commit/rollback |
+| `dry_run(db) do db...end` | `db.dryRun((db) {...})` | `with db.dry_run():` | `db.dryRun((db) => ...)` | `db:dry_run(function(db)...end)` | begin_dry_run + fn + end_dry_run |
+
+The JS pair is synchronous only (every FFI call is): a Promise-returning `fn` would commit or end
+the dry run before its awaited work ran.
 
 **Scoped resource factories (Julia and Python — no Dart/JS equivalent):** the four bindings sit in
 three shapes and the divergence is not yet resolved. Julia has callback-first overloads for `do`

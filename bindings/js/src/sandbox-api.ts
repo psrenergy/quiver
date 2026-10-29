@@ -95,7 +95,9 @@ midnight.
   writes when \`fn\` errors; nothing undoes a file a \`db:\` call wrote. A
   \`db:begin_transaction()\` (or \`db:begin_dry_run()\`) you opened and never closed stays open
   after the error, and closing it is up to the host. A host that runs your script inside its own
-  transaction or dry run may undo the whole run; check \`db:in_transaction()\` if it matters. To
+  transaction or dry run may undo the whole run; check \`db:in_transaction()\` if it matters. That
+  scope is the host's: \`db:commit()\`, \`db:rollback()\` and \`db:end_dry_run()\` refuse to end it
+  (see Transactions). To
   make several writes all-or-nothing, put them in one \`db:transaction(function(db) ... end)\`
   and do not \`pcall\` inside it: a caught error lets the block commit whatever ran.
 - **Standard library.** Loaded standard libraries: base, string, table, math, coroutine, utf8.
@@ -115,7 +117,12 @@ midnight.
   relative paths against the directory containing the database file and rejects anything outside it
   (subdirectories are fine; \`..\` escapes and outside absolute paths throw \`Cannot <op>: path '...' escapes the
   database directory ...\`). On an in-memory database these operations throw
-  \`Cannot <op>: database is in-memory, file operations are unavailable\`.
+  \`Cannot <op>: database is in-memory, file operations are unavailable\`. The operations that write
+  a file (\`db:write_csv\`, \`db:export_csv\`, \`db:open_file\` with mode \`"w"\`, \`db:bin_to_csv\`,
+  \`db:csv_to_bin\`, \`save\`) also refuse the database file and its \`-journal\`/\`-wal\`/\`-shm\`
+  files (\`Cannot <op>: path '...' is the database file or one of its journals\`), and refuse to
+  run at all when the host opened the database read-only
+  (\`Cannot <op>: database is open read-only, so scripts cannot write files\`); reads still work.
 - **Raw SQL is read-only.** \`db:query_string\` / \`db:query_integer\` / \`db:query_float\` accept only
   statements that read: a write (\`INSERT\`, \`UPDATE\`, \`DELETE\`, DDL), a \`PRAGMA\` statement,
   \`ATTACH\`/\`DETACH\`, \`VACUUM\` or transaction control (\`BEGIN\`, \`COMMIT\`, \`ROLLBACK\`,
@@ -126,11 +133,12 @@ midnight.
 - **What the sandbox does not limit.** The sandbox controls which files a script can touch and
   which standard libraries exist. It does not bound how much work a script does: there is no
   instruction-count limit, no memory cap and no wall-clock timeout (\`while true do end\` runs
-  until the host stops it). Globals persist across \`run()\` calls on the same runner, so a global
+  until the host stops it). Globals persist across \`run()\` calls on the same Sandbox, so a global
   one script sets is visible to the next; use \`local\`. A host that runs untrusted scripts has to
   impose those limits outside the library.
 - **Output.** A script can \`return\` one value and the host receives it as JSON — prefer this over
-  \`print()\` when you need structured data back (\`print()\` still works and is captured). Only the
+  \`print()\` when you need structured data back (\`print()\` writes to the host process's standard
+  output, which the library does not capture; whether you see it depends on the host). Only the
   **first** returned value is encoded. Arrays are 1-indexed. Iterate with \`ipairs\` only where no
   NULL can appear: a read of a nullable column (a bulk scalar read, a vector/set inner list, a
   time-series value column, \`db:read_time_series_row\`) has \`nil\` holes, and \`ipairs\` stops at
@@ -175,9 +183,8 @@ midnight.
   is neither an integer nor a string (a boolean, a float such as \`1.5\`, a table) raises
   \`Cannot run: script returned a table with an unsupported key type\`.
 - **Embedding harness may restrict further.** The library itself allows transactions and the
-  (sandboxed) CSV/file operations below. A host that runs your script (e.g. a hosted \`run_lua\`
-  tool) may disable some of them and report \`disabled in the run_lua sandbox\` — that limit comes
-  from the harness, not from quiverdb.
+  (sandboxed) CSV/file operations below. A host that runs your script may disable some of them
+  with its own error message — that limit comes from the harness, not from quiverdb.
 
 ---
 
@@ -227,11 +234,13 @@ end)   -- both writes commit together; if either throws, both roll back
 
 **Caveat:** if the host already runs your script inside a plain transaction (not a dry run), an
 explicit \`db:begin_transaction()\` will error
-(\`Cannot begin_transaction: transaction already active\`) and a mid-script \`db:commit()\` would
-prematurely end the host's transaction. \`db:transaction(fn)\` begins one too, so it fails the same
-way. When unsure whether a transaction is already open, check \`db:in_transaction()\` first, or just issue writes directly:
-outside a transaction each \`db:\` write commits on its own, while inside the host's transaction it
-commits or rolls back with the host's.
+(\`Cannot begin_transaction: transaction already active\`), and \`db:transaction(fn)\` begins one
+too, so it fails the same way. A transaction that was open when the script started belongs to the
+host — including one an earlier script left open — so \`db:commit()\` and \`db:rollback()\` refuse
+to end it (\`Cannot commit: the transaction was open before the script started, so it belongs to
+the host\`). When unsure whether a transaction is already open, check \`db:in_transaction()\`
+first, or just issue writes directly: outside a transaction each \`db:\` write commits on its own,
+while inside the host's transaction it commits or rolls back with the host's.
 
 ---
 
@@ -268,8 +277,9 @@ Rules worth knowing:
 - **Dry runs do not nest.** The host may have already opened one around your whole script, in which
   case both \`db:begin_dry_run()\` and \`db:dry_run(fn)\` (which calls it internally) error with
   \`Cannot begin_dry_run: dry run already active\` — check \`db:in_dry_run()\` first and skip the
-  wrapper when one is already active. Do **not** call \`db:end_dry_run()\` to get around it: that
-  ends the host's dry run, and everything you write afterwards is committed for real.
+  wrapper when one is already active. \`db:end_dry_run()\` cannot get around it: a dry run that was
+  open when the script started belongs to the host, and ending it throws
+  \`Cannot end_dry_run: the dry run was open before the script started, so it belongs to the host\`.
 - **Nor inside a plain transaction.** If the host (or a \`db:transaction\` block) already holds a
   plain transaction, \`db:begin_dry_run()\` and \`db:dry_run(fn)\` throw
   \`Cannot begin_dry_run: transaction already active\`. \`db:in_transaction()\` is true under a host
@@ -898,9 +908,9 @@ quote, CR, LF or NUL is rejected as a separator: none of them can be a delimiter
 written with one could not be read back.
 
 Opening \`db:write_csv\` **truncates** an existing file at the target path — there is no overwrite
-guard, so a script can destroy an existing file in the case folder (including the database file
-itself) by writing to its path. This is documented behaviour, not a bug: reopening the same path
-always starts a fresh file. Two writers open on the *same* path at once is refused, though
+guard, so a script can destroy an existing file in the case folder by writing to its path. This is
+documented behaviour, not a bug: reopening the same path always starts a fresh file. The database
+file and its journals are the exception (see Filesystem sandbox): those paths are refused. Two writers open on the *same* path at once is refused, though
 (\`Cannot write_csv: file is already open for writing: ...\`) — the second would truncate what the
 first is still buffering. Close the first writer before reopening its path.
 
