@@ -153,7 +153,7 @@ Conventions that keep the error paths safe:
   `free_dimension`, `free_time_series_files`) `QUIVER_REQUIRE` a non-NULL handle.
 
 ### Alloc/Free Co-location
-Allocation functions and their corresponding free functions live in the same translation unit, organized per area: read alloc/free pairs in `database_read.cpp`, metadata alloc/free pairs in `database_metadata.cpp`, time series alloc/free pairs in `database_time_series.cpp`. Cross-area sharing exists where types overlap (query strings are freed by `free_string` in `database_read.cpp`; `list_time_series_groups` metadata by the array free in `database_metadata.cpp`).
+Allocation functions and their corresponding free functions live in the same translation unit, organized per area: read alloc/free pairs in `database_read.cpp`, metadata alloc/free pairs in `database_metadata.cpp`, time series alloc/free pairs in `database_time_series.cpp`. Cross-area sharing exists where types overlap (query strings are freed by `free_string` in `database_read.cpp`; `list_time_series_groups` metadata by the array free in `database_metadata.cpp`; the strings and arrays from `quiver_sandbox_run` (`sandbox.cpp`), `quiver_binary_file_*` and `quiver_binary_metadata_*` (`binary/`) by the shared `quiver_database_free_*` in `database_read.cpp`).
 
 ### String Handling
 Always null-terminate, use `quiver::string::new_c_str()` from `src/utils/string.h` (called with

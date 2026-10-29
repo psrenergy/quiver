@@ -43,6 +43,9 @@ callers to change something are prefixed **BREAKING** and say what to do.
   argument error (`script: 1 argument(s) expected. 0 provided.`, still exit 2), and a script that
   cannot be read reports `Failed to read script file: <p>` (still exit 1, still before the database
   is opened) instead of `Script file not found: <p>`.
+- **Windows: `from_schema` and `from_migrations` read SQL files byte-for-byte**, as on Linux and
+  macOS. A CRLF inside a multi-line string literal is now stored as CRLF (it was stored as LF), and
+  a Ctrl-Z byte no longer ends the file.
 
 ### Added
 
