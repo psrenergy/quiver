@@ -15,7 +15,7 @@ callers to change something are prefixed **BREAKING** and say what to do.
   `db:end_dry_run()` (under a host dry run) now throw `Cannot <op>: the transaction was open before
   the script started, so it belongs to the host` (`the dry run was ...` for `end_dry_run`) instead
   of ending it. A script that called `db:end_dry_run()` and kept writing used to commit those writes
-  for real, including under `quiver_cli --dry-run`. Under a host dry run, `db:commit()` and
+  for real. Under a host dry run, `db:commit()` and
   `db:rollback()` are still absorbed as before.
 
   *Adapt:* a transaction or dry run that one `run()` opens can no longer be closed by a later
@@ -48,6 +48,11 @@ callers to change something are prefixed **BREAKING** and say what to do.
 - **JS `Database.transaction(fn)` and `Database.dryRun(fn)`**, the block wrappers Julia, Dart,
   Python and Lua already had: commit (or always roll back) after `fn`, and on a throw undo
   best-effort and rethrow `fn`'s error. `fn` must be synchronous.
+
+### Removed
+
+- **BREAKING — `quiver_cli --dry-run`.** *Adapt:* wrap the script body in
+  `db:dry_run(function(db) ... end)`.
 
 ### Fixed
 

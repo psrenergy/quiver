@@ -199,7 +199,7 @@ Settled questions — don't relitigate without the user; each was decided delibe
   belongs to the host`) and `db:end_dry_run()` under a host dry run. Under a host dry run
   `commit`/`rollback` still reach `Database` and are absorbed, as the decision above requires. This
   is the same escape 0.13.4 closed for a raw `COMMIT` through `query_*`, through the typed API:
-  `quiver_cli --dry-run` and the host-dry-run pattern were escapable with `db:end_dry_run()`, and
+  the host-dry-run pattern was escapable with `db:end_dry_run()`, and
   both agent hosts (harness, claw) wrapped `db` in a Lua table proxy to block it. Only ending is
   refused; a nested `db:begin_transaction()`/`db:transaction(fn)` under a host transaction still
   throws `transaction already active` — absorbing it (a committing sibling of `begin_dry_run`)

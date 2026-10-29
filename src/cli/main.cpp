@@ -55,10 +55,6 @@ int main(int argc, char* argv[]) {
 
     program.add_argument("--read-only").help("open database in read-only mode").flag();
 
-    program.add_argument("--dry-run")
-        .help("run the script in a transaction and roll it back (scopes to the script only)")
-        .flag();
-
     program.add_argument("--log-level")
         .help("set log verbosity (debug, info, warn, error, off)")
         .default_value(std::string("warn"));
@@ -73,13 +69,6 @@ int main(int argc, char* argv[]) {
     // Mutual exclusivity check
     if (program.is_used("--schema") && program.is_used("--migrations")) {
         std::cerr << "Cannot use --schema and --migrations together" << std::endl;
-        return 2;
-    }
-
-    // --schema deletes and recreates the database file before the dry run's transaction opens, so
-    // the combination would destroy an existing database under a flag that promises the opposite.
-    if (program.is_used("--schema") && program.get<bool>("--dry-run")) {
-        std::cerr << "Cannot use --schema and --dry-run together: --schema recreates the database file" << std::endl;
         return 2;
     }
 
@@ -117,16 +106,9 @@ int main(int argc, char* argv[]) {
 
         // Read and execute script
         auto script = read_script_file(*script_path);
-        if (program.get<bool>("--dry-run")) {
-            db.begin_dry_run();
-        }
-
         quiver::Sandbox sandbox(db);
         auto result = sandbox.run(script);
 
-        if (db.in_dry_run()) {
-            db.end_dry_run();
-        }
         if (!result.empty()) {
             std::cout << result << std::endl;
         }
