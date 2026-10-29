@@ -12,7 +12,8 @@ include/quiver/c/         # C API headers (for FFI)
   options.h               # All option types and defaults: LogLevel, DatabaseOptions, CSVOptions
   database.h / element.h / sandbox.h
 include/quiver/c/binary/    # Binary C API headers
-  binary_file.h               # quiver_binary_file_t opaque handle, open/close/read/write
+  binary_file.h               # quiver_binary_file_t opaque handle, open_file/close/read/write
+                              # (no unopened handle: open_file is the only constructor)
   csv_converter.h             # bin_to_csv, csv_to_bin functions
   binary_metadata.h           # quiver_binary_metadata_t + flat structs (quiver_dimension_t, quiver_time_properties_t)
 include/quiver/c/expression/  # Expression C API header

@@ -166,8 +166,8 @@ Project.toml      # Deps: Artifacts, CEnum, Dates, Libdl; julia 1.11 compat
   and every converted handle across its operation's ccall. `get_metadata` is one generic owned by
   `Binary` and imported into `Quiver` before `include("expression.jl")` (an import after the
   definition is a load error), so a file answers with its handle's metadata, never through the
-  conversion: an unopened `Binary.File(path)` reports its handle's empty metadata, while an
-  expression built from it reads the file's metadata from disk. There is no public
+  conversion. A `Binary.File` comes only from `open_file` (there is no unopened handle, in Julia
+  or the C API). There is no public
   `Expression(::Expression)`: closing the result would close the argument. Do not re-add
   per-type methods for the file type — that was 97 forwarders.
 - **Scoped resource factories**: `open`, `from_schema`, `from_migrations`, and

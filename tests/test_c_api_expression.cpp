@@ -1462,12 +1462,12 @@ TEST_F(ExpressionCApiFixture, AggregateOutermostTimeDimFromMidYearStart) {
     EXPECT_DOUBLE_EQ(read_one_cell(path_out, {"month"}, {12})[0], 324.0);  // Dec: 112 + 212
 }
 
-TEST_F(ExpressionCApiFixture, FromUnopenedBinaryFile) {
+TEST_F(ExpressionCApiFixture, SaveFromFileOpenForReading) {
     write_fixture(path_a, [](int r, int c, int k) { return static_cast<double>(r * 100 + c * 10 + k); });
 
-    // Create the handle without opening — Expression must still build and save.
+    // The source handle stays open for reading across save().
     quiver_binary_file_t* f = nullptr;
-    ASSERT_EQ(quiver_binary_file_create(path_a.c_str(), &f), QUIVER_OK);
+    ASSERT_EQ(quiver_binary_file_open_file(path_a.c_str(), 'r', nullptr, &f), QUIVER_OK);
 
     quiver_expression_t* e = nullptr;
     ASSERT_EQ(quiver_expression_from_file(f, &e), QUIVER_OK);

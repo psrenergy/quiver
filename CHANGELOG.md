@@ -70,6 +70,10 @@ callers to change something are prefixed **BREAKING** and say what to do.
   `Result` and `Row` are internal now: they were reachable only by including those headers
   directly, and no public signature used them. *Adapt:* read through the typed `Database` readers
   and `query_*`.
+- **BREAKING (C API, Julia) — the two-step binary file open.** `quiver_binary_file_create` and
+  `quiver_binary_file_open` are gone from the C API, and `Binary.File(path)` and `Binary.open!`
+  from Julia. *Adapt:* open in one call with `quiver_binary_file_open_file(path, mode, md, &out)`
+  in C or `Binary.open_file(path; mode, metadata)` in Julia.
 
 ### Fixed
 

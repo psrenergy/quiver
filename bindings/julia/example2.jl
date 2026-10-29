@@ -30,11 +30,8 @@ Quiver.Binary.close!(b)
 
 ################################################
 
-a = Quiver.Binary.File("a")
-b = Quiver.Binary.File("b")
-
-Quiver.Binary.open!(a; mode = 'r')
-Quiver.Binary.open!(b; mode = 'r')
+a = Quiver.Binary.open_file("a"; mode = 'r')
+b = Quiver.Binary.open_file("b"; mode = 'r')
 
 @show c = a + b * 2
 Quiver.save(c, "c")
