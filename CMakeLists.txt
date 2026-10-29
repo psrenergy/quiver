@@ -58,36 +58,6 @@ if(QUIVER_BUILD_TESTS)
     add_subdirectory(tests)
 endif()
 
-# Package config for find_package() support
-if(NOT DEFINED SKBUILD)
-    include(GNUInstallDirs)
-    include(CMakePackageConfigHelpers)
-
-    write_basic_package_version_file(
-        "${CMAKE_CURRENT_BINARY_DIR}/quiverConfigVersion.cmake"
-        VERSION ${PROJECT_VERSION}
-        COMPATIBILITY SameMajorVersion
-    )
-
-    configure_package_config_file(
-        "${CMAKE_CURRENT_SOURCE_DIR}/cmake/quiverConfig.cmake.in"
-        "${CMAKE_CURRENT_BINARY_DIR}/quiverConfig.cmake"
-        INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/quiver
-    )
-
-    install(EXPORT quiverTargets
-        FILE quiverTargets.cmake
-        NAMESPACE quiver::
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/quiver
-    )
-
-    install(FILES
-        "${CMAKE_CURRENT_BINARY_DIR}/quiverConfig.cmake"
-        "${CMAKE_CURRENT_BINARY_DIR}/quiverConfigVersion.cmake"
-        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/quiver
-    )
-endif()
-
 # Source files for the format target (recursive, matching CI's clang-format check)
 file(GLOB_RECURSE ALL_SOURCE_FILES
     ${CMAKE_SOURCE_DIR}/include/*.h

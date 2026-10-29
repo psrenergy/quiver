@@ -81,6 +81,11 @@ callers to change something are prefixed **BREAKING** and say what to do.
   counterpart does. *Adapt:* free those results with `quiver_database_free_string`,
   `quiver_database_free_string_array` or `quiver_database_free_float_array` (declared in
   `database.h`, which `binary/binary_metadata.h` now includes).
+- **BREAKING (CMake) — the install rules and the `find_package(quiver)` package config.**
+  `cmake --install` no longer installs the libraries and headers or a `quiverConfig.cmake`, and
+  the `quiver::database` / `quiver::database_c` aliases are gone. The Python wheel's install is
+  unchanged. *Adapt:* add Quiver with `add_subdirectory` or FetchContent and link `quiver` /
+  `quiver_c`.
 
 ### Fixed
 

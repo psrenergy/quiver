@@ -70,8 +70,7 @@ endif()
 # Include directories
 target_include_directories(quiver
     PUBLIC
-        $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
-        $<INSTALL_INTERFACE:include>
+        ${CMAKE_SOURCE_DIR}/include
     PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}
 )
@@ -106,15 +105,14 @@ target_link_libraries(quiver
     PRIVATE
         quiver_compiler_options
         tomlplusplus::tomlplusplus
-        $<BUILD_INTERFACE:nlohmann_json::nlohmann_json>
+        nlohmann_json::nlohmann_json
         spdlog::spdlog
         lua_library
         sol2
         csv
         OpenXLSX::OpenXLSX
-        # OpenXLSX already carries pugixml for installed static consumers. This
-        # direct edge supplies the internal DOM header without ambiguous exports.
-        $<BUILD_INTERFACE:pugixml::static>
+        # Direct edge for the pugixml DOM header src/xlsx reaches through XLXmlParser.hpp.
+        pugixml::static
 )
 
 # Set library properties
@@ -124,23 +122,6 @@ set_target_properties(quiver PROPERTIES
     ${QUIVER_LIB_VERSION}
     PREFIX "lib"
 )
-
-# Alias for use in subdirectories
-add_library(quiver::database ALIAS quiver)
-
-# Installation rules
-include(GNUInstallDirs)
-if(NOT DEFINED SKBUILD)
-    install(TARGETS quiver
-        EXPORT quiverTargets
-        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-    )
-    install(DIRECTORY ${CMAKE_SOURCE_DIR}/include/quiver
-        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-    )
-endif()
 
 # C API wrapper (optional)
 if(QUIVER_BUILD_C_API)
@@ -173,8 +154,7 @@ if(QUIVER_BUILD_C_API)
 
     target_include_directories(quiver_c
         PUBLIC
-            $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
-            $<INSTALL_INTERFACE:include>
+            ${CMAKE_SOURCE_DIR}/include
         PRIVATE
             ${CMAKE_CURRENT_SOURCE_DIR}
     )
@@ -188,17 +168,6 @@ if(QUIVER_BUILD_C_API)
         ${QUIVER_LIB_VERSION}
         PREFIX "lib"
     )
-
-    add_library(quiver::database_c ALIAS quiver_c)
-
-    if(NOT DEFINED SKBUILD)
-        install(TARGETS quiver_c
-            EXPORT quiverTargets
-            LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-            ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-            RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-        )
-    endif()
 endif()
 
 # CLI executable

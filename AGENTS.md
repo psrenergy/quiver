@@ -22,7 +22,7 @@ scripts/                  # build-all/test-all/clean-all.bat, format.bat, tidy.b
                           # generator.bat (runs all three FFI generators),
                           # assert_version.py (check + bump), validate_wheel*.py + test-wheel-install.bat,
                           # ci/{dispatch_workflow.sh, native_s3.sh}, julia/generate_artifacts.jl
-cmake/                    # CompilerOptions.cmake, Dependencies.cmake, Platform.cmake, quiverConfig.cmake.in
+cmake/                    # CompilerOptions.cmake, Dependencies.cmake, Platform.cmake
 docs/                     # User-facing docs: introduction, rules, attributes, migrations, time_series
 assets/                   # logo.svg
 ```
@@ -587,9 +587,11 @@ JS has no generator — update the hand-written symbol table in `bindings/js/src
   pugixml 1.15, nowide 11.3.1 on Windows); its CMake policy-floor override is scoped to the
   dependency for CMake 4. Documentation/examples/tests/benchmarks/LTO are disabled.
   nlohmann/json v3.12.0 is header-only and build-only; its tests and installation are disabled.
-- **Targets**: `quiver` (core, alias `quiver::database`), `quiver_c` (alias
-  `quiver::database_c`), `quiver_cli`, `quiver_tests`, `quiver_c_tests`, `quiver_benchmark`,
-  `quiver_sandbox`. Outputs: executables/DLLs → `build/bin/`, libs → `build/lib/`.
+- **Targets**: `quiver` (core), `quiver_c`, `quiver_cli`, `quiver_tests`, `quiver_c_tests`,
+  `quiver_benchmark`, `quiver_sandbox`. Outputs: executables/DLLs → `build/bin/`, libs → `build/lib/`.
+  There is no `install()`/`find_package(quiver)` package: a C++ consumer adds Quiver with
+  `add_subdirectory`/FetchContent and links `quiver` / `quiver_c`. The only `install()` rule is
+  the SKBUILD one that puts both libraries into the Python wheel's `quiverdb/_libs`.
 
 ## Versioning
 
