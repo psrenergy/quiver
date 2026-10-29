@@ -127,6 +127,27 @@ end
     end
 end
 
+@testset "Read-only from_migrations" begin
+    path_migrations = joinpath(tests_path(), "schemas", "migrations")
+
+    @testset "Behind its migrations throws" begin
+        exc = @test_throws Quiver.DatabaseException Quiver.from_migrations(":memory:", path_migrations; read_only = true)
+        @test occursin("a read-only open cannot apply them", exc.value.msg)
+    end
+
+    @testset "Up to date opens" begin
+        mktempdir() do dir
+            db_path = joinpath(dir, "test.db")
+            Quiver.close!(Quiver.from_migrations(db_path, path_migrations))
+
+            db = Quiver.from_migrations(db_path, path_migrations; read_only = true)
+            @test Quiver.current_version(db) == 3
+            Quiver.close!(db)
+            return nothing
+        end
+    end
+end
+
 @testset "Test Migrations" begin
     @testset "Success" begin
         path_migrations = joinpath(tests_path(), "schemas", "migrations")

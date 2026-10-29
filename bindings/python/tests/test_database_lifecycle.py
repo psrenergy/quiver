@@ -37,6 +37,22 @@ def test_from_migrations_creates_database(migrations_path: Path, tmp_path: Path)
         db.close()
 
 
+def test_from_migrations_read_only_rejects_pending_migrations(migrations_path: Path) -> None:
+    with pytest.raises(QuiverError, match="a read-only open cannot apply them"):
+        Database.from_migrations(":memory:", str(migrations_path), read_only=True)
+
+
+def test_from_migrations_read_only_opens_migrated_database(migrations_path: Path, tmp_path: Path) -> None:
+    db_path = str(tmp_path / "test.db")
+    Database.from_migrations(db_path, str(migrations_path)).close()
+
+    reopened = Database.from_migrations(db_path, str(migrations_path), read_only=True)
+    try:
+        assert reopened.current_version() == 3
+    finally:
+        reopened.close()
+
+
 def test_validate_migrations_succeeds(migrations_path: Path) -> None:
     assert Database.validate_migrations(str(migrations_path)) is None
 

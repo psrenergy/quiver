@@ -3,8 +3,10 @@
 
 #include <filesystem>
 #include <fstream>
+#include <iterator>
 #include <optional>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -1193,4 +1195,93 @@ enum = "initial_volume_type"
 
     EXPECT_EQ(report.find(kEnumClauseOpener), std::string::npos) << report;
     EXPECT_NE(report.find(R"(values {0: 1})"), std::string::npos) << report;
+}
+
+// ============================================================================
+// Read-only from_migrations: the sidecar without migrating, creating or logging
+// ============================================================================
+
+namespace {
+
+std::string file_bytes(const fs::path& path) {
+    std::ifstream file(path, std::ios::binary);
+    return {std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>()};
+}
+
+}  // namespace
+
+// An up-to-date database opens read-only with its labels, and nothing in its directory changes.
+TEST_F(DatabaseUiMetadataTest, ReadOnlyOpenCarriesSidecarAndWritesNothing) {
+    write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
+    write_ui_file("hydro_plant.toml", R"TOML(
+id = "HydroPlant"
+
+[[attribute]]
+id = "hm3_initial"
+label.en = "Initial Storage (hm³)"
+)TOML");
+    {
+        auto db = open_tree();
+    }
+    const auto db_file = fs::path(root) / "study.db";
+    const auto log_file = fs::path(root) / "quiver_database.log";
+    fs::remove(log_file);
+    const auto before = file_bytes(db_file);
+
+    {
+        auto db = quiver::Database::from_migrations(
+            db_file.string(),
+            migrations_dir(),
+            {.read_only = true, .console_level = quiver::LogLevel::Off}
+        );
+        const auto report = db.describe_collection("HydroPlant");
+        EXPECT_NE(report.find("; label \"Initial Storage (hm³)\""), std::string::npos) << report;
+    }
+
+    EXPECT_EQ(file_bytes(db_file), before);
+    EXPECT_FALSE(fs::exists(log_file));
+}
+
+// A read-only open cannot apply migrations, so a database behind them is refused, untouched.
+TEST_F(DatabaseUiMetadataTest, ReadOnlyOpenRefusesDatabaseBehindItsMigrations) {
+    write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
+    {
+        auto db = open_tree();
+    }
+    write_migration(2, "CREATE TABLE Extra (id INTEGER PRIMARY KEY) STRICT;", "DROP TABLE Extra;");
+    const auto db_file = fs::path(root) / "study.db";
+    const auto before = file_bytes(db_file);
+
+    try {
+        quiver::Database::from_migrations(
+            db_file.string(),
+            migrations_dir(),
+            {.read_only = true, .console_level = quiver::LogLevel::Off}
+        );
+        FAIL() << "expected from_migrations to throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(
+            e.what(),
+            "Cannot from_migrations: database is at version 1 but migrations reach 2; a read-only open cannot apply "
+            "them"
+        );
+    }
+    EXPECT_EQ(file_bytes(db_file), before);
+}
+
+// A read-only open of a missing path fails instead of creating an empty database (or a log).
+TEST_F(DatabaseUiMetadataTest, ReadOnlyOpenOfMissingFileCreatesNothing) {
+    write_migration(1, reservoir_schema(), "DROP TABLE HydroPlant; DROP TABLE Configuration;");
+    const auto missing = fs::path(root) / "missing.db";
+
+    EXPECT_THROW(
+        quiver::Database::from_migrations(
+            missing.string(),
+            migrations_dir(),
+            {.read_only = true, .console_level = quiver::LogLevel::Off}
+        ),
+        std::runtime_error
+    );
+    EXPECT_FALSE(fs::exists(missing));
+    EXPECT_FALSE(fs::exists(fs::path(root) / "quiver_database.log"));
 }

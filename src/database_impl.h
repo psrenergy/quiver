@@ -32,6 +32,9 @@ struct GroupColumns {
 struct Database::Impl {
     sqlite3* db = nullptr;
     std::string path;
+    // DatabaseOptions::read_only as the caller asked for it (SQLite would also report a
+    // write-protected file as read-only). The Sandbox reads it to refuse Lua file writes.
+    bool read_only = false;
     std::shared_ptr<spdlog::logger> logger;
     // Loaded lazily by require_schema: the Database(path, options) constructor opens an existing
     // database without reading its schema, and every metadata/CRUD path goes through

@@ -29,6 +29,16 @@ TEST_F(IssuesFixture, Issue161) {
 
     quiver::DatabaseOptions options;
     options.read_only = true;
-    EXPECT_THROW(quiver::Database::from_migrations(":memory:", migrations_path, options), std::runtime_error);
+    // A read-only open cannot migrate, so a database behind its migrations is refused.
+    try {
+        quiver::Database::from_migrations(":memory:", migrations_path, options);
+        FAIL() << "expected from_migrations to throw";
+    } catch (const std::runtime_error& e) {
+        EXPECT_STREQ(
+            e.what(),
+            "Cannot from_migrations: database is at version 0 but migrations reach 3; a read-only open cannot apply "
+            "them"
+        );
+    }
     EXPECT_THROW(quiver::Database::from_schema(":memory:", schema_path, options), std::runtime_error);
 }
