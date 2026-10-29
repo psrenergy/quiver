@@ -36,6 +36,10 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 - **A read-only open creates no log file.** Opening with `read_only` no longer creates or
   truncates `quiver_database.log` next to the database (it wiped the log of any writer on it).
+- **`quiver_cli` messages for a missing script.** Leaving out the `script` argument is now an
+  argument error (`script: 1 argument(s) expected. 0 provided.`, still exit 2), and a script that
+  cannot be read reports `Failed to read script file: <p>` (still exit 1, still before the database
+  is opened) instead of `Script file not found: <p>`.
 
 ### Added
 
