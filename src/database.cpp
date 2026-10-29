@@ -1,5 +1,4 @@
 #include "database_impl.h"
-#include "quiver/migrations.h"
 #include "quiver/result.h"
 #include "ui_metadata.h"
 #include "utils/file.h"
@@ -10,11 +9,15 @@
 #include <spdlog/spdlog.h>
 #include <sqlite3.h>
 
+#include <algorithm>
 #include <atomic>
+#include <charconv>
 #include <filesystem>
 #include <mutex>
 #include <optional>
 #include <stdexcept>
+#include <utility>
+#include <vector>
 
 namespace {
 
@@ -52,6 +55,31 @@ struct ReadOnlyAuthorizer {
 
     sqlite3* db;
 };
+
+// The numbered subdirectories of a migrations directory, ascending by version. A name counts only
+// when it parses whole as a positive integer; anything else is skipped, and a path that is not a
+// directory yields none.
+std::vector<std::pair<int64_t, std::filesystem::path>> list_migrations(const std::string& path) {
+    namespace fs = std::filesystem;
+    std::vector<std::pair<int64_t, fs::path>> migrations;
+    if (!fs::is_directory(path)) {
+        return migrations;
+    }
+    for (const auto& entry : fs::directory_iterator(path)) {
+        if (!entry.is_directory()) {
+            continue;
+        }
+        const auto name = entry.path().filename().string();
+        const auto* end = name.data() + name.size();
+        int64_t version = 0;
+        const auto [parsed, error] = std::from_chars(name.data(), end, version);
+        if (error == std::errc{} && parsed == end && version > 0) {
+            migrations.emplace_back(version, entry.path());
+        }
+    }
+    std::sort(migrations.begin(), migrations.end());
+    return migrations;
+}
 
 constexpr auto kNotReadOnly =
     "Cannot query: SQL must be read-only; writes, PRAGMA, ATTACH, VACUUM and transaction control are not allowed";
@@ -313,12 +341,12 @@ Database Database::from_migrations(
     if (options.read_only) {
         // Nothing can be migrated, so the database must already be where the migrations lead; the
         // ui/ sidecar is written for that version. The read-only open never creates a missing file.
-        const auto migrations = Migrations(migrations_path);
+        const auto migrations = list_migrations(migrations_path);
         const auto current = db.current_version();
-        if (!migrations.pending(current).empty()) {
+        if (!migrations.empty() && migrations.back().first > current) {
             throw std::runtime_error(
                 "Cannot from_migrations: database is at version " + std::to_string(current) + " but migrations reach " +
-                std::to_string(migrations.latest_version()) + "; a read-only open cannot apply them"
+                std::to_string(migrations.back().first) + "; a read-only open cannot apply them"
             );
         }
     } else {
@@ -336,7 +364,7 @@ void Database::validate_migrations(const std::string& migrations_path) {
     if (!fs::is_directory(migrations_path)) {
         throw std::runtime_error("Cannot validate_migrations: path is not a directory: " + migrations_path);
     }
-    if (Migrations(migrations_path).empty()) {
+    if (list_migrations(migrations_path).empty()) {
         throw std::runtime_error("Cannot validate_migrations: no migrations found in " + migrations_path);
     }
 
@@ -451,49 +479,49 @@ bool Database::in_dry_run() const {
 }
 
 void Database::migrate_up(const std::string& migrations_path, const char* operation) {
-    const auto migrations = Migrations(migrations_path);
+    const auto migrations = list_migrations(migrations_path);
     if (migrations.empty()) {
         impl_->logger->debug("No migrations found in {}", migrations_path);
         return;
     }
 
     const auto current = current_version();
-    const auto pending = migrations.pending(current);
+    const auto pending =
+        std::find_if(migrations.begin(), migrations.end(), [current](const auto& m) { return m.first > current; });
 
-    if (pending.empty()) {
+    if (pending == migrations.end()) {
         impl_->logger->debug("Database is up to date at version {}", current);
         return;
     }
 
     impl_->logger->info(
         "Applying {} pending migration(s) from version {} to {}",
-        pending.size(),
+        migrations.end() - pending,
         current,
-        migrations.latest_version()
+        migrations.back().first
     );
 
-    for (const auto& migration : pending) {
-        impl_->logger->info("Applying migration {}", migration.version());
+    for (auto it = pending; it != migrations.end(); ++it) {
+        const auto& [version, path] = *it;
+        impl_->logger->info("Applying migration {}", version);
 
-        const auto up_sql = migration.up_sql();
+        const auto up_sql = utils::read_file(path / "up.sql").value_or("");
         if (up_sql.empty()) {
             throw std::runtime_error(
-                std::string("Cannot ") + operation + ": migration " + std::to_string(migration.version()) +
-                " has no up.sql file"
+                std::string("Cannot ") + operation + ": migration " + std::to_string(version) + " has no up.sql file"
             );
         }
 
         try {
             Impl::TransactionGuard txn(*impl_);
             impl_->execute_raw(up_sql);
-            set_version(migration.version());
+            set_version(version);
             txn.commit();
-            impl_->logger->info("Migration {} applied successfully", migration.version());
+            impl_->logger->info("Migration {} applied successfully", version);
         } catch (const std::exception& e) {
-            impl_->logger->error("Migration {} failed: {}", migration.version(), e.what());
+            impl_->logger->error("Migration {} failed: {}", version, e.what());
             throw std::runtime_error(
-                std::string("Failed to ") + operation + ": up migration " + std::to_string(migration.version()) + ": " +
-                e.what()
+                std::string("Failed to ") + operation + ": up migration " + std::to_string(version) + ": " + e.what()
             );
         }
     }
@@ -503,36 +531,36 @@ void Database::migrate_up(const std::string& migrations_path, const char* operat
 }
 
 void Database::migrate_down(const std::string& migrations_path) {
-    const auto migrations = Migrations(migrations_path);
+    const auto migrations = list_migrations(migrations_path);
     if (migrations.empty()) {
         impl_->logger->debug("No migrations found in {}", migrations_path);
         return;
     }
 
-    const auto& all = migrations.all();
-    impl_->logger->info("Reverting {} migration(s) from version {} to 0", all.size(), migrations.latest_version());
+    impl_->logger->info("Reverting {} migration(s) from version {} to 0", migrations.size(), migrations.back().first);
 
-    for (auto it = all.rbegin(); it != all.rend(); ++it) {
-        impl_->logger->info("Reverting migration {}", it->version());
+    for (auto it = migrations.rbegin(); it != migrations.rend(); ++it) {
+        const auto& [version, path] = *it;
+        impl_->logger->info("Reverting migration {}", version);
 
-        const auto down_sql = it->down_sql();
+        const auto down_sql = utils::read_file(path / "down.sql").value_or("");
         if (down_sql.empty()) {
             throw std::runtime_error(
-                "Cannot validate_migrations: migration " + std::to_string(it->version()) + " has no down.sql file"
+                "Cannot validate_migrations: migration " + std::to_string(version) + " has no down.sql file"
             );
         }
 
-        const auto preceding_version = it + 1 == all.rend() ? 0 : (it + 1)->version();
+        const auto preceding_version = it + 1 == migrations.rend() ? 0 : (it + 1)->first;
         try {
             Impl::TransactionGuard txn(*impl_);
             impl_->execute_raw(down_sql);
             set_version(preceding_version);
             txn.commit();
-            impl_->logger->info("Migration {} reverted successfully", it->version());
+            impl_->logger->info("Migration {} reverted successfully", version);
         } catch (const std::exception& e) {
-            impl_->logger->error("Migration {} failed: {}", it->version(), e.what());
+            impl_->logger->error("Migration {} failed: {}", version, e.what());
             throw std::runtime_error(
-                "Failed to validate_migrations: down migration " + std::to_string(it->version()) + ": " + e.what()
+                "Failed to validate_migrations: down migration " + std::to_string(version) + ": " + e.what()
             );
         }
     }

@@ -17,7 +17,6 @@ include/quiver/           # C++ public headers
   value.h                 # Value variant (nullptr/int64/double/string)
   data_type.h             # DataType enum, data_type_to_string, is_date_time_column
   row.h / result.h        # Row and Result query-result types
-  migration.h / migrations.h  # Migration (version dir, up/down sql) and Migrations discovery
   export.h / quiver.h     # Export macro, umbrella header
 include/quiver/binary/      # Binary subsystem headers (binary file I/O)
   binary_file.h               # BinaryFile class (Pimpl) - open_file, read, write, get_metadata
@@ -43,7 +42,7 @@ src/                      # C++ implementation
   schema_validator.h / schema_validator.cpp  # SchemaValidator - schema convention checks
   type_validator.h / type_validator.cpp      # Scalar/array type validation (free functions,
                                              # caller-threaded Pattern 1 messages)
-  element.cpp / row.cpp / result.cpp / migration.cpp / migrations.cpp
+  element.cpp / row.cpp / result.cpp
   sandbox/             # Sandbox (sol2): database*.cpp bindings, plus csv, xlsx, binary, expression
     sandbox.cpp        # Sandbox::Impl (ctor order, the one Database usertype), RunHandles bodies, run()/GcGuard
     internal.h            # quiver::lua_internal: RunHandles, binder decls, converters, read adapters, option walk, group-decoder decls, metadata templates, parse_csv_options decl
@@ -343,7 +342,7 @@ Binary subsystem: `BinaryFile` uses Pimpl (hides file I/O dependencies). `CSVCon
 
 Expression subsystem: `Expression` is `final` and derives, as `BinaryFile` (Pimpl) does, from the stateless polymorphic `AbstractExpression` (virtual destructor, protected copy and move, so nothing slices through a base reference). It is a plain value type wrapping `shared_ptr<ExpressionNode>` — no Pimpl. `ExpressionNode` is an abstract base with virtual `metadata()` / `compute_row()`; concrete subclasses are exposed via `QUIVER_API` and use Rule of Zero. Polymorphism is justified by the recursive tree shape (operand-owning nodes hold child `shared_ptr<ExpressionNode>`).
 
-Classes with no private dependencies (`Element`, `Row`, `Migration`, `Migrations`, `GroupMetadata`, `ScalarMetadata`, `CSVOptions`, `Dimension`, `TimeProperties`, `Expression`) are plain value types — direct members, no Pimpl, Rule of Zero (compiler-generated copy/move/destructor). `BinaryMetadata` is the one deviation: it user-declares its default constructor and destructor (defaulted out-of-line), which suppresses compiler-generated moves — moves silently fall back to copies.
+Classes with no private dependencies (`Element`, `Row`, `GroupMetadata`, `ScalarMetadata`, `CSVOptions`, `Dimension`, `TimeProperties`, `Expression`) are plain value types — direct members, no Pimpl, Rule of Zero (compiler-generated copy/move/destructor). `BinaryMetadata` is the one deviation: it user-declares its default constructor and destructor (defaulted out-of-line), which suppresses compiler-generated moves — moves silently fall back to copies.
 
 ## Transactions
 
@@ -411,7 +410,9 @@ static Database from_migrations(const std::string& db_path, const std::string& m
 static void validate_migrations(const std::string& migrations_path);
 ```
 `schema_path` is a `.sql` file; `migrations_path` is a directory of numbered version
-subdirectories with `up.sql`/`down.sql`.
+subdirectories with `up.sql`/`down.sql`. `list_migrations` (anonymous namespace, `database.cpp`)
+finds them for all three: a subdirectory counts only when its whole name parses (`std::from_chars`)
+as a positive integer, anything else is skipped, and a missing `up.sql`/`down.sql` reads as empty.
 `validate_migrations` validates that directory in an in-memory database by executing every up migration
 and then every down migration, and finally rejects any table left behind; the direction-specific
 execution helpers remain private. Their errors name the public caller, not the helper:

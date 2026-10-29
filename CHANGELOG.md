@@ -57,6 +57,10 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 - **BREAKING — `quiver_cli --dry-run`.** *Adapt:* wrap the script body in
   `db:dry_run(function(db) ... end)`.
+- **BREAKING (C++ only) — `quiver/migration.h` and `quiver/migrations.h`.** The `Migration` and
+  `Migrations` classes are gone; discovery is internal to `Database`. *Adapt:* use
+  `Database::from_migrations` to apply a migrations directory and `Database::validate_migrations`
+  to check one.
 
 ### Fixed
 
