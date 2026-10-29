@@ -9,7 +9,7 @@ QUIVER_C_API quiver_error_t quiver_csv_converter_bin_to_csv(const char* path, in
     QUIVER_REQUIRE(path);
 
     try {
-        quiver::CSVConverter::bin_to_csv(path, aggregate_time_dimensions != 0);
+        quiver::bin_to_csv(path, aggregate_time_dimensions != 0);
         return QUIVER_OK;
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());
@@ -21,7 +21,7 @@ QUIVER_C_API quiver_error_t quiver_csv_converter_csv_to_bin(const char* path) {
     QUIVER_REQUIRE(path);
 
     try {
-        quiver::CSVConverter::csv_to_bin(path);
+        quiver::csv_to_bin(path);
         return QUIVER_OK;
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());

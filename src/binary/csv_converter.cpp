@@ -2,6 +2,7 @@
 
 #include "binary_utils.h"
 #include "quiver/binary/binary_file.h"
+#include "quiver/binary/binary_metadata.h"
 #include "quiver/binary/dimension.h"
 #include "quiver/binary/iteration.h"
 #include "utils/datetime.h"
@@ -10,10 +11,16 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <cstdint>
 #include <fstream>
+#include <iostream>
 #include <limits>
+#include <memory>
 #include <stdexcept>
+#include <string>
 #include <string_view>
+#include <unordered_map>
+#include <vector>
 
 namespace quiver {
 
@@ -47,7 +54,45 @@ std::string join_fields(const std::vector<std::string>& fields, std::string_view
     return joined;
 }
 
-}  // namespace
+// One conversion's CSV side: the metadata, the CSV stream and the column names. File-local, so
+// bin_to_csv and csv_to_bin below use its members directly.
+struct CSVConverter {
+    CSVConverter(const BinaryMetadata& metadata, std::unique_ptr<std::iostream> io, bool aggregate_time_dimensions);
+
+    struct CSVRow {
+        std::vector<std::string> dimension_values;
+        std::vector<double> data;
+    };
+
+    // CSV Builders
+    std::string build_line(const std::vector<double>& data, const std::vector<int64_t>& current_dimensions);
+    std::string build_datetime_string_from_time_dimension_values(
+        const std::vector<int64_t>& time_dimension_values
+    ) const;
+    std::vector<std::string> dimension_cells(const std::vector<int64_t>& current_dimensions) const;
+    void write_header();
+
+    // CSV Readers
+    CSVRow read_line(size_t line_number);
+
+    // Validations
+    void validate_dimensions(
+        const std::vector<std::string>& dimension_values,
+        const std::vector<int64_t>& current_dimensions
+    );
+    void validate_header();
+
+    // Time-dimension predicates
+    bool aggregates_time_dimensions() const;
+    bool has_hourly_dimension() const;
+
+    BinaryMetadata metadata_;
+    std::unique_ptr<std::iostream> io_;
+    bool aggregate_time_dimensions_ = false;
+    // The CSV column names, built once by the constructor: the dimension columns (or, when time
+    // dimensions are aggregated, a leading date/datetime column instead of the time ones), then the labels.
+    std::vector<std::string> header_;
+};
 
 CSVConverter::CSVConverter(
     const BinaryMetadata& metadata,
@@ -82,77 +127,6 @@ bool CSVConverter::has_hourly_dimension() const {
     return std::any_of(dimensions.begin(), dimensions.end(), [](const auto& d) {
         return d.is_time_dimension() && d.time->frequency == TimeFrequency::Hourly;
     });
-}
-
-void CSVConverter::csv_to_bin(const std::string& file_path) {
-    auto metadata = BinaryMetadata::from_toml_file(file_path);
-
-    // Open the CSV file and detect whether time dimensions are aggregated
-    auto csv_io = std::make_unique<std::fstream>(file_path + std::string(CSV_EXTENSION), std::ios::in);
-    std::string header_line;
-    std::getline(*csv_io, header_line);
-    bool aggregate_time_dimensions = false;
-    if (metadata.number_of_time_dimensions() > 0) {
-        std::string first_field = header_line.substr(0, header_line.find(','));
-        aggregate_time_dimensions = (first_field == "datetime" || first_field == "date");
-    }
-    csv_io->seekg(0);  // Rewind so validate_header can re-read
-
-    CSVConverter csv_reader(metadata, std::move(csv_io), aggregate_time_dimensions);
-    csv_reader.validate_header();
-
-    // Open the binary file in write mode
-    BinaryFile bin_writer = BinaryFile::open_file(file_path, 'w', metadata);
-
-    // Iterate CSV lines and write to binary. Line 1 is the header, so data starts at line 2.
-    const auto& dimensions = metadata.dimensions;
-    std::vector<int64_t> current_dimensions = first_dimensions(metadata);
-    for (size_t line_number = 2;; ++line_number) {
-        auto row = csv_reader.read_line(line_number);
-        csv_reader.validate_dimensions(row.dimension_values, current_dimensions);
-
-        std::unordered_map<std::string, int64_t> dims;
-        for (size_t j = 0; j < dimensions.size(); ++j) {
-            dims[dimensions[j].name] = current_dimensions[j];
-        }
-        bin_writer.write(row.data, dims);
-
-        auto nxt = next_dimensions(metadata, current_dimensions);
-        if (!nxt) {
-            break;
-        }
-        current_dimensions = std::move(*nxt);
-    }
-}
-
-void CSVConverter::bin_to_csv(const std::string& file_path, bool aggregate_time_dimensions) {
-    // Open the binary file in read mode
-    BinaryFile bin_reader = BinaryFile::open_file(file_path, 'r');
-    const auto& metadata = bin_reader.get_metadata();
-
-    // Open the CSV file in write mode
-    auto csv_io = std::make_unique<std::fstream>(file_path + std::string(CSV_EXTENSION), std::ios::out);
-    CSVConverter csv_writer(metadata, std::move(csv_io), aggregate_time_dimensions);
-    csv_writer.write_header();
-
-    // Iterate files and write to CSV
-    const auto& dimensions = metadata.dimensions;
-    std::vector<int64_t> current_dimensions = first_dimensions(metadata);
-    for (;;) {
-        std::unordered_map<std::string, int64_t> dims;
-        for (size_t j = 0; j < dimensions.size(); ++j) {
-            dims[dimensions[j].name] = current_dimensions[j];
-        }
-
-        std::vector<double> data = bin_reader.read(dims, true);
-        *csv_writer.io_ << csv_writer.build_line(data, current_dimensions);
-
-        auto nxt = next_dimensions(metadata, current_dimensions);
-        if (!nxt) {
-            break;
-        }
-        current_dimensions = std::move(*nxt);
-    }
 }
 
 CSVConverter::CSVRow CSVConverter::read_line(size_t line_number) {
@@ -283,6 +257,79 @@ void CSVConverter::validate_dimensions(
                 expected_values[i] + "'"
             );
         }
+    }
+}
+
+}  // namespace
+
+void csv_to_bin(const std::string& file_path) {
+    auto metadata = BinaryMetadata::from_toml_file(file_path);
+
+    // Open the CSV file and detect whether time dimensions are aggregated
+    auto csv_io = std::make_unique<std::fstream>(file_path + std::string(CSV_EXTENSION), std::ios::in);
+    std::string header_line;
+    std::getline(*csv_io, header_line);
+    bool aggregate_time_dimensions = false;
+    if (metadata.number_of_time_dimensions() > 0) {
+        std::string first_field = header_line.substr(0, header_line.find(','));
+        aggregate_time_dimensions = (first_field == "datetime" || first_field == "date");
+    }
+    csv_io->seekg(0);  // Rewind so validate_header can re-read
+
+    CSVConverter csv_reader(metadata, std::move(csv_io), aggregate_time_dimensions);
+    csv_reader.validate_header();
+
+    // Open the binary file in write mode
+    BinaryFile bin_writer = BinaryFile::open_file(file_path, 'w', metadata);
+
+    // Iterate CSV lines and write to binary. Line 1 is the header, so data starts at line 2.
+    const auto& dimensions = metadata.dimensions;
+    std::vector<int64_t> current_dimensions = first_dimensions(metadata);
+    for (size_t line_number = 2;; ++line_number) {
+        auto row = csv_reader.read_line(line_number);
+        csv_reader.validate_dimensions(row.dimension_values, current_dimensions);
+
+        std::unordered_map<std::string, int64_t> dims;
+        for (size_t j = 0; j < dimensions.size(); ++j) {
+            dims[dimensions[j].name] = current_dimensions[j];
+        }
+        bin_writer.write(row.data, dims);
+
+        auto nxt = next_dimensions(metadata, current_dimensions);
+        if (!nxt) {
+            break;
+        }
+        current_dimensions = std::move(*nxt);
+    }
+}
+
+void bin_to_csv(const std::string& file_path, bool aggregate_time_dimensions) {
+    // Open the binary file in read mode
+    BinaryFile bin_reader = BinaryFile::open_file(file_path, 'r');
+    const auto& metadata = bin_reader.get_metadata();
+
+    // Open the CSV file in write mode
+    auto csv_io = std::make_unique<std::fstream>(file_path + std::string(CSV_EXTENSION), std::ios::out);
+    CSVConverter csv_writer(metadata, std::move(csv_io), aggregate_time_dimensions);
+    csv_writer.write_header();
+
+    // Iterate files and write to CSV
+    const auto& dimensions = metadata.dimensions;
+    std::vector<int64_t> current_dimensions = first_dimensions(metadata);
+    for (;;) {
+        std::unordered_map<std::string, int64_t> dims;
+        for (size_t j = 0; j < dimensions.size(); ++j) {
+            dims[dimensions[j].name] = current_dimensions[j];
+        }
+
+        std::vector<double> data = bin_reader.read(dims, true);
+        *csv_writer.io_ << csv_writer.build_line(data, current_dimensions);
+
+        auto nxt = next_dimensions(metadata, current_dimensions);
+        if (!nxt) {
+            break;
+        }
+        current_dimensions = std::move(*nxt);
     }
 }
 

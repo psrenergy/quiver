@@ -108,7 +108,7 @@ protected:
     // csv_to_bin(path) must throw std::runtime_error carrying exactly `message`.
     void expect_csv_to_bin_error(const std::string& message) {
         try {
-            CSVConverter::csv_to_bin(path);
+            csv_to_bin(path);
             FAIL() << "expected csv_to_bin to throw";
         } catch (const std::runtime_error& e) {
             EXPECT_STREQ(e.what(), message.c_str());
@@ -125,7 +125,7 @@ TEST_F(CSVConverterFixture, NonTimeMetadataHeader) {
     {
         auto binary_file = BinaryFile::open_file(path, 'w', md);
     }
-    CSVConverter::bin_to_csv(path);
+    bin_to_csv(path);
     auto lines = csv_lines();
     ASSERT_FALSE(lines.empty());
     EXPECT_EQ(lines[0], "row,col,val1,val2");
@@ -136,7 +136,7 @@ TEST_F(CSVConverterFixture, AggregatedNoHourlyHeader) {
     {
         auto binary_file = BinaryFile::open_file(path, 'w', md);
     }
-    CSVConverter::bin_to_csv(path, true);
+    bin_to_csv(path, true);
     auto lines = csv_lines();
     ASSERT_FALSE(lines.empty());
     EXPECT_EQ(lines[0], "date,plant_1,plant_2");
@@ -147,7 +147,7 @@ TEST_F(CSVConverterFixture, AggregatedWithHourlyHeader) {
     {
         auto binary_file = BinaryFile::open_file(path, 'w', md);
     }
-    CSVConverter::bin_to_csv(path, true);
+    bin_to_csv(path, true);
     auto lines = csv_lines();
     ASSERT_FALSE(lines.empty());
     EXPECT_EQ(lines[0], "datetime,val");
@@ -158,7 +158,7 @@ TEST_F(CSVConverterFixture, NonAggregatedHeader) {
     {
         auto binary_file = BinaryFile::open_file(path, 'w', md);
     }
-    CSVConverter::bin_to_csv(path, false);
+    bin_to_csv(path, false);
     auto lines = csv_lines();
     ASSERT_FALSE(lines.empty());
     EXPECT_EQ(lines[0], "stage,block,plant_1,plant_2");
@@ -173,7 +173,7 @@ TEST_F(CSVConverterFixture, CreatesCSVFile) {
     {
         auto binary_file = BinaryFile::open_file(path, 'w', md);
     }
-    CSVConverter::bin_to_csv(path);
+    bin_to_csv(path);
     EXPECT_TRUE(fs::exists(path + ".csv"));
 }
 
@@ -184,7 +184,7 @@ TEST_F(CSVConverterFixture, DataValuesMatch) {
         binary_file.write({1.5, 2.5}, {{"row", 1}, {"col", 1}});
         binary_file.write({3.5, 4.5}, {{"row", 1}, {"col", 2}});
     }
-    CSVConverter::bin_to_csv(path);
+    bin_to_csv(path);
     auto lines = csv_lines();
     // line 1 = header, line 2 = row=1,col=1
     ASSERT_GE(lines.size(), 3u);
@@ -197,7 +197,7 @@ TEST_F(CSVConverterFixture, NaNValuesAppearAsNull) {
     {
         auto binary_file = BinaryFile::open_file(path, 'w', md);
     }  // all NaN
-    CSVConverter::bin_to_csv(path);
+    bin_to_csv(path);
     auto lines = csv_lines();
     ASSERT_GE(lines.size(), 2u);
     EXPECT_NE(lines[1].find("null"), std::string::npos);
@@ -217,7 +217,7 @@ TEST_F(CSVConverterFixture, FloatPrecision) {
         auto binary_file = BinaryFile::open_file(path, 'w', md);
         binary_file.write({1.23456789}, {{"row", 1}});
     }
-    CSVConverter::bin_to_csv(path);
+    bin_to_csv(path);
     auto lines = csv_lines();
     ASSERT_GE(lines.size(), 2u);
     // Shortest round-trip form (utils::append_number), not 6 significant digits.
@@ -233,7 +233,7 @@ TEST_F(CSVConverterFixture, NonTimeRowCountEqualsProduct) {
     {
         auto binary_file = BinaryFile::open_file(path, 'w', md);
     }
-    CSVConverter::bin_to_csv(path);
+    bin_to_csv(path);
     auto lines = csv_lines();
     // 3 * 2 = 6 data rows + 1 header
     EXPECT_EQ(lines.size(), 7u);
@@ -249,7 +249,7 @@ TEST_F(CSVConverterFixture, TimeMetadataRowCountLessThanProduct) {
     {
         auto binary_file = BinaryFile::open_file(path, 'w', md);
     }
-    CSVConverter::bin_to_csv(path);
+    bin_to_csv(path);
     auto lines = csv_lines();
     size_t data_rows = lines.size() - 1;
     // Must be less than 4 * 31 = 124 (because of variable month lengths)
@@ -263,7 +263,7 @@ TEST_F(CSVConverterFixture, HourlyMetadataRowCount) {
     {
         auto binary_file = BinaryFile::open_file(path, 'w', md);
     }
-    CSVConverter::bin_to_csv(path);
+    bin_to_csv(path);
     auto lines = csv_lines();
     size_t data_rows = lines.size() - 1;
     // 3 days * 24 hours = 72 (fixed sizes)
@@ -287,7 +287,7 @@ TEST_F(CSVConverterFixture, AggregatedDateIsTheStartOfEachMonth) {
     {
         auto binary_file = BinaryFile::open_file(path, 'w', md);
     }
-    CSVConverter::bin_to_csv(path, true);
+    bin_to_csv(path, true);
     auto lines = csv_lines();
     ASSERT_EQ(lines.size(), 5u);
     EXPECT_EQ(lines[1], "2025-01-01,null");
@@ -313,13 +313,13 @@ TEST_F(CSVConverterFixture, AggregatedDatetimeKeepsANonMidnightStart) {
     {
         auto binary_file = BinaryFile::open_file(path, 'w', md);
     }
-    CSVConverter::bin_to_csv(path, true);
+    bin_to_csv(path, true);
     auto lines = csv_lines();
     ASSERT_EQ(lines.size(), 1u + 402u);  // header + hours 343..744 of January
     EXPECT_EQ(lines[1], "2025-01-15T06:00:00,null");
     EXPECT_EQ(lines[2], "2025-01-15T07:00:00,null");
     EXPECT_EQ(lines.back(), "2025-01-31T23:00:00,null");
-    EXPECT_NO_THROW(CSVConverter::csv_to_bin(path));  // re-reads the labels bin_to_csv wrote
+    EXPECT_NO_THROW(csv_to_bin(path));  // re-reads the labels bin_to_csv wrote
 }
 
 // ============================================================================
@@ -335,7 +335,7 @@ TEST_F(CSVConverterFixture, CsvToBinCreatesQvrFile) {
     csv += "2,1,5.0,6.0\n2,2,7.0,8.0\n";
     csv += "3,1,9.0,10.0\n3,2,11.0,12.0\n";
     write_csv(csv);
-    CSVConverter::csv_to_bin(path);
+    csv_to_bin(path);
     EXPECT_TRUE(fs::exists(path + ".qvr"));
 }
 
@@ -347,7 +347,7 @@ TEST_F(CSVConverterFixture, CsvToBinNonTimeRoundTrip) {
     csv += "2,1,5.5,6.5\n2,2,7.5,8.5\n";
     csv += "3,1,9.5,10.5\n3,2,11.5,12.5\n";
     write_csv(csv);
-    CSVConverter::csv_to_bin(path);
+    csv_to_bin(path);
 
     auto reader = BinaryFile::open_file(path, 'r');
     auto v = reader.read({{"row", 1}, {"col", 1}});
@@ -365,10 +365,10 @@ TEST_F(CSVConverterFixture, CsvToBinAggregatedDatetimeWithHourly) {
         auto binary_file = BinaryFile::open_file(path, 'w', md);
         binary_file.write({42.0}, {{"day", 1}, {"hour", 1}});
     }
-    CSVConverter::bin_to_csv(path, true);  // creates CSV with datetime header
+    bin_to_csv(path, true);  // creates CSV with datetime header
     // Delete .qvr so csv_to_bin recreates it
     fs::remove(path + ".qvr");
-    CSVConverter::csv_to_bin(path);
+    csv_to_bin(path);
 
     auto reader = BinaryFile::open_file(path, 'r');
     auto v = reader.read({{"day", 1}, {"hour", 1}});
@@ -381,9 +381,9 @@ TEST_F(CSVConverterFixture, CsvToBinAggregatedDateWithoutHourly) {
         auto binary_file = BinaryFile::open_file(path, 'w', md);
         binary_file.write({10.0, 20.0}, {{"stage", 1}, {"block", 1}});
     }
-    CSVConverter::bin_to_csv(path, true);
+    bin_to_csv(path, true);
     fs::remove(path + ".qvr");
-    CSVConverter::csv_to_bin(path);
+    csv_to_bin(path);
 
     auto reader = BinaryFile::open_file(path, 'r');
     auto v = reader.read({{"stage", 1}, {"block", 1}});
@@ -397,9 +397,9 @@ TEST_F(CSVConverterFixture, CsvToBinNonAggregatedTimeDimensions) {
         auto binary_file = BinaryFile::open_file(path, 'w', md);
         binary_file.write({5.0, 6.0}, {{"stage", 1}, {"block", 1}});
     }
-    CSVConverter::bin_to_csv(path, false);  // non-aggregated
+    bin_to_csv(path, false);  // non-aggregated
     fs::remove(path + ".qvr");
-    CSVConverter::csv_to_bin(path);
+    csv_to_bin(path);
 
     auto reader = BinaryFile::open_file(path, 'r');
     auto v = reader.read({{"stage", 1}, {"block", 1}});
@@ -415,7 +415,7 @@ TEST_F(CSVConverterFixture, HeaderMismatchWrongColumnName) {
     auto md = make_simple_metadata();
     write_toml(md);
     write_csv("row,bad_name,val1,val2\n1,1,1.0,2.0\n");
-    EXPECT_THROW(CSVConverter::csv_to_bin(path), std::runtime_error);
+    EXPECT_THROW(csv_to_bin(path), std::runtime_error);
 }
 
 TEST_F(CSVConverterFixture, HeaderTooFewColumns) {
@@ -429,7 +429,7 @@ TEST_F(CSVConverterFixture, HeaderTooManyColumns) {
     auto md = make_simple_metadata();
     write_toml(md);
     write_csv("row,col,val1,val2,extra\n1,1,1.0,2.0,3.0\n");
-    EXPECT_THROW(CSVConverter::csv_to_bin(path), std::runtime_error);
+    EXPECT_THROW(csv_to_bin(path), std::runtime_error);
 }
 
 TEST_F(CSVConverterFixture, DimensionValueMismatch) {
@@ -437,7 +437,7 @@ TEST_F(CSVConverterFixture, DimensionValueMismatch) {
     write_toml(md);
     // Row order wrong: should start with row=1,col=1 but starts with row=2,col=1
     write_csv("row,col,val1,val2\n2,1,1.0,2.0\n");
-    EXPECT_THROW(CSVConverter::csv_to_bin(path), std::runtime_error);
+    EXPECT_THROW(csv_to_bin(path), std::runtime_error);
 }
 
 TEST_F(CSVConverterFixture, NonNumericDataValue) {
@@ -470,7 +470,7 @@ TEST_F(CSVConverterFixture, NonNumericCellPastLastLabel) {
     write_toml(md);
     write_csv("row,col,val1,val2\n1,1,1.0,2.0,abc\n");
     try {
-        CSVConverter::csv_to_bin(path);
+        csv_to_bin(path);
         FAIL() << "expected csv_to_bin to throw";
     } catch (const std::runtime_error& e) {
         EXPECT_TRUE(std::string(e.what()).starts_with("Cannot csv_to_bin: ")) << e.what();
@@ -481,7 +481,7 @@ TEST_F(CSVConverterFixture, EmptyCSVFile) {
     auto md = make_simple_metadata();
     write_toml(md);
     write_csv("");
-    EXPECT_THROW(CSVConverter::csv_to_bin(path), std::runtime_error);
+    EXPECT_THROW(csv_to_bin(path), std::runtime_error);
 }
 
 // ============================================================================
@@ -536,9 +536,9 @@ TEST_F(CSVConverterFixture, BinToCsvToBinWithoutHourly) {
         binary_file.write({100.0, 200.0}, {{"stage", 1}, {"block", 1}});
         binary_file.write({300.0, 400.0}, {{"stage", 2}, {"block", 15}});
     }
-    CSVConverter::bin_to_csv(path, true);
+    bin_to_csv(path, true);
     fs::remove(path + ".qvr");
-    CSVConverter::csv_to_bin(path);
+    csv_to_bin(path);
 
     auto reader = BinaryFile::open_file(path, 'r');
     auto v1 = reader.read({{"stage", 1}, {"block", 1}});
@@ -555,13 +555,13 @@ TEST_F(CSVConverterFixture, CsvToBinToCsvWithoutHourly) {
         auto binary_file = BinaryFile::open_file(path, 'w', md);
         binary_file.write({1.0, 2.0}, {{"stage", 1}, {"block", 1}});
     }
-    CSVConverter::bin_to_csv(path, true);
+    bin_to_csv(path, true);
     auto csv1 = read_csv();
 
     fs::remove(path + ".qvr");
-    CSVConverter::csv_to_bin(path);
+    csv_to_bin(path);
     fs::remove(path + ".csv");
-    CSVConverter::bin_to_csv(path, true);
+    bin_to_csv(path, true);
     auto csv2 = read_csv();
 
     EXPECT_EQ(csv1, csv2);
@@ -574,7 +574,7 @@ TEST_F(CSVConverterFixture, BinToCsvToBinWithHourly) {
         binary_file.write({77.0}, {{"day", 1}, {"hour", 12}});
         binary_file.write({88.0}, {{"day", 3}, {"hour", 24}});
     }
-    CSVConverter::bin_to_csv(path, true);
+    bin_to_csv(path, true);
 
     // Verify datetime strings include time component
     auto lines = csv_lines();
@@ -591,7 +591,7 @@ TEST_F(CSVConverterFixture, BinToCsvToBinWithHourly) {
     EXPECT_TRUE(has_time_component);
 
     fs::remove(path + ".qvr");
-    CSVConverter::csv_to_bin(path);
+    csv_to_bin(path);
 
     auto reader = BinaryFile::open_file(path, 'r');
     EXPECT_DOUBLE_EQ(reader.read({{"day", 1}, {"hour", 12}})[0], 77.0);
@@ -604,13 +604,13 @@ TEST_F(CSVConverterFixture, CsvToBinToCsvWithHourly) {
         auto binary_file = BinaryFile::open_file(path, 'w', md);
         binary_file.write({1.0}, {{"day", 1}, {"hour", 1}});
     }
-    CSVConverter::bin_to_csv(path, true);
+    bin_to_csv(path, true);
     auto csv1 = read_csv();
 
     fs::remove(path + ".qvr");
-    CSVConverter::csv_to_bin(path);
+    csv_to_bin(path);
     fs::remove(path + ".csv");
-    CSVConverter::bin_to_csv(path, true);
+    bin_to_csv(path, true);
     auto csv2 = read_csv();
 
     EXPECT_EQ(csv1, csv2);
@@ -621,7 +621,7 @@ TEST_F(CSVConverterFixture, RoundTripWithNullValues) {
     {
         auto binary_file = BinaryFile::open_file(path, 'w', md);
     }  // all NaN
-    CSVConverter::bin_to_csv(path);
+    bin_to_csv(path);
 
     // Verify CSV contains "null"
     auto lines = csv_lines();
@@ -629,7 +629,7 @@ TEST_F(CSVConverterFixture, RoundTripWithNullValues) {
     EXPECT_NE(lines[1].find("null"), std::string::npos);
 
     fs::remove(path + ".qvr");
-    CSVConverter::csv_to_bin(path);
+    csv_to_bin(path);
 
     auto reader = BinaryFile::open_file(path, 'r');
     auto v = reader.read({{"row", 1}, {"col", 1}}, true);
@@ -658,9 +658,9 @@ TEST_F(CSVConverterFixture, RoundTripIsLossless) {
             binary_file.write({values[i]}, {{"row", static_cast<int64_t>(i + 1)}});
         }
     }
-    CSVConverter::bin_to_csv(path);
+    bin_to_csv(path);
     fs::remove(path + ".qvr");
-    CSVConverter::csv_to_bin(path);
+    csv_to_bin(path);
 
     auto reader = BinaryFile::open_file(path, 'r');
     for (size_t i = 0; i < values.size(); ++i) {
@@ -694,12 +694,12 @@ TEST_F(CSVConverterFixture, DecimalCommaLocaleReadsWrittenFloats) {
         auto binary_file = BinaryFile::open_file(path, 'w', md);
         binary_file.write({1.5, 0.1 + 0.2}, {{"row", 1}, {"col", 1}});
     }
-    CSVConverter::bin_to_csv(path);
+    bin_to_csv(path);
     auto lines = csv_lines();
     ASSERT_GE(lines.size(), 2u);
     EXPECT_EQ(lines[1], "1,1,1.5,0.30000000000000004");
     fs::remove(path + ".qvr");
-    CSVConverter::csv_to_bin(path);
+    csv_to_bin(path);
 
     auto reader = BinaryFile::open_file(path, 'r');
     auto v = reader.read({{"row", 1}, {"col", 1}});
@@ -718,9 +718,9 @@ TEST_F(CSVConverterFixture, AggregatedAndNonAggregatedProduceSameBinary) {
         binary_file.write({1.0, 2.0}, {{"stage", 1}, {"block", 1}});
         binary_file.write({3.0, 4.0}, {{"stage", 1}, {"block", 5}});
     }
-    CSVConverter::bin_to_csv(path, true);
+    bin_to_csv(path, true);
     fs::remove(path + ".qvr");
-    CSVConverter::csv_to_bin(path);
+    csv_to_bin(path);
     {
         auto reader = BinaryFile::open_file(path, 'r');
         v1a = reader.read({{"stage", 1}, {"block", 1}});
@@ -737,9 +737,9 @@ TEST_F(CSVConverterFixture, AggregatedAndNonAggregatedProduceSameBinary) {
         binary_file.write({1.0, 2.0}, {{"stage", 1}, {"block", 1}});
         binary_file.write({3.0, 4.0}, {{"stage", 1}, {"block", 5}});
     }
-    CSVConverter::bin_to_csv(path, false);
+    bin_to_csv(path, false);
     fs::remove(path + ".qvr");
-    CSVConverter::csv_to_bin(path);
+    csv_to_bin(path);
     {
         auto reader = BinaryFile::open_file(path, 'r');
         v2a = reader.read({{"stage", 1}, {"block", 1}});
@@ -769,9 +769,9 @@ TEST_F(CSVConverterFixture, RoundTripMixedTimeAndNonTime) {
         binary_file.write({99.0}, {{"month", 1}, {"scenario", 1}, {"day", 1}});
         binary_file.write({77.0}, {{"month", 2}, {"scenario", 2}, {"day", 15}});
     }
-    CSVConverter::bin_to_csv(path, true);
+    bin_to_csv(path, true);
     fs::remove(path + ".qvr");
-    CSVConverter::csv_to_bin(path);
+    csv_to_bin(path);
 
     auto reader = BinaryFile::open_file(path, 'r');
     EXPECT_DOUBLE_EQ(reader.read({{"month", 1}, {"scenario", 1}, {"day", 1}})[0], 99.0);
@@ -788,31 +788,31 @@ TEST_F(CSVConverterFixture, ValidateHeaderCorrect) {
         auto binary_file = BinaryFile::open_file(path, 'w', md);
         binary_file.write({1.0, 2.0}, {{"row", 1}, {"col", 1}});
     }
-    CSVConverter::bin_to_csv(path);
+    bin_to_csv(path);
     // If we can convert back, header was valid
     fs::remove(path + ".qvr");
-    EXPECT_NO_THROW(CSVConverter::csv_to_bin(path));
+    EXPECT_NO_THROW(csv_to_bin(path));
 }
 
 TEST_F(CSVConverterFixture, ValidateHeaderWrongColumn) {
     auto md = make_simple_metadata();
     write_toml(md);
     write_csv("row,wrong,val1,val2\n1,1,1.0,2.0\n");
-    EXPECT_THROW(CSVConverter::csv_to_bin(path), std::runtime_error);
+    EXPECT_THROW(csv_to_bin(path), std::runtime_error);
 }
 
 TEST_F(CSVConverterFixture, ValidateHeaderExtraColumn) {
     auto md = make_simple_metadata();
     write_toml(md);
     write_csv("row,col,val1,val2,extra\n1,1,1.0,2.0,3.0\n");
-    EXPECT_THROW(CSVConverter::csv_to_bin(path), std::runtime_error);
+    EXPECT_THROW(csv_to_bin(path), std::runtime_error);
 }
 
 TEST_F(CSVConverterFixture, ValidateHeaderMissingColumn) {
     auto md = make_simple_metadata();
     write_toml(md);
     write_csv("row,col,val1\n1,1,1.0\n");
-    EXPECT_THROW(CSVConverter::csv_to_bin(path), std::runtime_error);
+    EXPECT_THROW(csv_to_bin(path), std::runtime_error);
 }
 
 // ============================================================================
@@ -827,7 +827,7 @@ TEST_F(CSVConverterFixture, ValidateDimensionsCorrect) {
     csv += "2,1,5.0,6.0\n2,2,7.0,8.0\n";
     csv += "3,1,9.0,10.0\n3,2,11.0,12.0\n";
     write_csv(csv);
-    EXPECT_NO_THROW(CSVConverter::csv_to_bin(path));
+    EXPECT_NO_THROW(csv_to_bin(path));
 }
 
 TEST_F(CSVConverterFixture, ValidateDimensionsWrongValue) {
@@ -835,7 +835,7 @@ TEST_F(CSVConverterFixture, ValidateDimensionsWrongValue) {
     write_toml(md);
     // First row should be row=1,col=1 but we put row=1,col=2
     write_csv("row,col,val1,val2\n1,2,1.0,2.0\n");
-    EXPECT_THROW(CSVConverter::csv_to_bin(path), std::runtime_error);
+    EXPECT_THROW(csv_to_bin(path), std::runtime_error);
 }
 
 TEST_F(CSVConverterFixture, ValidateDimensionsWrongAggregatedDatetime) {
@@ -843,5 +843,5 @@ TEST_F(CSVConverterFixture, ValidateDimensionsWrongAggregatedDatetime) {
     write_toml(md);
     // Should be 2025-01-01 but we put 2025-02-01
     write_csv("date,plant_1,plant_2\n2025-02-01,1.0,2.0\n");
-    EXPECT_THROW(CSVConverter::csv_to_bin(path), std::runtime_error);
+    EXPECT_THROW(csv_to_bin(path), std::runtime_error);
 }

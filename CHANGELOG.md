@@ -34,6 +34,9 @@ callers to change something are prefixed **BREAKING** and say what to do.
   *Adapt:* open the database read-write to let a script write files, or inside
   `begin_dry_run`/`end_dry_run` to write files without keeping database writes.
 
+- **BREAKING (C++ only) — `CSVConverter::bin_to_csv` and `CSVConverter::csv_to_bin` are now the
+  free functions `quiver::bin_to_csv` and `quiver::csv_to_bin`**, with the same parameters and
+  defaults; the `CSVConverter` class is internal. *Adapt:* drop the `CSVConverter::` qualifier.
 - **A read-only open creates no log file.** Opening with `read_only` no longer creates or
   truncates `quiver_database.log` next to the database (it wiped the log of any writer on it).
 - **`quiver_cli` messages for a missing script.** Leaving out the `script` argument is now an

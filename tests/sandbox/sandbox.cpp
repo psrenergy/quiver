@@ -56,7 +56,7 @@ int main() {
         }
         std::cout << std::endl;
 
-        quiver::CSVConverter::bin_to_csv(file_path);
+        quiver::bin_to_csv(file_path);
 
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;

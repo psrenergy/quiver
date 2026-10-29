@@ -44,7 +44,7 @@ src/c/
                           # binary chunk (mode is 't')` through quiver_get_last_error. The sol2
                           # binders it runs live in src/sandbox/ (one file per core file they
                           # bind; see src/AGENTS.md)
-src/c/binary/               # BinaryFile / CSVConverter / BinaryMetadata wrappers
+src/c/binary/               # BinaryFile / bin_to_csv + csv_to_bin / BinaryMetadata wrappers
 src/c/expression/           # Expression node constructors, from_file bridge, save, free
 ```
 

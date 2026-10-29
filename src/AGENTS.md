@@ -19,7 +19,7 @@ include/quiver/           # C++ public headers
   export.h / quiver.h     # Export macro, umbrella header
 include/quiver/binary/      # Binary subsystem headers (binary file I/O)
   binary_file.h               # BinaryFile class (Pimpl) - open_file, read, write, get_metadata
-  csv_converter.h             # CSVConverter class - bin_to_csv, csv_to_bin
+  csv_converter.h             # bin_to_csv, csv_to_bin free functions
   iteration.h                 # first_dimensions, next_dimensions, dimension_sizes_at_values, dimension_start_at_values
   binary_metadata.h           # BinaryMetadata struct - dimensions, labels, serialization
   dimension.h                 # Dimension struct (name, size, optional TimeProperties)
@@ -85,7 +85,7 @@ src/json/                   # Internal nlohmann/json file reader; no public head
 src/binary/                 # Binary C++ implementation
   binary_file.cpp             # BinaryFile class (Pimpl impl) + write registry
   binary_utils.h              # Shared file-extension constants, day_of_year, position_in_parent
-  csv_converter.cpp           # CSVConverter implementation
+  csv_converter.cpp           # bin_to_csv/csv_to_bin + the file-local CSVConverter they share
   iteration.cpp               # first_dimensions/next_dimensions impls + dimension_sizes_at_values/dimension_start_at_values
   binary_metadata.cpp         # BinaryMetadata factories, serialization, validation
   time_properties.cpp         # TimeFrequency string conversion, add_offset_from_int
@@ -338,7 +338,7 @@ struct Database::Impl {
 };
 ```
 
-Binary subsystem: `BinaryFile` uses Pimpl (hides file I/O dependencies). `CSVConverter` is a plain class composing a `BinaryMetadata` and the CSV `iostream` (no Pimpl, no inheritance). `BinaryMetadata`, `Dimension`, `TimeProperties` are plain value types.
+Binary subsystem: `BinaryFile` uses Pimpl (hides file I/O dependencies). `bin_to_csv`/`csv_to_bin` are free functions over a file-local `CSVConverter` struct composing a `BinaryMetadata` and the CSV `iostream` (no Pimpl, no inheritance). `BinaryMetadata`, `Dimension`, `TimeProperties` are plain value types.
 
 Expression subsystem: `Expression` is `final` and derives, as `BinaryFile` (Pimpl) does, from the stateless polymorphic `AbstractExpression` (virtual destructor, protected copy and move, so nothing slices through a base reference). It is a plain value type wrapping `shared_ptr<ExpressionNode>` — no Pimpl. `ExpressionNode` is an abstract base with virtual `metadata()` / `compute_row()`; concrete subclasses are exposed via `QUIVER_API` and use Rule of Zero. Polymorphism is justified by the recursive tree shape (operand-owning nodes hold child `shared_ptr<ExpressionNode>`).
 
@@ -1039,19 +1039,18 @@ Standalone binary file I/O layer for `.qvr` files with `.toml` metadata sidecars
 Bound in **Julia and Lua** (root design decision); Lua binds these C++ classes directly via sol2 in `src/sandbox/binary.cpp` (file I/O is db-scoped and sandboxed — `db:open_file`/`db:bin_to_csv`/`db:csv_to_bin`; metadata builders under `quiver.*`; method syntax + string aggregation ops).
 
 - `BinaryFile` class (Pimpl): `open_file(path, mode, metadata?)`, `read(dims, allow_nulls = false)`, `write(data, dims)`, `get_metadata()`, `get_file_path()`
-- `CSVConverter` class (composition, no Pimpl): `bin_to_csv(path, aggregate)`, `csv_to_bin(path)` — the only
-  entry points; the constructor is private. Writer and reader share one definition of each text shape, so a file
-  `bin_to_csv` writes is exactly what `csv_to_bin` checks: the column names (`header_`, built once by the
-  constructor — the dimension columns, or a leading `date`/`datetime` column instead of the time dimensions when
+- `bin_to_csv(path, aggregate = true)`, `csv_to_bin(path)` — free functions, the only users of the file-local
+  `CSVConverter` (anonymous namespace in `csv_converter.cpp`). Writer and reader share one definition of each text
+  shape, so a file `bin_to_csv` writes is exactly what `csv_to_bin` checks: the column names (`header_`, built once by
+  the constructor — the dimension columns, or a leading `date`/`datetime` column instead of the time dimensions when
   aggregating, then the labels), a coordinate's dimension cells (`dimension_cells`), and the comma split/join
-  (`split_fields`/`join_fields`, file-local). `csv_to_bin` checks each data row's field count against `header_`
-  before parsing a cell (Pattern 1 `Cannot csv_to_bin: line N has X fields, expected Y`, or `file ends before
-  line N`), which is what lets `validate_dimensions` index every dimension cell. `split_fields` keeps a trailing
-  empty field (`a,b,` is three): do not swap it for `std::getline(stream, field, ',')`, which drops it and would let
-  a trailing-comma row pass the width check. Data cells are written by `utils::append_number` and read by
-  `utils::parse_float` (the whole cell must parse, in the "C" locale's format; `null` is NaN), so bin → csv → bin
-  is exact in every host locale. A bad cell throws `Cannot csv_to_bin: invalid float value '<v>' for label
-  '<label>'`.
+  (`split_fields`/`join_fields`, file-local). `csv_to_bin` checks each data row's field count against `header_` before
+  parsing a cell (Pattern 1 `Cannot csv_to_bin: line N has X fields, expected Y`, or `file ends before line N`), which
+  is what lets `validate_dimensions` index every dimension cell. `split_fields` keeps a trailing empty field (`a,b,`
+  is three): do not swap it for `std::getline(stream, field, ',')`, which drops it and would let a trailing-comma row
+  pass the width check. Data cells are written by `utils::append_number` and read by `utils::parse_float` (the whole
+  cell must parse, in the "C" locale's format; `null` is NaN), so bin → csv → bin is exact in every host locale. A bad
+  cell throws `Cannot csv_to_bin: invalid float value '<v>' for label '<label>'`.
 - `BinaryMetadata` struct: `dimensions`, `initial_datetime`, `unit`, `labels`, `version`; `number_of_time_dimensions()` is derived from `dimensions` (not stored)
   - Factories: `from_toml_content()` (and `from_toml_file()`, which reads the sidecar and calls it), `from_element()`. Both hand their eight fields to one anonymous-namespace `build_metadata(operation, ...)` in `binary_metadata.cpp`. It rejects a `dimension_sizes`/`dimensions` or `frequencies`/`time_dimensions` count mismatch before indexing either, takes each time dimension's frequency from its matched position in `time_dimensions`, and names the calling factory in its Pattern 1 errors. `from_element` does not go through TOML text. In a TOML document, an absent array reads as empty, an absent or non-string `version`/`unit`/`initial_datetime` throws naming the key, and a wrong-typed array entry throws instead of being skipped. There is no incremental builder: the two factories are the only construction path a binding reaches (C API, Julia, Lua), and they derive every time dimension's `parent_dimension_index` (the previous time dimension) and `initial_value` (from `initial_datetime`). Inside the library, `build_broadcast_metadata` (`expression_helpers.h`) still assembles `dimensions` directly.
   - Serialization: `to_toml()`
@@ -1090,7 +1089,7 @@ Free functions in `quiver::` for traversing the dimension space of a `BinaryMeta
 - `dimension_sizes_at_values(meta, values)` — per-dim actual sizes at a coordinate vector. Used by `next_dimensions()` and `ExpressionAggregate` to size variable-length time-dim iteration windows.
 - `dimension_start_at_values(meta, values, index)` — where dimension `index` starts at that coordinate: its `initial_value` if it is a time dim and **every** time ancestor on the `parent_dimension_index` chain is at its own `initial_value` (the period the file starts in), else `1`. It is the only place the mid-period start rule is written: `next_dimensions()` and `ExpressionAggregate::compute_row` both call it, so an aggregate reduces over `[dimension_start_at_values, dimension_sizes_at_values]`, exactly the cells the traversal visits — except when the reduced dimension is the outermost time dimension, whose window `[1, size]` also reads the first period's cells before `initial_datetime` (never written, so NaN, and skipped). Checking only the immediate parent (the old rule, which both places had) restarted every later March of a `yearly × monthly × daily` file starting 2025-03-15 at day 15.
 
-Used by `Expression::save()` and `CSVConverter::{bin_to_csv, csv_to_bin}` — single source of truth for `.qvr` traversal.
+Used by `Expression::save()`, `bin_to_csv` and `csv_to_bin` — single source of truth for `.qvr` traversal.
 
 ### Write Registry
 
