@@ -67,7 +67,8 @@ echo.
 
 :: ---- Step 3: Create a clean temporary venv ----
 echo Creating clean virtual environment at %TEMP_VENV%...
-uv venv "%TEMP_VENV%"
+:: From bindings/python, so the venv takes the same .python-version that `uv build` built the wheel for.
+uv venv --directory "%PYTHON_DIR%" "%TEMP_VENV%"
 if !errorlevel! neq 0 (
     echo FAIL: uv venv failed
     exit /b 1
