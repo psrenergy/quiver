@@ -42,8 +42,11 @@ C++ core and C API suites live here; binding suites live in each binding's `test
 - Supporting types: `test_element.cpp`, `test_row_result.cpp`, `test_schema_validator.cpp`
 - Lua: `test_sandbox_*.cpp` — per-area split mirroring the database files (`_create`, `_read`,
   `_update`, `_delete`, `_query`, `_describe`, `_return`, `_time_series`, `_transaction`,
-  `_errors`, `_csv_export`, `_csv_import`, `_all_types`, `_fk`, `_lifecycle`, `_migrations`). `_return` covers the JSON
-  encoding of a script's return value; `_errors` also pins text-only `load`, that a caught or
+  `_errors`, `_csv_export`, `_csv_import`, `_all_types`, `_fk`, `_lifecycle`, `_migrations`,
+  `_timeout`). `_return` covers the JSON
+  encoding of a script's return value; `_timeout` covers `run`'s time limit (a loop, `pcall`/`xpcall`,
+  a coroutine, a recursive CTE, a `db:transaction`/`read_csv_stream` callback, a write that must
+  not be interrupted, removal after the run, `0` and a negative value); `_errors` also pins text-only `load`, that a caught or
   propagated script error writes nothing to stderr, and that a dot-call (`db.commit()`) throws
   instead of crashing; `_update` pins the empty-array rule (`UpdateElementEmptyArrayClearsGroup`,
   `UpdateElementEmptyArrayErrors`, `UpdateElementEmptyArrayClearsEveryGroupSharingTheColumn`) and

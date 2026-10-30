@@ -64,6 +64,7 @@ class Sandbox {
       final err = bindings.quiver_sandbox_run(
         _ptr,
         script.toNativeUtf8(allocator: arena).cast(),
+        0,
         outResult,
       );
 

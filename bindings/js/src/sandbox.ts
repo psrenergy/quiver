@@ -26,7 +26,7 @@ export class Sandbox {
     const lib = getSymbols();
     const scriptBuf = toCString(script);
     const outResult = allocPtrOut();
-    check(lib.quiver_sandbox_run(this._ptr, scriptBuf.buf, outResult.buf));
+    check(lib.quiver_sandbox_run(this._ptr, scriptBuf.buf, 0, outResult.buf));
     const result = decodeStringFromBuf(outResult);
     lib.quiver_database_free_string(readPtrOut(outResult));
     return result;

@@ -63,9 +63,24 @@ callers to change something are prefixed **BREAKING** and say what to do.
 - **Windows: `from_schema` and `from_migrations` read SQL files byte-for-byte**, as on Linux and
   macOS. A CRLF inside a multi-line string literal is now stored as CRLF (it was stored as LF), and
   a Ctrl-Z byte no longer ends the file.
+- **BREAKING (C API) — `quiver_sandbox_run` takes a `timeout_ms` argument**, between `script` and
+  `out_result`: `quiver_sandbox_run(sandbox, script, timeout_ms, out_result)`.
+
+  *Adapt:* pass `0` for no limit, which is the old behaviour.
 
 ### Added
 
+- **`Sandbox::run` takes an optional time limit.** `run(script, timeout_ms)` in C++,
+  `quiver_sandbox_run(sandbox, script, timeout_ms, out_result)` in the C API, and an optional
+  `timeout_ms` (`timeoutMs` in Dart and JS) in Julia, Dart, Python and JS; `0`, the default, means
+  no limit, and a negative value throws. A script still running at its limit fails with `Cannot
+  run: script exceeded its time limit of <N> ms`, and `pcall`/`xpcall` cannot catch it. The limit
+  is soft: it is checked between Lua instructions and between SQLite VM steps, so a runaway loop,
+  coroutine or recursive query stops, but one long call (`export_csv` on a huge collection, an
+  expression `save`, a large XLSX load, a write) finishes first, and memory is not limited. A
+  timeout is an ordinary script error: `db:transaction(fn)` rolls back, and a transaction the
+  script opened by hand stays open for the host. With a limit set, a tight pure-Lua loop runs about
+  2x slower; with none, nothing changes.
 - **`from_migrations` accepts `read_only`.** It loads the `ui/` sidecar (the labels, tooltips and
   enum meanings `describe` shows) without applying migrations or creating a missing file, and
   throws `Cannot from_migrations: database is at version X but migrations reach Y; a read-only open

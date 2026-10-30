@@ -10,6 +10,8 @@
 
 #include <algorithm>
 #include <cctype>
+#include <chrono>
+#include <cstdint>
 #include <filesystem>
 #include <memory>
 #include <stdexcept>
@@ -17,6 +19,23 @@
 #include <vector>
 
 namespace quiver::lua_internal {
+
+constexpr int kTimeLimitCheckEvery = 10000;
+
+// run()'s time limit, read by the Lua count hook, the prelude's pcall/xpcall and SQLite's progress
+// handler. limit_ms == 0 means no limit: between runs, and in a run without one.
+struct TimeLimit {
+    sqlite3* connection = nullptr;
+    int64_t limit_ms = 0;
+    std::chrono::steady_clock::time_point deadline;
+    bool timed_out = false;
+    std::string message;
+
+    // True, latched in timed_out, once the deadline has passed.
+    bool exceeded();
+    void start(lua_State* L, int64_t timeout_ms);
+    void stop(lua_State* L);
+};
 
 namespace {
 
@@ -34,7 +53,91 @@ std::string fold(std::string name) {
     return name;
 }
 
+// Its address keys the Sandbox's TimeLimit in the Lua registry.
+const char time_limit_key = 0;
+
+// The Lua half of the time limit: the count hook, and the check the prelude's pcall/xpcall run after a
+// failed call, so a protected call cannot swallow the error. lua_error, never a C++ throw: this runs
+// inside the Lua VM.
+int raise_if_past_deadline(lua_State* L) {
+    lua_rawgetp(L, LUA_REGISTRYINDEX, &time_limit_key);
+    auto* limit = static_cast<TimeLimit*>(lua_touserdata(L, -1));
+    lua_pop(L, 1);
+    if (limit->exceeded()) {
+        lua_pushstring(L, limit->message.c_str());
+        return lua_error(L);
+    }
+    return 0;
+}
+
+void time_limit_hook(lua_State* L, lua_Debug* /*ar*/) {
+    raise_if_past_deadline(L);
+}
+
+// The SQLite half: a runaway query (a recursive CTE through query_*) fails with SQLITE_INTERRUPT. It
+// never interrupts a write, because SQLite answers an interrupted write by rolling back the whole
+// transaction, which may be the host's; query_* is read-only, so every statement a script writes itself
+// is still covered.
+int interrupt_if_past_deadline(void* data) {
+    auto& limit = *static_cast<TimeLimit*>(data);
+    if (!limit.exceeded()) {
+        return 0;
+    }
+    for (
+        auto* stmt = sqlite3_next_stmt(limit.connection, nullptr); stmt != nullptr;
+        stmt = sqlite3_next_stmt(limit.connection, stmt)
+    ) {
+        if (sqlite3_stmt_busy(stmt) != 0 && sqlite3_stmt_readonly(stmt) == 0) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
 }  // namespace
+
+bool TimeLimit::exceeded() {
+    if (limit_ms == 0) {
+        return false;
+    }
+    if (!timed_out) {
+        timed_out = std::chrono::steady_clock::now() >= deadline;
+    }
+    return timed_out;
+}
+
+// ponytail: a soft limit, checked every kTimeLimitCheckEvery Lua instructions and SQLite VM steps. A
+// single long C++ call (export_csv on a huge collection, an expression save over a large .qvr, an XLSX
+// load, a typed write) runs to completion before the limit is seen; a coroutine created by an earlier
+// run() without a limit carries no hook; memory stays uncapped. A hard limit means running the sandbox
+// in a process the host can kill.
+void TimeLimit::start(lua_State* L, int64_t timeout_ms) {
+    timed_out = false;
+    limit_ms = timeout_ms;
+    if (limit_ms == 0) {
+        return;
+    }
+    using namespace std::chrono;
+    const auto now = steady_clock::now();
+    // Saturates, so a huge limit (a host's INT64_MAX for "forever") cannot overflow the deadline.
+    const auto room = duration_cast<milliseconds>(steady_clock::time_point::max() - now).count();
+    deadline = limit_ms < room ? now + milliseconds(limit_ms) : steady_clock::time_point::max();
+    message = "Cannot run: script exceeded its time limit of " + std::to_string(limit_ms) + " ms";
+    // Coroutines copy the hook when created (lua_newthread), so a coroutine the script makes is limited too.
+    lua_sethook(L, &time_limit_hook, LUA_MASKCOUNT, kTimeLimitCheckEvery);
+    sqlite3_progress_handler(connection, kTimeLimitCheckEvery, &interrupt_if_past_deadline, this);
+}
+
+// Idempotent. Keeps timed_out for run()'s error. A coroutine created during the run keeps its hook,
+// which does nothing once limit_ms is 0.
+void TimeLimit::stop(lua_State* L) {
+    if (limit_ms == 0) {
+        return;
+    }
+    limit_ms = 0;
+    lua_sethook(L, nullptr, 0, 0);
+    sqlite3_progress_handler(connection, 0, nullptr, nullptr);
+}
 
 // Every Lua writer opens its files with truncate, so containment alone is not enough: the database
 // file and its journals sit inside the sandbox root, and a rollback cannot restore a truncated one.
@@ -144,6 +247,8 @@ struct Sandbox::Impl {
     Database& db;
     // Declared before `lua`: the state, and every closure that captured `handles`, is torn down first.
     lua_internal::RunHandles handles;
+    // Before `lua` too: a coroutine's hook can still run during lua_close's finalizers.
+    lua_internal::TimeLimit time_limit;
     sol::state lua;
 
     explicit Impl(Database& database) : db(database) {
@@ -155,16 +260,27 @@ struct Sandbox::Impl {
             sol::lib::coroutine,
             sol::lib::utf8
         );
+        lua_pushlightuserdata(lua.lua_state(), &time_limit);
+        lua_rawsetp(lua.lua_state(), LUA_REGISTRYINDEX, &lua_internal::time_limit_key);
         // Scripts may not load Lua source from disk, and load() takes text chunks only: Lua does not
         // verify bytecode, so a crafted binary chunk could read and write host memory. The wrapper
         // forces mode "t" whatever the caller passed; `...` forwards env only when one was given,
         // because stock load tells a missing env (global environment) from an explicit nil.
+        // pcall/xpcall re-raise a failed call once the time limit has passed, so a script cannot
+        // swallow the timeout; otherwise they return exactly what the stock ones do.
         lua["dofile"] = sol::lua_nil;
         lua["loadfile"] = sol::lua_nil;
-        lua.safe_script(R"lua(
-            local load = load
+        sol::protected_function prelude = lua.load(R"lua(
+            local load, pcall, xpcall, raise_if_past_deadline = load, pcall, xpcall, ...
             _G.load = function(chunk, chunkname, _, ...) return load(chunk, chunkname, "t", ...) end
+            local function checked(ok, ...)
+                if not ok then raise_if_past_deadline() end
+                return ok, ...
+            end
+            _G.pcall = function(...) return checked(pcall(...)) end
+            _G.xpcall = function(...) return checked(xpcall(...)) end
         )lua");
+        prelude(&lua_internal::raise_if_past_deadline);
         sol::table ns = lua.create_named_table("quiver");
         // The only Database usertype: registering it again would clear every method bound before.
         auto bind = lua.new_usertype<Database>("Database");
@@ -192,6 +308,7 @@ Sandbox::Sandbox(Database& db) : impl_(std::make_unique<Impl>(db)) {
     namespace fs = std::filesystem;
     auto& handles = impl_->handles;
     handles.read_only = db.impl_->read_only;
+    impl_->time_limit.connection = db.impl_->db;
     // SQLite's absolute name for the file, fixed at open; db.path() may be relative to a working
     // directory that has since changed. Empty for an in-memory database.
     const char* file = sqlite3_db_filename(db.impl_->db, "main");
@@ -215,7 +332,10 @@ Sandbox::Sandbox(Sandbox&&) noexcept = default;
 
 Sandbox& Sandbox::operator=(Sandbox&&) noexcept = default;
 
-std::string Sandbox::run(const std::string& script) {
+std::string Sandbox::run(const std::string& script, int64_t timeout_ms) {
+    if (timeout_ms < 0) {
+        throw std::runtime_error("Cannot run: timeout_ms must not be negative, got " + std::to_string(timeout_ms));
+    }
     // A writer (or any other unique_ptr + sol::no_constructor usertype, e.g. CsvWriter)
     // the script leaves unreachable at run()'s return is never collected on its own -- sol::state
     // is a long-lived member of Impl, so nothing forces a GC cycle between script executions.
@@ -242,15 +362,30 @@ std::string Sandbox::run(const std::string& script) {
             impl.handles.host_dry_run = true;
         }
     } gc_guard{*impl_};
+    // Declared after gc_guard, so destroyed before it: the time limit comes off before the collection,
+    // whose __gc finalizers are Lua code that must not be interrupted. The normal path takes it off
+    // right after the script; this covers an exception out of safe_script.
+    struct TimeLimitGuard {
+        Impl& impl;
+        ~TimeLimitGuard() {
+            impl.time_limit.stop(impl.lua.lua_state());
+        }
+    } time_limit_guard{*impl_};
 
     impl_->handles.host_dry_run = impl_->db.in_dry_run();
     impl_->handles.host_transaction = impl_->db.in_transaction() && !impl_->handles.host_dry_run;
 
     // Text only, like load(): a precompiled chunk passed as the script would skip the same check.
     auto& lua = impl_->lua;
+    impl_->time_limit.start(lua.lua_state(), timeout_ms);
     auto result =
         lua.safe_script(script, sol::script_pass_on_error, sol::detail::default_chunk_name(), sol::load_mode::text);
+    // The JSON encoder below and the host's next calls run without the limit.
+    impl_->time_limit.stop(lua.lua_state());
     if (!result.valid()) {
+        if (impl_->time_limit.timed_out) {
+            throw std::runtime_error(impl_->time_limit.message);
+        }
         sol::error err = result;
         throw std::runtime_error(std::string("Failed to run Lua script: ") + err.what());
     }

@@ -50,6 +50,7 @@ add_executable(quiver_tests
     test_sandbox_read.cpp
     test_sandbox_return.cpp
     test_sandbox_time_series.cpp
+    test_sandbox_timeout.cpp
     test_sandbox_transaction.cpp
     test_sandbox_update.cpp
     test_sandbox_write_csv.cpp

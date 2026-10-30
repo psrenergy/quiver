@@ -54,7 +54,7 @@ class Sandbox:
         self._ensure_open()
         lib = get_lib()
         out_result = ffi.new("char**")
-        check(lib.quiver_sandbox_run(self._ptr, script.encode("utf-8"), out_result))
+        check(lib.quiver_sandbox_run(self._ptr, script.encode("utf-8"), 0, out_result))
         try:
             return decode_string(out_result[0])
         finally:

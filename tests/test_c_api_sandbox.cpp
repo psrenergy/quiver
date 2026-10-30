@@ -19,7 +19,7 @@ namespace {
 // The tests that assert on the result call quiver_sandbox_run directly.
 quiver_error_t run_script(quiver_sandbox_t* sandbox, const char* script) {
     char* result = nullptr;
-    const auto err = quiver_sandbox_run(sandbox, script, &result);
+    const auto err = quiver_sandbox_run(sandbox, script, 0, &result);
     quiver_database_free_string(result);
     return err;
 }
@@ -305,6 +305,7 @@ TEST_F(SandboxCApiTest, ElementRealArraysPreserveCellTypes) {
                 db:update_element("Collection", id, { value_float = {false, 3.5, 2} })
                 return db:read_vectors_by_id("Collection", id).value_float
             )",
+            0,
             &result
         ),
         QUIVER_OK
@@ -546,14 +547,14 @@ TEST_F(SandboxCApiTest, RunReturnsJson) {
     ASSERT_EQ(quiver_sandbox_new(db, &sandbox), QUIVER_OK);
 
     char* result = nullptr;
-    ASSERT_EQ(quiver_sandbox_run(sandbox, "return { a = 1, b = {2, 3} }", &result), QUIVER_OK);
+    ASSERT_EQ(quiver_sandbox_run(sandbox, "return { a = 1, b = {2, 3} }", 0, &result), QUIVER_OK);
     ASSERT_NE(result, nullptr);
     EXPECT_STREQ(result, R"({"a":1,"b":[2,3]})");
     quiver_database_free_string(result);
 
     // A script that returns nothing yields an empty string, not NULL.
     result = nullptr;
-    ASSERT_EQ(quiver_sandbox_run(sandbox, "local x = 1", &result), QUIVER_OK);
+    ASSERT_EQ(quiver_sandbox_run(sandbox, "local x = 1", 0, &result), QUIVER_OK);
     ASSERT_NE(result, nullptr);
     EXPECT_STREQ(result, "");
     quiver_database_free_string(result);
@@ -570,7 +571,7 @@ TEST_F(SandboxCApiTest, RunWithNullOutResult) {
     quiver_sandbox_t* sandbox = nullptr;
     ASSERT_EQ(quiver_sandbox_new(db, &sandbox), QUIVER_OK);
 
-    EXPECT_EQ(quiver_sandbox_run(sandbox, "return 1", nullptr), QUIVER_ERROR);
+    EXPECT_EQ(quiver_sandbox_run(sandbox, "return 1", 0, nullptr), QUIVER_ERROR);
 
     quiver_sandbox_free(sandbox);
     quiver_database_close(db);
@@ -609,6 +610,7 @@ TEST_F(SandboxCApiTest, DryRunWrapsScript) {
         end)
         return db:read_element_ids("Collection")
     )",
+            0,
             &result
         ),
         QUIVER_OK
@@ -641,5 +643,46 @@ TEST_F(SandboxCApiTest, DryRunErrorsSurfaceThroughTheErrorChannel) {
     EXPECT_STREQ(quiver_get_last_error(), "Cannot begin_dry_run: dry run already active");
     ASSERT_EQ(quiver_database_end_dry_run(db), QUIVER_OK);
 
+    quiver_database_close(db);
+}
+
+// ============================================================================
+// Time limit
+// ============================================================================
+
+TEST_F(SandboxCApiTest, RunTimeLimitStopsRunawayScript) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", collections_schema.c_str(), &options, &db), QUIVER_OK);
+
+    quiver_sandbox_t* sandbox = nullptr;
+    ASSERT_EQ(quiver_sandbox_new(db, &sandbox), QUIVER_OK);
+
+    char* result = nullptr;
+    EXPECT_EQ(quiver_sandbox_run(sandbox, "while true do end", 100, &result), QUIVER_ERROR);
+    EXPECT_EQ(result, nullptr);
+    EXPECT_STREQ(quiver_get_last_error(), "Cannot run: script exceeded its time limit of 100 ms");
+
+    quiver_sandbox_free(sandbox);
+    quiver_database_close(db);
+}
+
+TEST_F(SandboxCApiTest, RunZeroTimeoutMeansNoLimit) {
+    auto options = quiver::test::quiet_options();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_from_schema(":memory:", collections_schema.c_str(), &options, &db), QUIVER_OK);
+
+    quiver_sandbox_t* sandbox = nullptr;
+    ASSERT_EQ(quiver_sandbox_new(db, &sandbox), QUIVER_OK);
+
+    char* result = nullptr;
+    ASSERT_EQ(
+        quiver_sandbox_run(sandbox, "local s = 0 for i = 1, 1000000 do s = s + i end return s", 0, &result),
+        QUIVER_OK
+    );
+    EXPECT_STREQ(result, "500000500000");
+    quiver_database_free_string(result);
+
+    quiver_sandbox_free(sandbox);
     quiver_database_close(db);
 }

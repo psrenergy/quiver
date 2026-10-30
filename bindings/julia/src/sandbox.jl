@@ -15,7 +15,7 @@ end
 
 function run!(sandbox::Sandbox, script::String)
     out_result = Ref{Ptr{Cchar}}(C_NULL)
-    check(C.quiver_sandbox_run(sandbox.ptr, script, out_result))
+    check(C.quiver_sandbox_run(sandbox.ptr, script, 0, out_result))
     result = unsafe_string(out_result[])
     C.quiver_database_free_string(out_result[])
     return result

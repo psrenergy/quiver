@@ -3,6 +3,7 @@
 
 #include "export.h"
 
+#include <cstdint>
 #include <memory>
 #include <string>
 
@@ -32,7 +33,14 @@ public:
     /// Database::begin_dry_run / Database::end_dry_run. A transaction or dry run open when run()
     /// starts belongs to the caller: the script's db:commit / db:rollback / db:end_dry_run refuse
     /// to end it. On a database opened read-only, the script cannot write files.
-    std::string run(const std::string& script);
+    ///
+    /// timeout_ms > 0 limits how long the script runs, in wall-clock milliseconds; 0 (the default)
+    /// means no limit, and a negative value throws. The limit is soft: it is checked between Lua
+    /// instructions and between SQLite VM steps, so a single long C++ call (export_csv on a huge
+    /// collection, an expression save, a typed write) finishes first. A script past its limit fails
+    /// with "Cannot run: script exceeded its time limit of <N> ms", which pcall cannot catch. Memory
+    /// is not limited.
+    std::string run(const std::string& script, int64_t timeout_ms = 0);
 
 private:
     struct Impl;
