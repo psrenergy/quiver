@@ -20,13 +20,15 @@ export class Sandbox {
    *
    * To execute a script without keeping its writes, wrap the call in a dry run:
    * `db.dryRun(() => sandbox.run(script))`.
+   *
+   * `timeoutMs` > 0 stops a script still running after that many milliseconds; 0 means no limit.
    */
-  run(script: string): string {
+  run(script: string, { timeoutMs = 0 }: { timeoutMs?: number } = {}): string {
     this.ensureOpen();
     const lib = getSymbols();
     const scriptBuf = toCString(script);
     const outResult = allocPtrOut();
-    check(lib.quiver_sandbox_run(this._ptr, scriptBuf.buf, 0, outResult.buf));
+    check(lib.quiver_sandbox_run(this._ptr, scriptBuf.buf, BigInt(timeoutMs), outResult.buf));
     const result = decodeStringFromBuf(outResult);
     lib.quiver_database_free_string(readPtrOut(outResult));
     return result;

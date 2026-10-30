@@ -72,6 +72,20 @@ describe("Sandbox", () => {
     }
   });
 
+  test("timeoutMs stops a runaway script, and the default is no limit", () => {
+    const db = Database.fromSchema(":memory:", SCHEMA_PATH);
+    const sandbox = new Sandbox(db);
+    try {
+      expect(() => sandbox.run("while true do end", { timeoutMs: 100 })).toThrow(
+        new QuiverError("Cannot run: script exceeded its time limit of 100 ms"),
+      );
+      expect(sandbox.run("return 1")).toBe("1");
+    } finally {
+      sandbox.close();
+      db.close();
+    }
+  });
+
   test("multiple run calls on same sandbox succeed", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);
     const sandbox = new Sandbox(db);

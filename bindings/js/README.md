@@ -198,8 +198,9 @@ The describe methods give agents the schema, attribute meanings and data coverag
 ### Lua
 
 - `Sandbox(db)` -- Create Lua script runner with database access
-- `run(script)` -- Execute a Lua script; returns its return value as a JSON string, or `""` if it
-  returned nothing
+- `run(script, { timeoutMs? })` -- Execute a Lua script; returns its return value as a JSON
+  string, or `""` if it returned nothing. `timeoutMs` > 0 stops a script still running after that
+  many milliseconds (default 0, no limit)
 - `close()` -- Close the Sandbox
 
 ## Types

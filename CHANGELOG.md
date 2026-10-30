@@ -72,8 +72,10 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 - **`Sandbox::run` takes an optional time limit.** `run(script, timeout_ms)` in C++,
   `quiver_sandbox_run(sandbox, script, timeout_ms, out_result)` in the C API, and an optional
-  `timeout_ms` (`timeoutMs` in Dart and JS) in Julia, Dart, Python and JS; `0`, the default, means
-  no limit, and a negative value throws. A script still running at its limit fails with `Cannot
+  named argument in every binding: `run!(sandbox, script; timeout_ms = 100)` in Julia,
+  `run(script, timeout_ms=100)` in Python, `run(script, timeoutMs: 100)` in Dart and
+  `run(script, { timeoutMs: 100 })` in JS; `0`, the default, means no limit, and a negative value
+  throws. A script still running at its limit fails with `Cannot
   run: script exceeded its time limit of <N> ms`, and `pcall`/`xpcall` cannot catch it. The limit
   is soft: it is checked between Lua instructions and between SQLite VM steps, so a runaway loop,
   coroutine or recursive query stops, but one long call (`export_csv` on a huge collection, an

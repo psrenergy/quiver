@@ -119,6 +119,35 @@ void main() {
     });
   });
 
+  group('Sandbox time limit', () {
+    test('stops a runaway script, and the default is no limit', () {
+      final db = Database.fromSchema(
+        ':memory:',
+        path.join(testsPath, 'schemas', 'valid', 'collections.sql'),
+      );
+      try {
+        final sandbox = Sandbox(db);
+        try {
+          expect(
+            () => sandbox.run('while true do end', timeoutMs: 100),
+            throwsA(
+              isA<SandboxException>().having(
+                (e) => e.message,
+                'message',
+                equals('Cannot run: script exceeded its time limit of 100 ms'),
+              ),
+            ),
+          );
+          expect(sandbox.run('return 1'), equals('1'));
+        } finally {
+          sandbox.dispose();
+        }
+      } finally {
+        db.close();
+      }
+    });
+  });
+
   group('Sandbox Reuse Runner', () {
     test('runs multiple scripts with same runner', () {
       final db = Database.fromSchema(
