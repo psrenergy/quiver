@@ -305,14 +305,20 @@ void Schema::load_from_database(sqlite3* db) {
         throw std::runtime_error("Failed to query table names");
     }
 
+    // A step can fail midway (a Sandbox time limit interrupts a long read), and a truncated list that
+    // still validates would be published for good.
     std::vector<std::string> names;
-    while (sqlite3_step(stmt) == SQLITE_ROW) {
+    int rc = SQLITE_OK;
+    while ((rc = sqlite3_step(stmt)) == SQLITE_ROW) {
         const char* name = reinterpret_cast<const char*>(sqlite3_column_text(stmt, 0));
         if (name) {
             names.emplace_back(name);
         }
     }
     sqlite3_finalize(stmt);
+    if (rc != SQLITE_DONE) {
+        throw std::runtime_error(std::string("Failed to query table names: ") + sqlite3_errmsg(db));
+    }
 
     // Load each table's metadata
     for (const auto& name : names) {

@@ -31,12 +31,17 @@ QUIVER_C_API quiver_error_t quiver_sandbox_free(quiver_sandbox_t* sandbox) {
     return QUIVER_OK;
 }
 
-QUIVER_C_API quiver_error_t quiver_sandbox_run(quiver_sandbox_t* sandbox, const char* script, char** out_result) {
+QUIVER_C_API quiver_error_t quiver_sandbox_run(
+    quiver_sandbox_t* sandbox,
+    const char* script,
+    int64_t timeout_ms,
+    char** out_result
+) {
     QUIVER_REQUIRE(sandbox, script, out_result);
     *out_result = nullptr;  // so a caller that frees unconditionally never sees a stale pointer
 
     try {
-        *out_result = quiver::string::new_c_str(sandbox->sandbox.run(script));
+        *out_result = quiver::string::new_c_str(sandbox->sandbox.run(script, timeout_ms));
         return QUIVER_OK;
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());

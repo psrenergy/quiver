@@ -90,6 +90,21 @@ include("fixture.jl")
         Quiver.close!(db)
     end
 
+    @testset "Time Limit" begin
+        path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
+        db = Quiver.from_schema(":memory:", path_schema)
+        sandbox = Quiver.Sandbox(db)
+        try
+            err = @test_throws Quiver.DatabaseException Quiver.run!(sandbox, "while true do end"; timeout_ms = 100)
+            @test err.value.msg == "Cannot run: script exceeded its time limit of 100 ms"
+            # The default is no limit.
+            @test Quiver.run!(sandbox, "return 1") == "1"
+        finally
+            Quiver.close!(sandbox)
+            Quiver.close!(db)
+        end
+    end
+
     @testset "Reuse Runner" begin
         path_schema = joinpath(tests_path(), "schemas", "valid", "collections.sql")
         db = Quiver.from_schema(":memory:", path_schema)

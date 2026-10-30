@@ -198,7 +198,7 @@ const freeSymbols = {
 const sandboxSymbols = {
   quiver_sandbox_new: { args: [P, P], returns: I32 },
   quiver_sandbox_free: { args: [P], returns: I32 },
-  quiver_sandbox_run: { args: [P, BUF, BUF], returns: I32 },
+  quiver_sandbox_run: { args: [P, BUF, I64, BUF], returns: I32 },
 } as const;
 
 // Combined symbol map for dlopen.

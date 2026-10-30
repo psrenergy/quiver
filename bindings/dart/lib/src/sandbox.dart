@@ -54,8 +54,10 @@ class Sandbox {
   /// Returns the script's return value encoded as JSON, or `''` if it returned nothing.
   /// To execute a script without keeping its writes, wrap the call in [Database.dryRun].
   ///
-  /// Throws [SandboxException] if the script fails to execute.
-  String run(String script) {
+  /// [timeoutMs] > 0 stops a script still running after that many milliseconds; 0 means no limit.
+  ///
+  /// Throws [SandboxException] if the script fails to execute or exceeds [timeoutMs].
+  String run(String script, {int timeoutMs = 0}) {
     _ensureNotDisposed();
 
     final arena = Arena();
@@ -64,6 +66,7 @@ class Sandbox {
       final err = bindings.quiver_sandbox_run(
         _ptr,
         script.toNativeUtf8(allocator: arena).cast(),
+        timeoutMs,
         outResult,
       );
 

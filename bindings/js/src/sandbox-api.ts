@@ -130,12 +130,17 @@ midnight.
   transaction control are not allowed\` before anything runs. The table-valued \`pragma_*()\`
   functions (\`SELECT name FROM pragma_table_info('X')\`) are reads and stay available. Write
   through the \`db:\` API, which validates what it writes.
-- **What the sandbox does not limit.** The sandbox controls which files a script can touch and
-  which standard libraries exist. It does not bound how much work a script does: there is no
-  instruction-count limit, no memory cap and no wall-clock timeout (\`while true do end\` runs
-  until the host stops it). Globals persist across \`run()\` calls on the same Sandbox, so a global
-  one script sets is visible to the next; use \`local\`. A host that runs untrusted scripts has to
-  impose those limits outside the library.
+- **Time limit, and what the sandbox does not limit.** The sandbox controls which files a script
+  can touch and which standard libraries exist. The host may also give \`run()\` a time limit; a
+  script still running past it fails with \`Cannot run: script exceeded its time limit of <N> ms\`,
+  and \`pcall\`/\`xpcall\`/\`coroutine.resume\` cannot catch that. The limit is checked between Lua
+  instructions and SQL query steps, so a long query is stopped, but a single long library call (a
+  large expression \`save\`, an XLSX load, a write) or a string pattern call
+  (\`string.find\`/\`match\`/\`gsub\`) backtracking over a long input finishes before it is seen, and
+  a loop inside a \`__gc\` finalizer is never stopped. Without a limit, \`while true do end\` runs
+  until the host stops it. There is no memory cap. Globals persist
+  across \`run()\` calls on the same Sandbox, so a global one script sets is visible to the next;
+  use \`local\`.
 - **Output.** A script can \`return\` one value and the host receives it as JSON — prefer this over
   \`print()\` when you need structured data back (\`print()\` writes to the host process's standard
   output, which the library does not capture; whether you see it depends on the host). Only the

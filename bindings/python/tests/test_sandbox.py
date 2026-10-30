@@ -70,6 +70,13 @@ class TestSandboxErrors:
             """)
         sandbox.close()
 
+    def test_time_limit_stops_runaway_script(self, collections_db: Database) -> None:
+        with Sandbox(collections_db) as sandbox:
+            with pytest.raises(QuiverError, match="^Cannot run: script exceeded its time limit of 100 ms$"):
+                sandbox.run("while true do end", timeout_ms=100)
+            # The default is no limit.
+            assert sandbox.run("return 1") == "1"
+
 
 class TestSandboxLifecycle:
     """Tests for Sandbox lifecycle management."""

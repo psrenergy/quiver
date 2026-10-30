@@ -42,7 +42,8 @@ src/c/
                           # quiver_database_free_string). run passes the script through unchanged and the core
                           # loads it as text only, so a precompiled (bytecode) chunk fails like
                           # any script error: `Failed to run Lua script: ... attempt to load a
-                          # binary chunk (mode is 't')` through quiver_get_last_error. The sol2
+                          # binary chunk (mode is 't')` through quiver_get_last_error. timeout_ms
+                          # is forwarded to Sandbox::run (0 = no limit). The sol2
                           # binders it runs live in src/sandbox/ (one file per core file they
                           # bind; see src/AGENTS.md)
 src/c/binary/               # BinaryFile / bin_to_csv + csv_to_bin / BinaryMetadata wrappers

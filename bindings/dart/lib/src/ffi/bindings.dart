@@ -3356,11 +3356,13 @@ class QuiverDatabaseBindings {
   int quiver_sandbox_run(
     ffi.Pointer<quiver_sandbox_t> sandbox,
     ffi.Pointer<ffi.Char> script,
+    int timeout_ms,
     ffi.Pointer<ffi.Pointer<ffi.Char>> out_result,
   ) {
     return _quiver_sandbox_run(
       sandbox,
       script,
+      timeout_ms,
       out_result,
     );
   }
@@ -3371,13 +3373,14 @@ class QuiverDatabaseBindings {
           ffi.UnsignedInt Function(
             ffi.Pointer<quiver_sandbox_t>,
             ffi.Pointer<ffi.Char>,
+            ffi.Int64,
             ffi.Pointer<ffi.Pointer<ffi.Char>>,
           )
         >
       >('quiver_sandbox_run');
   late final _quiver_sandbox_run = _quiver_sandbox_runPtr
       .asFunction<
-        int Function(ffi.Pointer<quiver_sandbox_t>, ffi.Pointer<ffi.Char>, ffi.Pointer<ffi.Pointer<ffi.Char>>)
+        int Function(ffi.Pointer<quiver_sandbox_t>, ffi.Pointer<ffi.Char>, int, ffi.Pointer<ffi.Pointer<ffi.Char>>)
       >();
 }
 

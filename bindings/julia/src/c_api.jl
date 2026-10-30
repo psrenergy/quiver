@@ -557,8 +557,8 @@ function quiver_sandbox_free(sandbox)
     @ccall libquiver_c.quiver_sandbox_free(sandbox::Ptr{quiver_sandbox_t})::quiver_error_t
 end
 
-function quiver_sandbox_run(sandbox, script, out_result)
-    @ccall libquiver_c.quiver_sandbox_run(sandbox::Ptr{quiver_sandbox_t}, script::Ptr{Cchar}, out_result::Ptr{Ptr{Cchar}})::quiver_error_t
+function quiver_sandbox_run(sandbox, script, timeout_ms, out_result)
+    @ccall libquiver_c.quiver_sandbox_run(sandbox::Ptr{quiver_sandbox_t}, script::Ptr{Cchar}, timeout_ms::Int64, out_result::Ptr{Ptr{Cchar}})::quiver_error_t
 end
 
 @cenum quiver_time_frequency_t::UInt32 begin

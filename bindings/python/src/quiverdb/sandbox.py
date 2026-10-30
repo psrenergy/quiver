@@ -42,19 +42,21 @@ class Sandbox:
         if self._closed:
             raise QuiverError("Sandbox is closed")
 
-    def run(self, script: str) -> str:
+    def run(self, script: str, *, timeout_ms: int = 0) -> str:
         """Execute a script against the database.
 
         Returns the script's return value encoded as JSON, or "" if it returned nothing.
 
         To execute a script without keeping its writes, wrap the call in Database.dry_run().
 
-        Raises QuiverError if the script fails (syntax or runtime error).
+        timeout_ms > 0 stops a script still running after that many milliseconds; 0 means no limit.
+
+        Raises QuiverError if the script fails (syntax or runtime error) or exceeds timeout_ms.
         """
         self._ensure_open()
         lib = get_lib()
         out_result = ffi.new("char**")
-        check(lib.quiver_sandbox_run(self._ptr, script.encode("utf-8"), out_result))
+        check(lib.quiver_sandbox_run(self._ptr, script.encode("utf-8"), timeout_ms, out_result))
         try:
             return decode_string(out_result[0])
         finally:

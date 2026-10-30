@@ -235,6 +235,24 @@ Settled questions — don't relitigate without the user; each was decided delibe
   depth alone does not bound a table that shares sub-tables), a string that is not valid UTF-8
   (JSON must be UTF-8, a Lua string need not), and a table where an integer key and a string key
   spell the same thing (two Lua keys, one JSON key — refused rather than silently dropped).
+- **`Sandbox::run` takes an optional, soft time limit** (`run(script, timeout_ms)`, 0 = none,
+  negative throws). It is checked between Lua instructions (a count hook firing every 10000,
+  which coroutines inherit) and between SQLite VM steps (a progress handler), and fails the script with
+  `Cannot run: script exceeded its time limit of <N> ms`. No Lua call that catches an error can
+  swallow it (`pcall`, `xpcall` and its handler, `coroutine.resume`/`close`/`wrap`, `load`'s reader):
+  the prelude's wrappers re-raise once the deadline has passed. Both are removed at `run()`'s exit,
+  before `GcGuard`'s collection, so the host's next calls are never interrupted. The ceiling is
+  deliberate: a long read query is interrupted, but work outside the Lua VM and SQLite's (an
+  expression `save`, an XLSX load, `export_csv`'s file write, a Lua string pattern match, a write —
+  the progress handler never interrupts a write, because SQLite would roll back the whole
+  transaction, the host's included) finishes first; Lua runs `__gc` finalizers, and the `__close` of
+  a coroutine the limit killed, with hooks off, so a loop inside one is not stopped; and memory stays
+  uncapped. A hard limit means a separate process. A timeout behaves like any script error
+  (`db:transaction(fn)` rolls back; a scope the script opened by hand stays open). It is the one
+  in-process limit every binding can use: Bun's FFI call and Julia's `ccall` block the thread a host
+  timer would need, and a Python timer thread (CFFI releases the GIL) has no API it could call to stop
+  the script. A set limit costs a tight pure-Lua loop about 2x (Lua 5.4 traps every instruction while
+  a hook is set); no limit, no cost.
 - **`import_csv` refuses to run inside an open transaction** — Pattern 1 precondition, not a silent
   rollback. Import must own its transaction (a `TransactionGuard`, rolled back on any error):
   nested inside a caller's, the guard would no-op, so a failure partway through would leave
@@ -877,12 +895,13 @@ takes every expression operation and method in C++, Lua and Julia; the C API con
 
 ### Sandbox Class
 Executes Lua scripts against a database; the `db` userdata exposes the same API surface
-(see cross-layer tables below). `run(script)` returns the script's return value encoded as
-**JSON** (empty string if it returned nothing) — every binding passes that string through
-verbatim. The binding lives in `src/sandbox/`, one file per core file it binds (`database.cpp` and
-`database_*.cpp`, named after `src/database*.cpp`), plus `csv.cpp`, `json.cpp`, `xlsx.cpp`,
-`binary.cpp` and `expression.cpp`;
-the layout and its rules are in `src/AGENTS.md`, along with the implementation notes.
+(see cross-layer tables below). `run(script, timeout_ms = 0)` returns the script's return value
+encoded as **JSON** (empty string if it returned nothing) — every binding passes that string
+through verbatim. `timeout_ms > 0` is a soft wall-clock limit (design decision above). The binding
+lives in `src/sandbox/`, one file per core file it binds (`database.cpp` and `database_*.cpp`,
+named after `src/database*.cpp`), plus `csv.cpp`, `json.cpp`, `xlsx.cpp`, `binary.cpp` and
+`expression.cpp`; the layout and its rules are in `src/AGENTS.md`, along with the implementation
+notes.
 
 ## Cross-Layer Naming Conventions
 

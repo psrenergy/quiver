@@ -123,7 +123,9 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
   so a `toDartString` failure cannot leak it. The columnar group decoders (`_decodeGroupRows`,
   `readTimeSeriesGroup`) free the C result in their own `finally` for the same reason. The script
   must be Lua source text: the core loads it in text mode, so a precompiled (bytecode) chunk is
-  rejected with `Failed to run Lua script: ...` and surfaces like any other script error.
+  rejected with `Failed to run Lua script: ...` and surfaces like any other script error. The
+  `timeoutMs` named parameter (default 0, no limit) is passed straight through; the C API validates
+  it and raises the time-limit error.
   `test/sandbox_test.dart` checks mixed Lua REAL arrays on create/update; cell conversion and
   schema validation stay in C++.
 - **Time-series group NULLs**: `readTimeSeriesGroup`/`updateTimeSeriesGroup` use

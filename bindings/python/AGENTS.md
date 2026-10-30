@@ -116,7 +116,8 @@ ruff.toml         # Lint/format config; lint is isort only (select = ["I"])
   `finally` so a `decode_string` failure (the JSON is rejected as non-UTF-8 in C++, but be safe)
   cannot leak the native buffer. The script must be Lua source text: the core loads it in text mode,
   so a precompiled (bytecode) chunk is rejected with `Failed to run Lua script: ...` and surfaces
-  like any other script error.
+  like any other script error. The keyword-only `timeout_ms` (default 0, no limit) is passed
+  straight through; the C API validates it and raises the time-limit error.
   `tests/test_sandbox.py` checks mixed Lua REAL arrays on create/update; cell conversion and
   schema validation stay in C++.
 - **`Sandbox.__init__` starts with `_closed = True` and sets it to `False` only after `_ptr` is

@@ -146,6 +146,8 @@ bunfig.toml       # coverageSkipTestFiles = true (Bun 1.3 reports test/ otherwis
   which is also what the C API leaves there on failure, and `check()` throws before the decode.
   The script must be Lua source text: the core loads it in text mode, so a precompiled (bytecode)
   chunk is rejected with `Failed to run Lua script: ...` and surfaces like any other script error.
+  `run(script, { timeoutMs })` (default 0, no limit) passes it as `BigInt`, like every other int64
+  argument; the C API validates it and raises the time-limit error.
   `test/sandbox.test.ts` checks mixed Lua REAL arrays on create/update; cell conversion and
   schema validation stay in C++.
 - **Time-series NULL cells** (`TimeSeriesData = Record<string, (number | string | null)[]>`): a
