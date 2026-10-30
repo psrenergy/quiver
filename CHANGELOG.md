@@ -34,6 +34,9 @@ callers to change something are prefixed **BREAKING** and say what to do.
   *Adapt:* open the database read-write to let a script write files, or inside
   `begin_dry_run`/`end_dry_run` to write files without keeping database writes.
 
+- **BREAKING (C++ only) — `CSVConverter::bin_to_csv` and `CSVConverter::csv_to_bin` are now the
+  free functions `quiver::bin_to_csv` and `quiver::csv_to_bin`**, with the same parameters and
+  defaults; the `CSVConverter` class is internal. *Adapt:* drop the `CSVConverter::` qualifier.
 - **BREAKING — `upsert_time_series_row()` patches a row instead of replacing it.** It used
   `INSERT OR REPLACE`, so every value column you did not name was reset to NULL. Now only the
   columns you name are written; an unnamed column keeps its value, and a named null still clears
@@ -53,6 +56,13 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 - **A read-only open creates no log file.** Opening with `read_only` no longer creates or
   truncates `quiver_database.log` next to the database (it wiped the log of any writer on it).
+- **`quiver_cli` messages for a missing script.** Leaving out the `script` argument is now an
+  argument error (`script: 1 argument(s) expected. 0 provided.`, still exit 2), and a script that
+  cannot be read reports `Failed to read script file: <p>` (still exit 1, still before the database
+  is opened) instead of `Script file not found: <p>`.
+- **Windows: `from_schema` and `from_migrations` read SQL files byte-for-byte**, as on Linux and
+  macOS. A CRLF inside a multi-line string literal is now stored as CRLF (it was stored as LF), and
+  a Ctrl-Z byte no longer ends the file.
 
 ### Added
 
@@ -70,6 +80,32 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 - **BREAKING — `quiver_cli --dry-run`.** *Adapt:* wrap the script body in
   `db:dry_run(function(db) ... end)`.
+- **BREAKING (C++ only) — `quiver/migration.h` and `quiver/migrations.h`.** The `Migration` and
+  `Migrations` classes are gone; discovery is internal to `Database`. *Adapt:* use
+  `Database::from_migrations` to apply a migrations directory and `Database::validate_migrations`
+  to check one.
+- **BREAKING (C++ only) — `quiver::default_csv_options()`.** It only returned `{}`. *Adapt:* use
+  `quiver::CSVOptions{}`.
+- **BREAKING (C++ only) — `quiver/result.h` and `quiver/row.h` are no longer public headers.**
+  `Result` and `Row` are internal now: they were reachable only by including those headers
+  directly, and no public signature used them. *Adapt:* read through the typed `Database` readers
+  and `query_*`.
+- **BREAKING (C API, Julia) — the two-step binary file open.** `quiver_binary_file_create` and
+  `quiver_binary_file_open` are gone from the C API, and `Binary.File(path)` and `Binary.open!`
+  from Julia. *Adapt:* open in one call with `quiver_binary_file_open_file(path, mode, md, &out)`
+  in C or `Binary.open_file(path; mode, metadata)` in Julia.
+- **BREAKING (C API only) — the per-entity copies of the string and array frees.**
+  `quiver_binary_file_free_string`, `quiver_binary_file_free_float_array`,
+  `quiver_binary_metadata_free_string`, `quiver_binary_metadata_free_string_array` and
+  `quiver_sandbox_free_string` are gone; each did exactly what its `quiver_database_free_*`
+  counterpart does. *Adapt:* free those results with `quiver_database_free_string`,
+  `quiver_database_free_string_array` or `quiver_database_free_float_array` (declared in
+  `database.h`, which `binary/binary_metadata.h` now includes).
+- **BREAKING (CMake) — the install rules and the `find_package(quiver)` package config.**
+  `cmake --install` no longer installs the libraries and headers or a `quiverConfig.cmake`, and
+  the `quiver::database` / `quiver::database_c` aliases are gone. The Python wheel's install is
+  unchanged. *Adapt:* add Quiver with `add_subdirectory` or FetchContent and link `quiver` /
+  `quiver_c`.
 
 ### Fixed
 

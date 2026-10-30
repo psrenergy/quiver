@@ -11,17 +11,15 @@ patterns, schema conventions, design decisions) live in the root `AGENTS.md`.
 include/quiver/           # C++ public headers
   database.h              # Database class - main API
   attribute_metadata.h    # ScalarMetadata, GroupMetadata types
-  options.h               # DatabaseOptions, CSVOptions types and factories
+  options.h               # DatabaseOptions, CSVOptions types (default-construct for defaults)
   element.h               # Element builder for create operations
   sandbox.h            # Lua scripting support
   value.h                 # Value variant (nullptr/int64/double/string)
   data_type.h             # DataType enum, data_type_to_string, is_date_time_column
-  row.h / result.h        # Row and Result query-result types
-  migration.h / migrations.h  # Migration (version dir, up/down sql) and Migrations discovery
   export.h / quiver.h     # Export macro, umbrella header
 include/quiver/binary/      # Binary subsystem headers (binary file I/O)
   binary_file.h               # BinaryFile class (Pimpl) - open_file, read, write, get_metadata
-  csv_converter.h             # CSVConverter class - bin_to_csv, csv_to_bin
+  csv_converter.h             # bin_to_csv, csv_to_bin free functions
   iteration.h                 # first_dimensions, next_dimensions, dimension_sizes_at_values, dimension_start_at_values
   binary_metadata.h           # BinaryMetadata struct - dimensions, labels, serialization
   dimension.h                 # Dimension struct (name, size, optional TimeProperties)
@@ -40,10 +38,11 @@ src/                      # C++ implementation
   database_csv_export.cpp / database_csv_import.cpp
   schema.h / schema.cpp   # Schema/TableDefinition introspection (from_database), table classification,
                           # group_names, group table name helpers
-  schema_validator.h / schema_validator.cpp  # SchemaValidator - schema convention checks
+  schema_validator.h / schema_validator.cpp  # validate_schema - schema convention checks
   type_validator.h / type_validator.cpp      # Scalar/array type validation (free functions,
                                              # caller-threaded Pattern 1 messages)
-  element.cpp / row.cpp / result.cpp / migration.cpp / migrations.cpp
+  element.cpp
+  row.h / result.h        # Row and Result query-result types (internal, header-only)
   sandbox/             # Sandbox (sol2): database*.cpp bindings, plus csv, xlsx, binary, expression
     sandbox.cpp        # Sandbox::Impl (ctor order, the one Database usertype), RunHandles bodies, run()/GcGuard
     internal.h            # quiver::lua_internal: RunHandles, binder decls, converters, read adapters, option walk, group-decoder decls, metadata templates, parse_csv_options decl
@@ -73,6 +72,7 @@ src/                      # C++ implementation
   utils/datetime.h        # ISO 8601 parse/format helpers
   utils/number.h          # quiver::utils::append_number (std::to_chars shortest round-trip) and
                           # parse_float (its whole-cell, host-locale-proof reader)
+  utils/file.h            # quiver::utils::read_file: whole file, binary mode, nullopt unless read in full
 src/csv/                    # Standalone CSV file reader/writer (see below)
   csv_read.h / csv_read.cpp   # Internal CSV reader (csv-parser, Pimpl'd) behind db:read_csv /
                               # db:read_csv_stream and import_csv -- no include/quiver/ counterpart
@@ -85,7 +85,7 @@ src/json/                   # Internal nlohmann/json file reader; no public head
 src/binary/                 # Binary C++ implementation
   binary_file.cpp             # BinaryFile class (Pimpl impl) + write registry
   binary_utils.h              # Shared file-extension constants, day_of_year, position_in_parent
-  csv_converter.cpp           # CSVConverter implementation
+  csv_converter.cpp           # bin_to_csv/csv_to_bin + the file-local CSVConverter they share
   iteration.cpp               # first_dimensions/next_dimensions impls + dimension_sizes_at_values/dimension_start_at_values
   binary_metadata.cpp         # BinaryMetadata factories, serialization, validation
   time_properties.cpp         # TimeFrequency string conversion, add_offset_from_int
@@ -221,8 +221,8 @@ iteration itself failing) logs one warning from the outer catch and degrades to 
 `UiMetadata`; a file that cannot be read or parsed logs its own warning through the per-database
 logger and costs only that file — `from_migrations` still succeeds in every case. Both passes go
 through one `parse_toml_file(path)` helper so their failure behaviour cannot drift: it throws
-Pattern 3 on a failed open **and on a failed read** (`ifstream::bad()` after the slurp), the second
-because a truncated TOML prefix is usually still syntactically valid, so a half-read sidecar would
+Pattern 3 when `utils::read_file` fails to open **or to read** the file, the second because a
+truncated TOML prefix is usually still syntactically valid, so a half-read sidecar would
 otherwise have parsed as a complete one and silently lost every attribute past the cut. Two things
 in that loop are deliberately spelled the way they are: `directory_entry::is_regular_file` takes
 the **`std::error_code` overload**, because that test sits outside the per-file `try` and the
@@ -338,11 +338,11 @@ struct Database::Impl {
 };
 ```
 
-Binary subsystem: `BinaryFile` uses Pimpl (hides file I/O dependencies). `CSVConverter` is a plain class composing a `BinaryMetadata` and the CSV `iostream` (no Pimpl, no inheritance). `BinaryMetadata`, `Dimension`, `TimeProperties` are plain value types.
+Binary subsystem: `BinaryFile` uses Pimpl (hides file I/O dependencies). `bin_to_csv`/`csv_to_bin` are free functions over a file-local `CSVConverter` struct composing a `BinaryMetadata` and the CSV `iostream` (no Pimpl, no inheritance). `BinaryMetadata`, `Dimension`, `TimeProperties` are plain value types.
 
 Expression subsystem: `Expression` is `final` and derives, as `BinaryFile` (Pimpl) does, from the stateless polymorphic `AbstractExpression` (virtual destructor, protected copy and move, so nothing slices through a base reference). It is a plain value type wrapping `shared_ptr<ExpressionNode>` — no Pimpl. `ExpressionNode` is an abstract base with virtual `metadata()` / `compute_row()`; concrete subclasses are exposed via `QUIVER_API` and use Rule of Zero. Polymorphism is justified by the recursive tree shape (operand-owning nodes hold child `shared_ptr<ExpressionNode>`).
 
-Classes with no private dependencies (`Element`, `Row`, `Migration`, `Migrations`, `GroupMetadata`, `ScalarMetadata`, `CSVOptions`, `Dimension`, `TimeProperties`, `Expression`) are plain value types — direct members, no Pimpl, Rule of Zero (compiler-generated copy/move/destructor). `BinaryMetadata` is the one deviation: it user-declares its default constructor and destructor (defaulted out-of-line), which suppresses compiler-generated moves — moves silently fall back to copies.
+Classes with no private dependencies (`Element`, `Row`, `GroupMetadata`, `ScalarMetadata`, `CSVOptions`, `BinaryMetadata`, `Dimension`, `TimeProperties`, `Expression`) are plain value types — direct members, no Pimpl, Rule of Zero (compiler-generated copy/move/destructor).
 
 ## Transactions
 
@@ -410,7 +410,9 @@ static Database from_migrations(const std::string& db_path, const std::string& m
 static void validate_migrations(const std::string& migrations_path);
 ```
 `schema_path` is a `.sql` file; `migrations_path` is a directory of numbered version
-subdirectories with `up.sql`/`down.sql`.
+subdirectories with `up.sql`/`down.sql`. `list_migrations` (anonymous namespace, `database.cpp`)
+finds them for all three: a subdirectory counts only when its whole name parses (`std::from_chars`)
+as a positive integer, anything else is skipped, and a missing `up.sql`/`down.sql` reads as empty.
 `validate_migrations` validates that directory in an in-memory database by executing every up migration
 and then every down migration, and finally rejects any table left behind; the direction-specific
 execution helpers remain private. Their errors name the public caller, not the helper:
@@ -599,18 +601,18 @@ impl_->logger->debug("Opening database: {}", path);
 - **Schema metadata loads lazily** (`Impl::require_schema`): the `Database(path, options)`
   constructor does not read it, so the first metadata/CRUD call does. `schema` is `mutable` (const
   readers trigger the load), and `load_schema_metadata()` publishes it only after
-  `SchemaValidator::validate()` passes, so a failed lazy load leaves no half-loaded state for the
+  `validate_schema()` passes, so a failed lazy load leaves no half-loaded state for the
   next call: `require_schema` loads only while `schema` is null, so a schema published early would
   never be validated again. Rationale in the root design decisions.
 - **Every group table's parent is checked by one helper** (`schema_validator.cpp`,
-  `validate_group_parent`, called from `validate()` for vector, set and time-series tables after
-  their structural checks): the prefix must name an existing collection and `id` must reference
+  `validate_group_parent`, called from `validate_schema()` for vector, set and time-series tables
+  after their structural checks): the prefix must name an existing collection and `id` must reference
   it with ON DELETE CASCADE ON UPDATE CASCADE — `delete_element` is a bare `DELETE` on the
   collection and relies on that cascade. `validate_foreign_keys` then applies one action rule to
   every FK in every table. Sets and time series used to skip the parent check, and time series
   the action rule too, so a schema could leave orphan set rows or make `delete_element` fail on a
   time-series table with SQLite's `FOREIGN KEY constraint failed`.
-- **`Row::get_float` widens an int64** (`row.cpp`): the one place the int64-for-REAL policy is
+- **`Row::get_float` widens an int64** (`row.h`): the one place the int64-for-REAL policy is
   implemented for reads, since `read_column_values_nullable<double>`,
   `read_grouped_values_all<double>`, `read_single_value<double>` and `query_float` all funnel
   through it. Don't re-add a widening branch at a call site.
@@ -1042,19 +1044,18 @@ Standalone binary file I/O layer for `.qvr` files with `.toml` metadata sidecars
 Bound in **Julia and Lua** (root design decision); Lua binds these C++ classes directly via sol2 in `src/sandbox/binary.cpp` (file I/O is db-scoped and sandboxed — `db:open_file`/`db:bin_to_csv`/`db:csv_to_bin`; metadata builders under `quiver.*`; method syntax + string aggregation ops).
 
 - `BinaryFile` class (Pimpl): `open_file(path, mode, metadata?)`, `read(dims, allow_nulls = false)`, `write(data, dims)`, `get_metadata()`, `get_file_path()`
-- `CSVConverter` class (composition, no Pimpl): `bin_to_csv(path, aggregate)`, `csv_to_bin(path)` — the only
-  entry points; the constructor is private. Writer and reader share one definition of each text shape, so a file
-  `bin_to_csv` writes is exactly what `csv_to_bin` checks: the column names (`header_`, built once by the
-  constructor — the dimension columns, or a leading `date`/`datetime` column instead of the time dimensions when
+- `bin_to_csv(path, aggregate = true)`, `csv_to_bin(path)` — free functions, the only users of the file-local
+  `CSVConverter` (anonymous namespace in `csv_converter.cpp`). Writer and reader share one definition of each text
+  shape, so a file `bin_to_csv` writes is exactly what `csv_to_bin` checks: the column names (`header_`, built once by
+  the constructor — the dimension columns, or a leading `date`/`datetime` column instead of the time dimensions when
   aggregating, then the labels), a coordinate's dimension cells (`dimension_cells`), and the comma split/join
-  (`split_fields`/`join_fields`, file-local). `csv_to_bin` checks each data row's field count against `header_`
-  before parsing a cell (Pattern 1 `Cannot csv_to_bin: line N has X fields, expected Y`, or `file ends before
-  line N`), which is what lets `validate_dimensions` index every dimension cell. `split_fields` keeps a trailing
-  empty field (`a,b,` is three): do not swap it for `std::getline(stream, field, ',')`, which drops it and would let
-  a trailing-comma row pass the width check. Data cells are written by `utils::append_number` and read by
-  `utils::parse_float` (the whole cell must parse, in the "C" locale's format; `null` is NaN), so bin → csv → bin
-  is exact in every host locale. A bad cell throws `Cannot csv_to_bin: invalid float value '<v>' for label
-  '<label>'`.
+  (`split_fields`/`join_fields`, file-local). `csv_to_bin` checks each data row's field count against `header_` before
+  parsing a cell (Pattern 1 `Cannot csv_to_bin: line N has X fields, expected Y`, or `file ends before line N`), which
+  is what lets `validate_dimensions` index every dimension cell. `split_fields` keeps a trailing empty field (`a,b,`
+  is three): do not swap it for `std::getline(stream, field, ',')`, which drops it and would let a trailing-comma row
+  pass the width check. Data cells are written by `utils::append_number` and read by `utils::parse_float` (the whole
+  cell must parse, in the "C" locale's format; `null` is NaN), so bin → csv → bin is exact in every host locale. A bad
+  cell throws `Cannot csv_to_bin: invalid float value '<v>' for label '<label>'`.
 - `BinaryMetadata` struct: `dimensions`, `initial_datetime`, `unit`, `labels`, `version`; `number_of_time_dimensions()` is derived from `dimensions` (not stored)
   - Factories: `from_toml_content()` (and `from_toml_file()`, which reads the sidecar and calls it), `from_element()`. Both hand their eight fields to one anonymous-namespace `build_metadata(operation, ...)` in `binary_metadata.cpp`. It rejects a `dimension_sizes`/`dimensions` or `frequencies`/`time_dimensions` count mismatch before indexing either, takes each time dimension's frequency from its matched position in `time_dimensions`, and names the calling factory in its Pattern 1 errors. `from_element` does not go through TOML text. In a TOML document, an absent array reads as empty, an absent or non-string `version`/`unit`/`initial_datetime` throws naming the key, and a wrong-typed array entry throws instead of being skipped. There is no incremental builder: the two factories are the only construction path a binding reaches (C API, Julia, Lua), and they derive every time dimension's `parent_dimension_index` (the previous time dimension) and `initial_value` (from `initial_datetime`). Inside the library, `build_broadcast_metadata` (`expression_helpers.h`) still assembles `dimensions` directly.
   - Serialization: `to_toml()`
@@ -1093,7 +1094,7 @@ Free functions in `quiver::` for traversing the dimension space of a `BinaryMeta
 - `dimension_sizes_at_values(meta, values)` — per-dim actual sizes at a coordinate vector. Used by `next_dimensions()` and `ExpressionAggregate` to size variable-length time-dim iteration windows.
 - `dimension_start_at_values(meta, values, index)` — where dimension `index` starts at that coordinate: its `initial_value` if it is a time dim and **every** time ancestor on the `parent_dimension_index` chain is at its own `initial_value` (the period the file starts in), else `1`. It is the only place the mid-period start rule is written: `next_dimensions()` and `ExpressionAggregate::compute_row` both call it, so an aggregate reduces over `[dimension_start_at_values, dimension_sizes_at_values]`, exactly the cells the traversal visits — except when the reduced dimension is the outermost time dimension, whose window `[1, size]` also reads the first period's cells before `initial_datetime` (never written, so NaN, and skipped). Checking only the immediate parent (the old rule, which both places had) restarted every later March of a `yearly × monthly × daily` file starting 2025-03-15 at day 15.
 
-Used by `Expression::save()` and `CSVConverter::{bin_to_csv, csv_to_bin}` — single source of truth for `.qvr` traversal.
+Used by `Expression::save()`, `bin_to_csv` and `csv_to_bin` — single source of truth for `.qvr` traversal.
 
 ### Write Registry
 

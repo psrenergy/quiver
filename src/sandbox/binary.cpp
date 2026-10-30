@@ -128,10 +128,10 @@ sol::usertype<BinaryFile> bind_binary(
         // Containment first, as in every file operation, then the flag.
         const auto resolved = handles.resolve_write_path(self, "bin_to_csv", path, {".csv"});
         const bool by_agent = optional_from_lua<bool>(aggregate, "bin_to_csv", "aggregate", "a boolean").value_or(true);
-        CSVConverter::bin_to_csv(resolved, by_agent);
+        bin_to_csv(resolved, by_agent);
     });
     bind.set_function("csv_to_bin", [&handles](Database& self, const std::string& path) {
-        CSVConverter::csv_to_bin(handles.resolve_write_path(self, "csv_to_bin", path, {".qvr", ".toml"}));
+        csv_to_bin(handles.resolve_write_path(self, "csv_to_bin", path, {".qvr", ".toml"}));
     });
 
     state.new_usertype<BinaryMetadata>(

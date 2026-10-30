@@ -23,10 +23,8 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
   tooltips), scalar statistics and group coverage. `describe` appends these same complete reports
   after its database/version header; both forward the C string without binding-side formatting.
 - **Regenerate after C API changes**: `generator/generator.bat` rewrites
-  `lib/src/ffi/bindings.dart`. The live ffigen config is the `ffigen:` block in
-  **pubspec.yaml** (plain `dart run ffigen` reads only that); the sibling `ffigen.yaml` is an
-  unused duplicate consulted only via an explicit `--config` flag — editing it alone changes
-  nothing.
+  `lib/src/ffi/bindings.dart` from the `ffigen:` block in **pubspec.yaml** (plain
+  `dart run ffigen` reads it; there is no separate `ffigen.yaml`).
 - **LLVM for ffigen**: `pubspec.yaml` points `llvm-path` at Visual Studio 18 Community's
   `VC/Tools/Llvm/x64` directory, which contains `bin/libclang.dll`. ffigen 20.1.1 does not
   search that installation by default; adjust the path for a different Visual Studio install.
@@ -85,19 +83,21 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
   `ArgumentError('Could not allocate 0 bytes.')` whenever the platform returns NULL for it, which
   POSIX `malloc`/`calloc` may do (Windows' `CoTaskMemAlloc` does not, so a Windows test run will
   not catch it). Pass `nullptr` for an empty array instead, since the C API takes NULL with a zero
-  count; `updateTimeSeriesFiles`, `_marshalGroupColumns` (empty map) and `_marshalParams` do this.
+  count; `updateTimeSeriesFiles`, `_marshalGroupColumns` (empty map), `marshalCells` (empty list)
+  and `_marshalParams` do this.
   The six columnar group writers (`updateVectorGroup`/`updateSetGroup`/`updateTimeSeriesGroup`
   and their `ByLabel` forms) marshal the whole payload through `_marshalGroupColumns(Arena, Map)`
-  (empty map → NULL arrays; jagged columns → `ArgumentError` naming the column), which calls the
-  per-column `_marshalGroupColumn(Arena, String, List<Object?>)`. The two row upserts call
-  `_marshalGroupColumn` directly, wrapping each cell in a one-element list (no mask in the row C
-  signature: a `null` in their `Map<String, Object?>` is sent as a NULL data pointer, which the C
-  API writes as an explicit SQL NULL; an unnamed column keeps its current value); query parameters
-  go through `_marshalParams`. Both `_marshalGroupColumn` and `Element._setMixedList` take the family
+  (empty map → NULL arrays; jagged columns → `ArgumentError` naming the column), which calls
+  `marshalCells(Arena, List<Object?>, owner, noun)` (`element.dart`) per column. The two row
+  upserts call `marshalCells` directly, wrapping each cell in a one-element list (no mask in the
+  row C signature: a `null` in their `Map<String, Object?>` is sent as a NULL data pointer, which
+  the C API writes as an explicit SQL NULL; an unnamed column keeps its current value), and so does
+  `Element._setMixedList`, so a mixed list is typed the same on both write paths; query parameters
+  go through `_marshalParams`. `marshalCells` takes the family
   (numeric, String, DateTime) from the first non-null cell and the numeric type from all of them: a
   numeric column is INTEGER unless some cell is a `double`, which widens it to FLOAT (the rule
   Python and JS share, so `[1, 2.5]` writes 1.0 and 2.5 in every binding; it used to throw here).
-  They then convert **every** cell individually — never `as`/`cast` the rest to the dispatched type, which defers the check to iteration and throws a raw `TypeError` naming
+  It then converts **every** cell individually — never `as`/`cast` the rest to the dispatched type, which defers the check to iteration and throws a raw `TypeError` naming
   neither the column nor the cell. An `int` (and a `bool`) is accepted into a REAL column by the
   int-for-REAL coercion. Find the dispatch cell with a plain loop, not `firstWhere(..., orElse: ()
   => null)`: `orElse` must return the list's *runtime* element type, so it throws on every
@@ -118,8 +118,8 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
   the same kind of mask, which the C API returns for every column type (mask 0 = no data at or
   before the date → `null`; the string branch never `toDartString`s a masked-out pointer).
 - **`Sandbox.run` owns its result**: `quiver_sandbox_run` takes a `char** out_result` whose JSON
-  string is C-heap allocated, so the `Arena` cannot own it — it is freed with
-  `quiver_sandbox_free_string` (*not* `quiver_database_free_string`) in its own nested `finally`,
+  string is C-heap allocated, so the `Arena` cannot own it — it is freed with the shared
+  `quiver_database_free_string` in its own nested `finally`,
   so a `toDartString` failure cannot leak it. The columnar group decoders (`_decodeGroupRows`,
   `readTimeSeriesGroup`) free the C result in their own `finally` for the same reason. The script
   must be Lua source text: the core loads it in text mode, so a precompiled (bytecode) chunk is
@@ -127,10 +127,11 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
   `test/sandbox_test.dart` checks mixed Lua REAL arrays on create/update; cell conversion and
   schema validation stay in C++.
 - **Time-series group NULLs**: `readTimeSeriesGroup`/`updateTimeSeriesGroup` use
-  `Map<String, List<Object?>>` — a `null` cell is a SQL NULL. `_marshalGroupColumn` returns a
-  `({int type, Pointer<Void> data, Pointer<Uint8> hasValue})` record (the per-cell mask;
-  `upsertTimeSeriesRow` and `upsertTimeSeriesRowByLabel` ignore `hasValue`), types the column by
-  the rule above, and tags an all-null/empty column FLOAT with a zeroed placeholder. Reads
+  `Map<String, List<Object?>>` — a `null` cell is a SQL NULL. `marshalCells` returns a
+  `({int type, Pointer<Void> data, Pointer<Uint8> mask})` record (the per-cell mask;
+  `upsertTimeSeriesRow` and `upsertTimeSeriesRowByLabel` ignore `mask`), types the column by
+  the rule above, tags an all-null column INTEGER (the C API ignores the type and data of a
+  masked-out cell) and passes an empty one as NULL arrays. Reads
   decode the mask out-param and never `toDartString` a masked-out (NULL) pointer.
 - **Query API shape**: `queryString`/`queryInteger`/`queryBoolean`/`queryFloat`/`queryDateTime`
   take an optional positional `List<Object?>? parameters` (no separate `*Params` methods). Every
@@ -161,18 +162,19 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
   rejection message names the offending column. It throws `ArgumentError` — a locally-crafted
   message is unavoidable here, since these readers are a binding-only convenience the core never sees. On writes,
   `Element.set` maps `bool` to `setInteger` (and a `List<bool?>` through `_setMixedList`),
-  `_marshalParams` binds a `bool` parameter as INTEGER, and `_marshalGroupColumn`
-  (`database_update.dart`) counts `bool` as numeric (`first is bool || first is int || first is
+  `_marshalParams` binds a `bool` parameter as INTEGER, and `marshalCells`
+  (`element.dart`) counts `bool` as numeric (`first is bool || first is int || first is
   double`) — a Dart `bool` is not an `int`, so without the `bool` half the group writers threw.
   bool and int are **one branch converting per cell**, not two branches each casting `as` their own
   type: the family comes from the first non-null cell, so a mixed `[true, 1]` column would
-  otherwise throw a raw `TypeError` naming nothing. That branch covers all eight call sites
+  otherwise throw a raw `TypeError` naming nothing. That branch covers all eight group call sites
   (`updateVectorGroup`/`updateSetGroup`/`updateTimeSeriesGroup`/`upsertTimeSeriesRow` and every
-  `ByLabel` form; six of them via `_marshalGroupColumns`), which is why it takes the column name: its unsupported-type `ArgumentError`
-  has to name the offending column per the root marshalling-error rule.
+  `ByLabel` form; six of them via `_marshalGroupColumns`) and `Element.set`, which is why it takes
+  an `owner` (`column 'c'` or `'attr'`): its unsupported-type `ArgumentError` has to name the
+  offending column per the root marshalling-error rule.
 - **Element array NULLs**: `Element.setArray{Integer,Float,String}` take `List<T?>` and pass the
-  per-cell `has_value` mask to the C setters; `Element.set` types mixed lists like
-  `_marshalGroupColumn` (family from the first non-null element, a `double` anywhere widens to
+  per-cell `has_value` mask to the C setters; `Element.set` types mixed lists through
+  `marshalCells` (family from the first non-null element, a `double` anywhere widens to
   float), and an empty or all-null list is tagged integer (valid — type is irrelevant
   when no value is read). Do not reintroduce the old "empty mixed list" rejection: an empty array
   on `updateElement` is the clear-group path.

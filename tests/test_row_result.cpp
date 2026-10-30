@@ -1,10 +1,9 @@
+#include "row.h"
 #include "test_utils.h"
 
 #include <gtest/gtest.h>
 #include <quiver/database.h>
 #include <quiver/element.h>
-#include <quiver/result.h>
-#include <quiver/row.h>
 
 // ============================================================================
 // Row boundary tests
@@ -71,89 +70,6 @@ TEST(Row, GetStringFromNull) {
 
     auto result = row.get_string(0);
     EXPECT_FALSE(result.has_value());
-}
-
-// ============================================================================
-// Result tests
-// ============================================================================
-
-TEST(Result, ColumnsAccessor) {
-    std::vector<std::string> columns = {"id", "name", "value"};
-    std::vector<quiver::Row> rows;
-
-    quiver::Result result(columns, std::move(rows));
-
-    auto& cols = result.columns();
-    EXPECT_EQ(cols.size(), 3u);
-    EXPECT_EQ(cols[0], "id");
-    EXPECT_EQ(cols[1], "name");
-    EXPECT_EQ(cols[2], "value");
-}
-
-TEST(Result, EmptyResult) {
-    std::vector<std::string> columns = {"id", "name"};
-    std::vector<quiver::Row> rows;
-
-    quiver::Result result(columns, std::move(rows));
-
-    EXPECT_TRUE(result.empty());
-    EXPECT_EQ(result.row_count(), 0u);
-    EXPECT_EQ(result.columns().size(), 2u);  // Columns exist but no rows
-}
-
-TEST(Result, IteratorOnEmpty) {
-    quiver::Result result({}, {});
-
-    int count = 0;
-    for (const auto& row : result) {
-        (void)row;
-        ++count;
-    }
-    EXPECT_EQ(count, 0);
-}
-
-TEST(Result, IteratorOnNonEmpty) {
-    std::vector<std::string> columns = {"value"};
-    std::vector<quiver::Row> rows;
-    rows.emplace_back(std::vector<quiver::Value>{int64_t{1}});
-    rows.emplace_back(std::vector<quiver::Value>{int64_t{2}});
-    rows.emplace_back(std::vector<quiver::Value>{int64_t{3}});
-
-    quiver::Result result(columns, std::move(rows));
-
-    int count = 0;
-    for (const auto& row : result) {
-        EXPECT_EQ(row.get_integer(0).value(), count + 1);
-        ++count;
-    }
-    EXPECT_EQ(count, 3);
-}
-
-TEST(Result, OperatorBracketValid) {
-    std::vector<std::string> columns = {"value"};
-    std::vector<quiver::Row> rows;
-    rows.emplace_back(std::vector<quiver::Value>{int64_t{42}});
-
-    quiver::Result result(columns, std::move(rows));
-
-    const auto& row = result[0];
-    EXPECT_EQ(row.get_integer(0).value(), 42);
-}
-
-TEST(Result, MixedValueTypes) {
-    std::vector<std::string> columns = {"integer_col", "float_col", "string_col", "null_col"};
-    std::vector<quiver::Row> rows;
-    rows.emplace_back(std::vector<quiver::Value>{int64_t{42}, 3.14, std::string("hello"), nullptr});
-
-    quiver::Result result(columns, std::move(rows));
-
-    EXPECT_EQ(result.row_count(), 1u);
-
-    const auto& row = result[0];
-    EXPECT_EQ(row.get_integer(0).value(), 42);
-    EXPECT_DOUBLE_EQ(row.get_float(1).value(), 3.14);
-    EXPECT_EQ(row.get_string(2).value(), "hello");
-    EXPECT_TRUE(row.is_null(3));
 }
 
 // ============================================================================

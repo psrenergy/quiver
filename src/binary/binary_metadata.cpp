@@ -5,12 +5,12 @@
 #include "quiver/binary/time_constants.h"
 #include "quiver/binary/time_properties.h"
 #include "utils/datetime.h"
+#include "utils/file.h"
 
 #include <toml++/toml.hpp>
 
 #include <algorithm>
 #include <filesystem>
-#include <fstream>
 #include <sstream>
 #include <stdexcept>
 #include <type_traits>
@@ -148,9 +148,6 @@ BinaryMetadata build_metadata(
 
 }  // namespace
 
-BinaryMetadata::BinaryMetadata() = default;
-BinaryMetadata::~BinaryMetadata() = default;
-
 int64_t BinaryMetadata::number_of_time_dimensions() const {
     int64_t count = 0;
     for (const auto& dim : dimensions) {
@@ -265,9 +262,11 @@ BinaryMetadata BinaryMetadata::from_toml_file(const std::string& file_path) {
     if (!std::filesystem::exists(toml_path)) {
         throw std::runtime_error("Metadata file not found: " + toml_path);
     }
-    std::ifstream toml_file(toml_path);
-    std::string toml_content((std::istreambuf_iterator<char>(toml_file)), std::istreambuf_iterator<char>());
-    return from_toml_content(toml_content);
+    const auto toml_content = utils::read_file(toml_path);
+    if (!toml_content) {
+        throw std::runtime_error("Failed to read metadata file: " + toml_path);
+    }
+    return from_toml_content(*toml_content);
 }
 
 BinaryMetadata BinaryMetadata::from_toml_content(const std::string& content) {

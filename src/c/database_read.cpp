@@ -577,7 +577,14 @@ QUIVER_C_API quiver_error_t quiver_database_read_element_ids(
     QUIVER_REQUIRE(db, collection, out_ids, out_count);
 
     try {
-        return read_scalars_impl(db->db.read_element_ids(collection), out_ids, out_count);
+        const auto ids = db->db.read_element_ids(collection);
+        *out_count = ids.size();
+        *out_ids = nullptr;
+        if (!ids.empty()) {
+            *out_ids = new int64_t[ids.size()];
+            std::copy(ids.begin(), ids.end(), *out_ids);
+        }
+        return QUIVER_OK;
     } catch (const std::exception& e) {
         quiver_set_last_error(e.what());
         return QUIVER_ERROR;

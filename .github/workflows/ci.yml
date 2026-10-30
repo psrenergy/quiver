@@ -69,12 +69,10 @@ jobs:
           lcov --list coverage.info --ignore-errors mismatch
 
       - name: Upload to Codecov
-        uses: codecov/codecov-action@v7
+        uses: ./.github/actions/codecov
         with:
           files: coverage.info
           flags: cpp
-          fail_ci_if_error: true
-          disable_search: true
           # The CLI's gcov plugin would re-run gcov over build/ and upload tests/ and _deps/.
           plugins: noop
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -113,12 +111,10 @@ jobs:
           directories: bindings/julia/src
 
       - name: Upload to Codecov
-        uses: codecov/codecov-action@v7
+        uses: ./.github/actions/codecov
         with:
           files: lcov.info
           flags: julia
-          fail_ci_if_error: true
-          disable_search: true
           token: ${{ secrets.CODECOV_TOKEN }}
 
   dart-coverage:
@@ -152,12 +148,10 @@ jobs:
           lcov --list coverage/lcov.info
 
       - name: Upload to Codecov
-        uses: codecov/codecov-action@v7
+        uses: ./.github/actions/codecov
         with:
           files: bindings/dart/coverage/lcov.info
           flags: dart
-          fail_ci_if_error: true
-          disable_search: true
           token: ${{ secrets.CODECOV_TOKEN }}
 
   python-coverage:
@@ -186,12 +180,10 @@ jobs:
           uv run pytest --cov=quiverdb --cov-report=xml
 
       - name: Upload to Codecov
-        uses: codecov/codecov-action@v7
+        uses: ./.github/actions/codecov
         with:
           files: bindings/python/coverage.xml
           flags: python
-          fail_ci_if_error: true
-          disable_search: true
           token: ${{ secrets.CODECOV_TOKEN }}
 
   clang-format:
@@ -271,10 +263,8 @@ jobs:
 
       - name: Upload to Codecov
         if: matrix.os == 'ubuntu-24.04'
-        uses: codecov/codecov-action@v7
+        uses: ./.github/actions/codecov
         with:
           files: bindings/js/coverage/lcov.info
           flags: js
-          fail_ci_if_error: true
-          disable_search: true
           token: ${{ secrets.CODECOV_TOKEN }}

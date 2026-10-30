@@ -3,8 +3,6 @@
 #include <gtest/gtest.h>
 #include <quiver/database.h>
 #include <quiver/element.h>
-#include <quiver/migration.h>
-#include <quiver/migrations.h>
 
 #include <filesystem>
 #include <fstream>
@@ -157,111 +155,6 @@ protected:
 };
 
 // ============================================================================
-// Migration class tests
-// ============================================================================
-
-TEST_F(MigrationFixture, MigrationCreation) {
-    quiver::Migration migration(1, migrations_path + "/1");
-    EXPECT_EQ(migration.version(), 1);
-    EXPECT_FALSE(migration.path().empty());
-}
-
-TEST_F(MigrationFixture, MigrationUpSqlRead) {
-    quiver::Migration migration(1, migrations_path + "/1");
-    std::string sql = migration.up_sql();
-    EXPECT_FALSE(sql.empty());
-    EXPECT_NE(sql.find("CREATE TABLE Test1"), std::string::npos);
-}
-
-TEST_F(MigrationFixture, MigrationDownSqlRead) {
-    quiver::Migration migration(1, migrations_path + "/1");
-    std::string sql = migration.down_sql();
-    EXPECT_FALSE(sql.empty());
-    EXPECT_NE(sql.find("DROP TABLE"), std::string::npos);
-}
-
-TEST_F(MigrationFixture, MigrationComparison) {
-    quiver::Migration m1(1, migrations_path + "/1");
-    quiver::Migration m2(2, migrations_path + "/2");
-    quiver::Migration m3(3, migrations_path + "/3");
-
-    EXPECT_TRUE(m1 < m2);
-    EXPECT_TRUE(m2 < m3);
-    EXPECT_TRUE(m1 < m3);
-    EXPECT_FALSE(m2 < m1);
-
-    EXPECT_TRUE(m1 == m1);
-    EXPECT_FALSE(m1 == m2);
-    EXPECT_TRUE(m1 != m2);
-}
-
-TEST_F(MigrationFixture, MigrationCopy) {
-    quiver::Migration original(2, migrations_path + "/2");
-    quiver::Migration copy = original;
-
-    EXPECT_EQ(copy.version(), original.version());
-    EXPECT_EQ(copy.path(), original.path());
-}
-
-// ============================================================================
-// Migrations class tests
-// ============================================================================
-
-TEST_F(MigrationFixture, MigrationsLoad) {
-    quiver::Migrations migrations(migrations_path);
-
-    EXPECT_FALSE(migrations.empty());
-    EXPECT_EQ(migrations.count(), 3u);
-    EXPECT_EQ(migrations.latest_version(), 3);
-}
-
-TEST_F(MigrationFixture, MigrationsOrder) {
-    quiver::Migrations migrations(migrations_path);
-    auto all = migrations.all();
-
-    ASSERT_EQ(all.size(), 3u);
-    EXPECT_EQ(all[0].version(), 1);
-    EXPECT_EQ(all[1].version(), 2);
-    EXPECT_EQ(all[2].version(), 3);
-}
-
-TEST_F(MigrationFixture, MigrationsPending) {
-    quiver::Migrations migrations(migrations_path);
-
-    auto pending_from_0 = migrations.pending(0);
-    EXPECT_EQ(pending_from_0.size(), 3u);
-
-    auto pending_from_1 = migrations.pending(1);
-    EXPECT_EQ(pending_from_1.size(), 2u);
-    EXPECT_EQ(pending_from_1[0].version(), 2);
-
-    auto pending_from_2 = migrations.pending(2);
-    EXPECT_EQ(pending_from_2.size(), 1u);
-    EXPECT_EQ(pending_from_2[0].version(), 3);
-
-    auto pending_from_3 = migrations.pending(3);
-    EXPECT_TRUE(pending_from_3.empty());
-}
-
-TEST_F(MigrationFixture, MigrationsIteration) {
-    quiver::Migrations migrations(migrations_path);
-
-    int64_t expected_version = 1;
-    for (const auto& migration : migrations) {
-        EXPECT_EQ(migration.version(), expected_version);
-        ++expected_version;
-    }
-    EXPECT_EQ(expected_version, 4);
-}
-
-TEST_F(MigrationFixture, MigrationsEmptyPath) {
-    quiver::Migrations migrations("non_existent_path");
-    EXPECT_TRUE(migrations.empty());
-    EXPECT_EQ(migrations.count(), 0u);
-    EXPECT_EQ(migrations.latest_version(), 0);
-}
-
-// ============================================================================
 // Database migration tests
 // ============================================================================
 
@@ -277,35 +170,30 @@ TEST_F(MigrationFixture, DatabaseFromMigrations) {
     EXPECT_TRUE(db.is_healthy());
 }
 
-TEST_F(MigrationFixture, MigrationsInvalidDirectory) {
-    quiver::Migrations migrations("nonexistent/path/to/migrations");
-    EXPECT_TRUE(migrations.empty());
-    EXPECT_EQ(migrations.count(), 0u);
-    EXPECT_EQ(migrations.latest_version(), 0);
-}
-
 TEST_F(MigrationFixture, MigrationsPendingFromHigherVersion) {
-    quiver::Migrations migrations(migrations_path);
+    // A database past the latest migration (3) has nothing pending, so nothing is applied
+    quiver::test::exec_sql(path, "PRAGMA user_version = 100;");
 
-    // If current version is higher than latest migration version
-    auto pending = migrations.pending(100);
-    EXPECT_TRUE(pending.empty());
+    auto db = quiver::Database::from_migrations(path, migrations_path);
+    EXPECT_EQ(db.current_version(), 100);
 }
 
 TEST_F(MigrationFixture, DatabaseFromMigrationsInvalidPath) {
     EXPECT_THROW(quiver::Database::from_migrations(path, "nonexistent/migrations/"), std::runtime_error);
 }
 
-TEST_F(MigrationFixture, MigrationVersionZero) {
-    quiver::Migrations migrations(migrations_path);
-
-    // Version 0 should return all migrations as pending
-    auto pending = migrations.pending(0);
-    EXPECT_EQ(pending.size(), migrations.count());
-}
-
 TEST_F(MigrationFixture, MigrationsWithPartialApplication) {
-    // First apply first migration using from_migrations and then check
+    // A database at version 1 gets only migrations 2 and 3: re-running 1/up.sql would fail on CREATE TABLE
+    const auto first_only = fs::temp_directory_path() / "quiver_first_migration_only";
+    fs::remove_all(first_only);
+    fs::create_directories(first_only / "1");
+    fs::copy(fs::path(migrations_path) / "1", first_only / "1");
+    {
+        auto db = quiver::Database::from_migrations(path, first_only.string());
+        EXPECT_EQ(db.current_version(), 1);
+    }
+    fs::remove_all(first_only);
+
     {
         auto db = quiver::Database::from_migrations(path, migrations_path);
         EXPECT_EQ(db.current_version(), 3);
@@ -315,19 +203,6 @@ TEST_F(MigrationFixture, MigrationsWithPartialApplication) {
     {
         quiver::Database db(path);
         EXPECT_EQ(db.current_version(), 3);
-    }
-}
-
-TEST_F(MigrationFixture, MigrationGetByVersion) {
-    quiver::Migrations migrations(migrations_path);
-
-    auto all = migrations.all();
-    ASSERT_EQ(all.size(), 3u);
-
-    // Verify each migration has correct version
-    for (const auto& m : all) {
-        EXPECT_GE(m.version(), 1);
-        EXPECT_LE(m.version(), 3);
     }
 }
 
@@ -454,7 +329,7 @@ TEST_F(TempFileFixture, OpenReadOnlyLoadsSchemaOnFirstUse) {
     );
 }
 
-// A directory with no versioned subdirectories is not an error: Migrations() reports empty and
+// A directory with no versioned subdirectories is not an error: it holds no migrations, and
 // from_migrations returns a usable handle. Loading (and validating) the schema eagerly here would
 // turn an empty database into a "Schema must have a 'Configuration' table" throw at open.
 TEST_F(TempFileFixture, FromMigrationsWithNoVersionsReturnsHandle) {

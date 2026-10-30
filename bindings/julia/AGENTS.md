@@ -90,8 +90,8 @@ Project.toml      # Deps: Artifacts, CEnum, Dates, Libdl; julia 1.11 compat
   `"ConfigT1"` and quoted that in the error. `string_to_date_time(::Nothing)` returns `nothing`
   (the `_integer_to_boolean` precedent), which is why no caller hand-rolls a null guard.
 - **`run!` owns its result**: `quiver_sandbox_run` takes an `out_result::Ptr{Ptr{Cchar}}` and the
-  JSON string must be freed with `quiver_sandbox_free_string` — *not*
-  `quiver_database_free_string`. `check` throws before the `unsafe_string`, and the C API leaves
+  JSON string is freed with the shared `quiver_database_free_string`, as are the binary wrappers'
+  strings and arrays. `check` throws before the `unsafe_string`, and the C API leaves
   `out_result` NULL on failure. The script must be Lua source text: the core loads it in text mode,
   so a precompiled (bytecode) chunk is rejected with `Failed to run Lua script: ...` and surfaces
   like any other script error.
@@ -167,8 +167,8 @@ Project.toml      # Deps: Artifacts, CEnum, Dates, Libdl; julia 1.11 compat
   and every converted handle across its operation's ccall. `get_metadata` is one generic owned by
   `Binary` and imported into `Quiver` before `include("expression.jl")` (an import after the
   definition is a load error), so a file answers with its handle's metadata, never through the
-  conversion: an unopened `Binary.File(path)` reports its handle's empty metadata, while an
-  expression built from it reads the file's metadata from disk. There is no public
+  conversion. A `Binary.File` comes only from `open_file` (there is no unopened handle, in Julia
+  or the C API). There is no public
   `Expression(::Expression)`: closing the result would close the argument. Do not re-add
   per-type methods for the file type — that was 97 forwarders.
 - **Scoped resource factories**: `open`, `from_schema`, `from_migrations`, and

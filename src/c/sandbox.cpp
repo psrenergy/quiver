@@ -44,9 +44,4 @@ QUIVER_C_API quiver_error_t quiver_sandbox_run(quiver_sandbox_t* sandbox, const 
     }
 }
 
-QUIVER_C_API quiver_error_t quiver_sandbox_free_string(char* str) {
-    delete[] str;
-    return QUIVER_OK;
-}
-
 }  // extern "C"

@@ -18,12 +18,6 @@ QUIVER_C_API quiver_error_t quiver_binary_file_open_file(
     quiver_binary_metadata_t* md,
     quiver_binary_file_t** out
 );
-QUIVER_C_API quiver_error_t quiver_binary_file_create(const char* path, quiver_binary_file_t** out);
-QUIVER_C_API quiver_error_t quiver_binary_file_open(
-    quiver_binary_file_t* binary_file,
-    char mode,
-    quiver_binary_metadata_t* md
-);
 QUIVER_C_API quiver_error_t quiver_binary_file_close(quiver_binary_file_t* binary_file);
 
 // I/O (dimensions as parallel arrays)
@@ -51,10 +45,6 @@ QUIVER_C_API quiver_error_t quiver_binary_file_get_metadata(
     quiver_binary_metadata_t** out
 );
 QUIVER_C_API quiver_error_t quiver_binary_file_get_file_path(quiver_binary_file_t* binary_file, char** out);
-
-// Free
-QUIVER_C_API quiver_error_t quiver_binary_file_free_string(char* str);
-QUIVER_C_API quiver_error_t quiver_binary_file_free_float_array(double* data);
 
 #ifdef __cplusplus
 }

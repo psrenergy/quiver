@@ -15,7 +15,7 @@ export function makeDefaultOptions(options?: DatabaseOptions): Allocation {
   return { ptr: ptr(buf), buf };
 }
 
-/** Allocate an 8-byte buffer for a pointer out-parameter. */
+/** Allocate an 8-byte buffer for a pointer or uint64 out-parameter. */
 export function allocPtrOut(): Allocation {
   const buf = new Uint8Array(8);
   return { ptr: ptr(buf), buf };
@@ -26,12 +26,6 @@ export function readPtrOut(alloc: Allocation): Pointer | null {
   const dv = new DataView(alloc.buf.buffer);
   const raw = dv.getBigUint64(0, true);
   return raw === 0n ? null : (Number(raw) as Pointer);
-}
-
-/** Allocate an 8-byte buffer for a uint64 out-parameter. */
-export function allocUint64Out(): Allocation {
-  const buf = new Uint8Array(8);
-  return { ptr: ptr(buf), buf };
 }
 
 /** Read a uint64 value from an out-parameter buffer. */
@@ -50,11 +44,13 @@ export function decodeStringFromBuf(alloc: Allocation): string {
   return new CString(p).toString();
 }
 
-/** Read an array of int64 values from a native pointer, returning JS numbers. */
-export function decodeInt64Array(p: Pointer | null, count: number): number[] {
+/** Read an array of int64 (or, with `unsigned`, uint64) values from a native pointer. */
+export function decodeInt64Array(p: Pointer | null, count: number, unsigned = false): number[] {
   if (!p || count === 0) return [];
-  const i64 = new BigInt64Array(toArrayBuffer(p, 0, count * 8));
-  return Array.from(i64, (v) => Number(v));
+  const bytes = toArrayBuffer(p, 0, count * 8);
+  return Array.from(unsigned ? new BigUint64Array(bytes) : new BigInt64Array(bytes), (v) =>
+    Number(v),
+  );
 }
 
 /** Read an array of float64 values from a native pointer. */
@@ -64,11 +60,9 @@ export function decodeFloat64Array(p: Pointer | null, count: number): number[] {
   return Array.from(f64);
 }
 
-/** Read an array of uint64 values from a native pointer, returning JS numbers. */
-export function decodeUint64Array(p: Pointer | null, count: number): number[] {
-  if (!p || count === 0) return [];
-  const u64 = new BigUint64Array(toArrayBuffer(p, 0, count * 8));
-  return Array.from(u64, (v) => Number(v));
+/** Read a per-cell presence mask (uint8_t*) from a native pointer: mask[i] === 0 means SQL NULL. */
+export function decodeMask(p: Pointer | null, count: number): Uint8Array {
+  return new Uint8Array(toArrayBuffer(p as Pointer, 0, count));
 }
 
 /** Read an array of pointers from a native pointer using offset-based reading. */
@@ -95,9 +89,7 @@ export function decodeStringArray(p: Pointer | null, count: number): string[] {
 
 /** Encode a JS string as a null-terminated C string buffer. */
 export function toCString(str: string): Allocation {
-  const encoded = encoder.encode(str + "\0");
-  const buf = new Uint8Array(encoded.length);
-  buf.set(encoded);
+  const buf = encoder.encode(`${str}\0`);
   return { ptr: ptr(buf), buf };
 }
 
@@ -135,12 +127,6 @@ export function allocNativePtrTable(ptrs: (Pointer | null)[]): Allocation {
   return { ptr: ptr(buf), buf };
 }
 
-/** Allocate a native string (null-terminated) and return its allocation. */
-export function allocNativeString(str: string): Allocation {
-  const buf = encoder.encode(str + "\0");
-  return { ptr: ptr(buf), buf };
-}
-
 /**
  * Build a native string pointer table (const char* const*) from an array of strings.
  * A `null` entry becomes a NULL pointer in the table (used for SQL-NULL string cells).
@@ -149,7 +135,7 @@ export function allocNativeStringArray(strings: (string | null)[]): {
   table: Allocation;
   keepalive: Allocation[];
 } {
-  const strAllocs = strings.map((s) => (s === null ? null : allocNativeString(s)));
+  const strAllocs = strings.map((s) => (s === null ? null : toCString(s)));
   const table = allocNativePtrTable(strAllocs.map((a) => (a ? a.ptr : null)));
   return { table, keepalive: strAllocs.filter((a): a is Allocation => a !== null) };
 }

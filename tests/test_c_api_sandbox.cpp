@@ -20,7 +20,7 @@ namespace {
 quiver_error_t run_script(quiver_sandbox_t* sandbox, const char* script) {
     char* result = nullptr;
     const auto err = quiver_sandbox_run(sandbox, script, &result);
-    quiver_sandbox_free_string(result);
+    quiver_database_free_string(result);
     return err;
 }
 
@@ -310,7 +310,7 @@ TEST_F(SandboxCApiTest, ElementRealArraysPreserveCellTypes) {
         QUIVER_OK
     ) << quiver_get_last_error();
     EXPECT_STREQ(result, "[0,3.5,2]");
-    quiver_sandbox_free_string(result);
+    quiver_database_free_string(result);
 
     quiver_sandbox_free(sandbox);
     quiver_database_close(db);
@@ -549,14 +549,14 @@ TEST_F(SandboxCApiTest, RunReturnsJson) {
     ASSERT_EQ(quiver_sandbox_run(sandbox, "return { a = 1, b = {2, 3} }", &result), QUIVER_OK);
     ASSERT_NE(result, nullptr);
     EXPECT_STREQ(result, R"({"a":1,"b":[2,3]})");
-    quiver_sandbox_free_string(result);
+    quiver_database_free_string(result);
 
     // A script that returns nothing yields an empty string, not NULL.
     result = nullptr;
     ASSERT_EQ(quiver_sandbox_run(sandbox, "local x = 1", &result), QUIVER_OK);
     ASSERT_NE(result, nullptr);
     EXPECT_STREQ(result, "");
-    quiver_sandbox_free_string(result);
+    quiver_database_free_string(result);
 
     quiver_sandbox_free(sandbox);
     quiver_database_close(db);
@@ -574,10 +574,6 @@ TEST_F(SandboxCApiTest, RunWithNullOutResult) {
 
     quiver_sandbox_free(sandbox);
     quiver_database_close(db);
-}
-
-TEST_F(SandboxCApiTest, FreeStringNull) {
-    EXPECT_EQ(quiver_sandbox_free_string(nullptr), QUIVER_OK);
 }
 
 // ============================================================================
@@ -618,7 +614,7 @@ TEST_F(SandboxCApiTest, DryRunWrapsScript) {
         QUIVER_OK
     );
     EXPECT_STREQ(result, "[1]");
-    quiver_sandbox_free_string(result);
+    quiver_database_free_string(result);
 
     ASSERT_EQ(quiver_database_end_dry_run(db), QUIVER_OK);
 

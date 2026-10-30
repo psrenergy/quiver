@@ -78,7 +78,7 @@ class Sandbox {
       try {
         return resultPtr.cast<Utf8>().toDartString();
       } finally {
-        bindings.quiver_sandbox_free_string(resultPtr);
+        bindings.quiver_database_free_string(resultPtr);
       }
     } finally {
       arena.releaseAll();

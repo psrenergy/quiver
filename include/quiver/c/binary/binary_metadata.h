@@ -2,6 +2,7 @@
 #define QUIVER_C_BINARY_METADATA_H
 
 #include "../common.h"
+#include "../database.h"  // binary strings and arrays are freed with quiver_database_free_*
 
 #ifdef __cplusplus
 extern "C" {
@@ -69,8 +70,6 @@ QUIVER_C_API quiver_error_t quiver_binary_metadata_get_dimension(
 );
 
 // Free helpers
-QUIVER_C_API quiver_error_t quiver_binary_metadata_free_string(char* str);
-QUIVER_C_API quiver_error_t quiver_binary_metadata_free_string_array(char** strs, size_t count);
 QUIVER_C_API quiver_error_t quiver_binary_metadata_free_dimension(quiver_dimension_t* dim);
 
 #ifdef __cplusplus

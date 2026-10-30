@@ -2,7 +2,7 @@
 #define QUIVER_DATABASE_IMPL_H
 
 #include "quiver/database.h"
-#include "quiver/result.h"
+#include "result.h"
 #include "schema.h"
 #include "schema_validator.h"
 #include "type_validator.h"
@@ -362,10 +362,10 @@ struct Database::Impl {
     }
 
     // Nothing is published until validation passes: require_schema only loads while `schema` is
-    // null, so a schema published before a failed validate() would never be validated again.
+    // null, so a schema published before a failed validate_schema() would never be validated again.
     void load_schema_metadata() const {
         auto loaded = std::make_unique<Schema>(Schema::from_database(db));
-        SchemaValidator(*loaded).validate();
+        validate_schema(*loaded);
         schema = std::move(loaded);
     }
 

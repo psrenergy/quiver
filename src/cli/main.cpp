@@ -1,26 +1,24 @@
+#include "../utils/file.h"
+
 #include <argparse/argparse.hpp>
 #include <quiver/database.h>
 #include <quiver/sandbox.h>
 
-#include <filesystem>
-#include <fstream>
 #include <iostream>
 #include <string>
 
 static std::string read_script_file(const std::string& path) {
-    std::ifstream file(path, std::ios::binary);
-    if (!file.is_open()) {
+    auto content = quiver::utils::read_file(path);
+    if (!content) {
         throw std::runtime_error("Failed to read script file: " + path);
     }
 
-    std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-
     // Strip UTF-8 BOM if present
-    if (content.size() >= 3 && content[0] == '\xEF' && content[1] == '\xBB' && content[2] == '\xBF') {
-        content.erase(0, 3);
+    if (content->starts_with("\xEF\xBB\xBF")) {
+        content->erase(0, 3);
     }
 
-    return content;
+    return *content;
 }
 
 static quiver::LogLevel parse_log_level(const std::string& level) {
@@ -47,7 +45,7 @@ int main(int argc, char* argv[]) {
 
     program.add_argument("database").help("path to the database file");
 
-    program.add_argument("script").help("path to the Lua script file").nargs(argparse::nargs_pattern::optional);
+    program.add_argument("script").help("path to the Lua script file");
 
     program.add_argument("--schema").help("create database from schema file");
 
@@ -72,19 +70,9 @@ int main(int argc, char* argv[]) {
         return 2;
     }
 
-    // Script required (for now) -- prepare for future REPL
-    auto script_path = program.present<std::string>("script");
-    if (!script_path) {
-        std::cerr << "No script provided" << std::endl;
-        return 2;
-    }
-
     try {
-        // Check script file exists
-        if (!std::filesystem::exists(*script_path)) {
-            std::cerr << "Script file not found: " << *script_path << std::endl;
-            return 1;
-        }
+        // Read the script before the database is touched: from_schema recreates the file
+        auto script = read_script_file(program.get<std::string>("script"));
 
         // Configure database options
         quiver::DatabaseOptions options{};
@@ -104,8 +92,6 @@ int main(int argc, char* argv[]) {
             return quiver::Database(db_path, options);
         }();
 
-        // Read and execute script
-        auto script = read_script_file(*script_path);
         quiver::Sandbox sandbox(db);
         auto result = sandbox.run(script);
 

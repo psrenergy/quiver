@@ -4,7 +4,6 @@ import { check, QuiverError } from "./errors.ts";
 import {
   allocNativeFloat64,
   allocNativeInt64,
-  allocNativeString,
   allocPtrOut,
   decodeStringFromBuf,
   nativeAddress,
@@ -69,7 +68,7 @@ function marshalParams(parameters?: QueryParam[]): {
       }
     } else if (typeof p === "string") {
       typesDv.setInt32(i * 4, DATA_TYPE_STRING, true);
-      const native = allocNativeString(p);
+      const native = toCString(p);
       keepalive.push(native);
       valuesDv.setBigInt64(i * 8, nativeAddress(native.ptr), true);
     } else {

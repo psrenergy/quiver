@@ -166,23 +166,6 @@ QUIVER_C_API quiver_error_t quiver_binary_metadata_get_dimension(
 
 // Free helpers
 
-QUIVER_C_API quiver_error_t quiver_binary_metadata_free_string(char* str) {
-    delete[] str;
-    return QUIVER_OK;
-}
-
-QUIVER_C_API quiver_error_t quiver_binary_metadata_free_string_array(char** strs, size_t count) {
-    if (!strs) {
-        return QUIVER_OK;
-    }
-
-    for (size_t i = 0; i < count; ++i) {
-        delete[] strs[i];
-    }
-    delete[] strs;
-    return QUIVER_OK;
-}
-
 QUIVER_C_API quiver_error_t quiver_binary_metadata_free_dimension(quiver_dimension_t* dim) {
     QUIVER_REQUIRE(dim);
 

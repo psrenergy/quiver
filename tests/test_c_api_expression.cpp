@@ -124,7 +124,7 @@ protected:
                 for (size_t i = 0; i < count; ++i) {
                     out.push_back(data[i]);
                 }
-                quiver_binary_file_free_float_array(data);
+                quiver_database_free_float_array(data);
             }
         }
         quiver_binary_file_close(f);
@@ -283,7 +283,7 @@ protected:
             QUIVER_OK
         );
         std::vector<double> out(data, data + count);
-        quiver_binary_file_free_float_array(data);
+        quiver_database_free_float_array(data);
         quiver_binary_file_close(f);
         return out;
     }
@@ -699,7 +699,7 @@ TEST_F(ExpressionCApiFixture, SingleLabelOperandsWithDifferentNamesBroadcast) {
     ASSERT_EQ(quiver_binary_metadata_get_labels(out_md, &labels, &label_count), QUIVER_OK);
     ASSERT_EQ(label_count, 1u);
     EXPECT_STREQ(labels[0], "alpha");  // both operands single-label: the lhs label wins
-    quiver_binary_metadata_free_string_array(labels, label_count);
+    quiver_database_free_string_array(labels, label_count);
     quiver_binary_metadata_free(out_md);
 
     ASSERT_EQ(quiver_expression_save(diff, path_out.c_str()), QUIVER_OK);
@@ -786,7 +786,7 @@ TEST_F(ExpressionCApiFixture, GetMetadataReturnsExpectedFields) {
     char* unit = nullptr;
     ASSERT_EQ(quiver_binary_metadata_get_unit(md, &unit), QUIVER_OK);
     EXPECT_STREQ(unit, "MW");
-    quiver_binary_metadata_free_string(unit);
+    quiver_database_free_string(unit);
 
     quiver_binary_metadata_free(md);
     quiver_expression_close(a);
@@ -805,7 +805,7 @@ TEST_F(ExpressionCApiFixture, GetMetadataAfterApplyReturnsBroadcastMetadata) {
     char* unit = nullptr;
     ASSERT_EQ(quiver_binary_metadata_get_unit(md, &unit), QUIVER_OK);
     EXPECT_STREQ(unit, "MW");  // unit broadcasts unchanged through scalar operation
-    quiver_binary_metadata_free_string(unit);
+    quiver_database_free_string(unit);
 
     quiver_binary_metadata_free(md);
     quiver_expression_close(a);
@@ -1286,7 +1286,7 @@ TEST_F(ExpressionCApiFixture, AggregateAgentsSumReducesLabels) {
     ASSERT_EQ(quiver_binary_metadata_get_labels(out_md, &labels, &label_count), QUIVER_OK);
     ASSERT_EQ(label_count, 1u);
     EXPECT_STREQ(labels[0], "sum");
-    quiver_binary_metadata_free_string_array(labels, label_count);
+    quiver_database_free_string_array(labels, label_count);
     quiver_binary_metadata_free(out_md);
 
     ASSERT_EQ(quiver_expression_save(agg, path_out.c_str()), QUIVER_OK);
@@ -1445,7 +1445,7 @@ TEST_F(ExpressionCApiFixture, AggregateOutermostTimeDimFromMidYearStart) {
     char* start = nullptr;
     ASSERT_EQ(quiver_binary_metadata_get_initial_datetime(out_md, &start), QUIVER_OK);
     EXPECT_STREQ(start, "2025-01-01T00:00:00");
-    quiver_binary_metadata_free_string(start);
+    quiver_database_free_string(start);
     quiver_dimension_t month_dim{};
     ASSERT_EQ(quiver_binary_metadata_get_dimension(out_md, 0, &month_dim), QUIVER_OK);
     EXPECT_EQ(month_dim.time_properties.initial_value, 1);
@@ -1462,12 +1462,12 @@ TEST_F(ExpressionCApiFixture, AggregateOutermostTimeDimFromMidYearStart) {
     EXPECT_DOUBLE_EQ(read_one_cell(path_out, {"month"}, {12})[0], 324.0);  // Dec: 112 + 212
 }
 
-TEST_F(ExpressionCApiFixture, FromUnopenedBinaryFile) {
+TEST_F(ExpressionCApiFixture, SaveFromFileOpenForReading) {
     write_fixture(path_a, [](int r, int c, int k) { return static_cast<double>(r * 100 + c * 10 + k); });
 
-    // Create the handle without opening — Expression must still build and save.
+    // The source handle stays open for reading across save().
     quiver_binary_file_t* f = nullptr;
-    ASSERT_EQ(quiver_binary_file_create(path_a.c_str(), &f), QUIVER_OK);
+    ASSERT_EQ(quiver_binary_file_open_file(path_a.c_str(), 'r', nullptr, &f), QUIVER_OK);
 
     quiver_expression_t* e = nullptr;
     ASSERT_EQ(quiver_expression_from_file(f, &e), QUIVER_OK);
@@ -1567,7 +1567,7 @@ TEST_F(ExpressionCApiFixture, UnarySqrtPropagatesNaNOnNegative) {
             for (size_t i = 0; i < count; ++i) {
                 EXPECT_TRUE(std::isnan(data[i]));
             }
-            quiver_binary_file_free_float_array(data);
+            quiver_database_free_float_array(data);
         }
     }
     quiver_binary_file_close(f);
@@ -1683,12 +1683,12 @@ TEST_F(ExpressionCApiFixture, ApplyTernaryIfElsePropagatesNaN) {
     ASSERT_EQ(quiver_binary_file_read(f, dim_names, cell_11, 2, /*allow_nulls=*/1, &data, &count), QUIVER_OK);
     EXPECT_TRUE(std::isnan(data[0]));
     EXPECT_TRUE(std::isnan(data[1]));
-    quiver_binary_file_free_float_array(data);
+    quiver_database_free_float_array(data);
 
     ASSERT_EQ(quiver_binary_file_read(f, dim_names, cell_22, 2, /*allow_nulls=*/0, &data, &count), QUIVER_OK);
     EXPECT_DOUBLE_EQ(data[0], 7.0);
     EXPECT_DOUBLE_EQ(data[1], 7.0);
-    quiver_binary_file_free_float_array(data);
+    quiver_database_free_float_array(data);
     quiver_binary_file_close(f);
 }
 
@@ -1802,7 +1802,7 @@ TEST_F(ExpressionCApiFixture, SelectAgentsSubset) {
     ASSERT_EQ(quiver_binary_metadata_get_labels(out_md, &out_labels, &out_count), QUIVER_OK);
     ASSERT_EQ(out_count, 1u);
     EXPECT_STREQ(out_labels[0], "val2");
-    quiver_binary_metadata_free_string_array(out_labels, out_count);
+    quiver_database_free_string_array(out_labels, out_count);
     quiver_binary_metadata_free(out_md);
 
     ASSERT_EQ(quiver_expression_save(sel, path_out.c_str()), QUIVER_OK);
@@ -1878,7 +1878,7 @@ TEST_F(ExpressionCApiFixture, RenameAgentsPartial) {
     ASSERT_EQ(out_count, 2u);
     EXPECT_STREQ(out_labels[0], "alpha");
     EXPECT_STREQ(out_labels[1], "val2");
-    quiver_binary_metadata_free_string_array(out_labels, out_count);
+    quiver_database_free_string_array(out_labels, out_count);
     quiver_binary_metadata_free(out_md);
 
     ASSERT_EQ(quiver_expression_save(ren, path_out.c_str()), QUIVER_OK);

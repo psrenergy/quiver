@@ -124,11 +124,12 @@ bunfig.toml       # coverageSkipTestFiles = true (Bun 1.3 reports test/ otherwis
   TypedArray has no pointer in Bun (`ptr()` of one *returns* a `TypeError` object instead of
   throwing), so a parameterless query never builds a buffer at all.
 - **Bulk and per-cell NULLs**: `readScalarIntegers`/`readScalarFloats` read a parallel `uint8_t*` mask
-  (`new Uint8Array(toArrayBuffer(...))`) and gate `mask[i] ? v : null` → `(number | null)[]` — never
+  (`decodeMask` in `ffi-helpers.ts`) and gate `mask[i] ? v : null` → `(number | null)[]` — never
   `Number()` a masked slot (would turn NULL into 0). The vector/set readers do the same per cell:
-  `readByIdIntegers`/`readByIdFloats` take a flat mask (`quiver_database_free_mask`), while
-  `readBulkIntegers`/`readBulkFloats` take a nested one — `decodePtrArray` over the outer pointer,
-  then a `Uint8Array` per element sized by `sizes[i]`, freed by `quiver_database_free_masks`. Every
+  `readByIdNumbers` takes a flat mask (`quiver_database_free_mask`), while `readBulkNumbers` takes
+  a nested one — `decodePtrArray` over the outer pointer, then `decodeMask` per element sized by
+  `sizes[i]`, freed by `quiver_database_free_masks`. Both serve integers and floats; the caller
+  passes the decoder and the values' free function. Every
   string reader (scalar, `readBulkStrings`, `readByIdStrings`) reads pointer-by-pointer with
   `decodePtrArray` + a NULL guard — **never `decodeStringArray`**, which turns a NULL `char*` into
   `""`. `loader.ts` carries the mask args on the eight numeric vector/set symbols and on
@@ -140,8 +141,8 @@ bunfig.toml       # coverageSkipTestFiles = true (Bun 1.3 reports test/ otherwis
   `fn`'s error surfaces; on success an `endDryRun` failure is thrown (no `finally`). Synchronous
   only — a Promise-returning `fn` would close the scope before its awaited work ran.
 - **`Sandbox.run` owns its result**: `quiver_sandbox_run` takes a `char** out_result` and the
-  JSON string must be freed with `quiver_sandbox_free_string` — *not* `quiver_database_free_string`
-  (both are in `loader.ts`, hand-maintained). `decodeStringFromBuf` returns `""` for a NULL pointer,
+  JSON string is freed with the shared `quiver_database_free_string` (`loader.ts`,
+  hand-maintained). `decodeStringFromBuf` returns `""` for a NULL pointer,
   which is also what the C API leaves there on failure, and `check()` throws before the decode.
   The script must be Lua source text: the core loads it in text mode, so a precompiled (bytecode)
   chunk is rejected with `Failed to run Lua script: ...` and surfaces like any other script error.

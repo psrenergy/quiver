@@ -3,59 +3,28 @@
 #include <algorithm>
 #include <set>
 #include <stdexcept>
+#include <string>
+#include <vector>
 
 namespace quiver {
 
-SchemaValidator::SchemaValidator(const Schema& schema) : schema_(schema) {}
+namespace {
 
-void SchemaValidator::validation_error(const std::string& message) {
+[[noreturn]] void validation_error(const std::string& message) {
     throw std::runtime_error("Failed to validate schema: " + message);
 }
 
-void SchemaValidator::validate() {
-    // Identify collections
-    collections_.clear();
-    for (const auto& name : schema_.table_names()) {
-        if (schema_.is_collection(name)) {
-            collections_.push_back(name);
-        }
-    }
-
-    // Run all validations
-    validate_configuration_exists();
-    validate_collection_names();
-
-    for (const auto& name : schema_.table_names()) {
-        if (schema_.is_collection(name)) {
-            validate_collection(name);
-        } else if (schema_.is_vector_table(name)) {
-            validate_vector_table(name);
-            validate_group_parent(name, "Vector");
-        } else if (schema_.is_set_table(name)) {
-            validate_set_table(name);
-            validate_group_parent(name, "Set");
-        } else if (schema_.is_time_series_table(name)) {
-            validate_group_parent(name, "Time series");
-        } else if (schema_.is_time_series_files_table(name)) {
-            validate_time_series_files_table(name);
-        }
-    }
-
-    validate_no_duplicate_attributes();
-    validate_foreign_keys();
-}
-
-void SchemaValidator::validate_configuration_exists() {
-    if (!schema_.has_table("Configuration")) {
+void validate_configuration_exists(const Schema& schema) {
+    if (!schema.has_table("Configuration")) {
         validation_error("Schema must have a 'Configuration' table");
     }
 }
 
-void SchemaValidator::validate_collection_names() {
-    for (const auto& name : schema_.table_names()) {
+void validate_collection_names(const Schema& schema) {
+    for (const auto& name : schema.table_names()) {
         // Skip special tables
-        if (schema_.is_vector_table(name) || schema_.is_set_table(name) || schema_.is_time_series_table(name) ||
-            schema_.is_time_series_files_table(name)) {
+        if (schema.is_vector_table(name) || schema.is_set_table(name) || schema.is_time_series_table(name) ||
+            schema.is_time_series_files_table(name)) {
             continue;
         }
 
@@ -66,8 +35,8 @@ void SchemaValidator::validate_collection_names() {
     }
 }
 
-void SchemaValidator::validate_collection(const std::string& name) {
-    const auto* table = schema_.get_table(name);
+void validate_collection(const Schema& schema, const std::string& name) {
+    const auto* table = schema.get_table(name);
 
     // Must have 'id' column as primary key
     const auto* id_column = table->get_column("id");
@@ -103,13 +72,18 @@ void SchemaValidator::validate_collection(const std::string& name) {
 // A vector, set or time series table belongs to the collection its name starts with, and its `id`
 // must reference that collection with ON DELETE CASCADE ON UPDATE CASCADE: delete_element is a bare
 // DELETE on the collection and relies on the cascade to remove the element's group rows.
-void SchemaValidator::validate_group_parent(const std::string& name, const std::string& kind) {
-    const auto parent = schema_.get_parent_collection(name);
-    if (std::find(collections_.begin(), collections_.end(), parent) == collections_.end()) {
+void validate_group_parent(
+    const Schema& schema,
+    const std::vector<std::string>& collections,
+    const std::string& name,
+    const std::string& kind
+) {
+    const auto parent = schema.get_parent_collection(name);
+    if (std::find(collections.begin(), collections.end(), parent) == collections.end()) {
         validation_error(kind + " table '" + name + "' references non-existent collection '" + parent + "'");
     }
 
-    for (const auto& fk : schema_.get_table(name)->foreign_keys) {
+    for (const auto& fk : schema.get_table(name)->foreign_keys) {
         if (fk.from_column == "id" && fk.to_table == parent) {
             if (fk.on_delete != "CASCADE" || fk.on_update != "CASCADE") {
                 validation_error(
@@ -122,8 +96,8 @@ void SchemaValidator::validate_group_parent(const std::string& name, const std::
     validation_error(kind + " table '" + name + "' must have foreign key to parent collection '" + parent + "'");
 }
 
-void SchemaValidator::validate_vector_table(const std::string& name) {
-    const auto* table = schema_.get_table(name);
+void validate_vector_table(const Schema& schema, const std::string& name) {
+    const auto* table = schema.get_table(name);
 
     // Must have 'id' column
     const auto* id_col = table->get_column("id");
@@ -152,8 +126,8 @@ void SchemaValidator::validate_vector_table(const std::string& name) {
     }
 }
 
-void SchemaValidator::validate_set_table(const std::string& name) {
-    const auto* table = schema_.get_table(name);
+void validate_set_table(const Schema& schema, const std::string& name) {
+    const auto* table = schema.get_table(name);
 
     // Get FK column names
     std::set<std::string> fk_columns;
@@ -195,12 +169,16 @@ void SchemaValidator::validate_set_table(const std::string& name) {
     }
 }
 
-void SchemaValidator::validate_time_series_files_table(const std::string& name) {
-    const auto* table = schema_.get_table(name);
+void validate_time_series_files_table(
+    const Schema& schema,
+    const std::vector<std::string>& collections,
+    const std::string& name
+) {
+    const auto* table = schema.get_table(name);
 
     // Get parent collection
-    auto parent = schema_.get_time_series_files_parent_collection(name);
-    if (std::find(collections_.begin(), collections_.end(), parent) == collections_.end()) {
+    auto parent = schema.get_time_series_files_parent_collection(name);
+    if (std::find(collections.begin(), collections.end(), parent) == collections.end()) {
         validation_error("Time series files table '" + name + "' references non-existent collection '" + parent + "'");
     }
 
@@ -214,15 +192,15 @@ void SchemaValidator::validate_time_series_files_table(const std::string& name) 
     }
 }
 
-void SchemaValidator::validate_no_duplicate_attributes() {
+void validate_no_duplicate_attributes(const Schema& schema, const std::vector<std::string>& collections) {
     // For each collection, gather all attribute names from scalar columns and all group tables
     // (vector, set, time series) and reject any duplicates.
-    for (const auto& collection : collections_) {
+    for (const auto& collection : collections) {
         if (collection == "Configuration") {
             continue;
         }
 
-        const auto* col_table = schema_.get_table(collection);
+        const auto* col_table = schema.get_table(collection);
 
         std::set<std::string> attributes;
 
@@ -234,19 +212,19 @@ void SchemaValidator::validate_no_duplicate_attributes() {
         }
 
         // Check all group tables (vector, set, time series) for duplicates
-        for (const auto& table_name : schema_.table_names()) {
-            const auto is_vector = schema_.is_vector_table(table_name);
-            const auto is_set = schema_.is_set_table(table_name);
-            const auto is_ts = schema_.is_time_series_table(table_name);
+        for (const auto& table_name : schema.table_names()) {
+            const auto is_vector = schema.is_vector_table(table_name);
+            const auto is_set = schema.is_set_table(table_name);
+            const auto is_ts = schema.is_time_series_table(table_name);
 
             if (!is_vector && !is_set && !is_ts) {
                 continue;
             }
-            if (schema_.get_parent_collection(table_name) != collection) {
+            if (schema.get_parent_collection(table_name) != collection) {
                 continue;
             }
 
-            const auto* group_table = schema_.get_table(table_name);
+            const auto* group_table = schema.get_table(table_name);
 
             // Get FK column names
             std::set<std::string> fk_cols;
@@ -280,9 +258,9 @@ void SchemaValidator::validate_no_duplicate_attributes() {
     }
 }
 
-void SchemaValidator::validate_foreign_keys() {
-    for (const auto& table_name : schema_.table_names()) {
-        const auto* table = schema_.get_table(table_name);
+void validate_foreign_keys(const Schema& schema) {
+    for (const auto& table_name : schema.table_names()) {
+        const auto* table = schema.get_table(table_name);
 
         for (const auto& fk : table->foreign_keys) {
             // A generated column can carry an FK, but PRAGMA table_info (the Schema's column source) omits it
@@ -315,8 +293,8 @@ void SchemaValidator::validate_foreign_keys() {
 
             // Rule: FK column names should follow pattern <collection>_id or <collection>_<relation>
             // Skip vector table id column and set table columns
-            if (!schema_.is_vector_table(table_name) || fk.from_column != "id") {
-                if (!schema_.is_set_table(table_name) && !schema_.is_time_series_table(table_name)) {
+            if (!schema.is_vector_table(table_name) || fk.from_column != "id") {
+                if (!schema.is_set_table(table_name) && !schema.is_time_series_table(table_name)) {
                     // Check if FK column name ends with _id or matches target_relation pattern
                     auto target = fk.to_table;
                     auto target_lower = target;
@@ -339,6 +317,41 @@ void SchemaValidator::validate_foreign_keys() {
             }
         }
     }
+}
+
+}  // namespace
+
+void validate_schema(const Schema& schema) {
+    // Identify collections
+    std::vector<std::string> collections;
+    for (const auto& name : schema.table_names()) {
+        if (schema.is_collection(name)) {
+            collections.push_back(name);
+        }
+    }
+
+    // Run all validations
+    validate_configuration_exists(schema);
+    validate_collection_names(schema);
+
+    for (const auto& name : schema.table_names()) {
+        if (schema.is_collection(name)) {
+            validate_collection(schema, name);
+        } else if (schema.is_vector_table(name)) {
+            validate_vector_table(schema, name);
+            validate_group_parent(schema, collections, name, "Vector");
+        } else if (schema.is_set_table(name)) {
+            validate_set_table(schema, name);
+            validate_group_parent(schema, collections, name, "Set");
+        } else if (schema.is_time_series_table(name)) {
+            validate_group_parent(schema, collections, name, "Time series");
+        } else if (schema.is_time_series_files_table(name)) {
+            validate_time_series_files_table(schema, collections, name);
+        }
+    }
+
+    validate_no_duplicate_attributes(schema, collections);
+    validate_foreign_keys(schema);
 }
 
 }  // namespace quiver

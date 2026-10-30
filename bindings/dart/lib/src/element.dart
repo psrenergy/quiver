@@ -88,75 +88,30 @@ class Element {
     }
   }
 
-  void _setMixedList(String name, List<dynamic> values) {
-    // The first non-null element picks the family and every element the numeric type: a numeric
-    // list is an integer array unless some cell is a double, which widens it to a float array (so
-    // [1, 2.5] stores 1.0 and 2.5, as in the other bindings). An empty or all-null list is tagged
-    // integer (the type is irrelevant when every cell is NULL). Each branch then converts per cell
-    // rather than `cast`ing the list, which defers the check to iteration and throws a raw
-    // TypeError naming neither the attribute nor the cell. A bool is INTEGER 1/0 and an int
-    // reaches a REAL column by the int-for-REAL coercion — the rules `_marshalGroupColumn` applies.
-    Object? first;
-    for (final v in values) {
-      if (v != null) {
-        first = v;
-        break;
-      }
-    }
-    final isNumeric = first is bool || first is int || first is double;
-    if (first == null) {
-      setArrayInteger(name, List<int?>.filled(values.length, null));
-    } else if (isNumeric && !values.any((v) => v is double)) {
-      setArrayInteger(name, [
-        for (var i = 0; i < values.length; i++)
-          switch (values[i]) {
-            null => null,
-            final bool b => b ? 1 : 0,
-            final int v => v,
-            final v => throw ArgumentError(
-              "Unsupported value type ${v.runtimeType} in cell $i of '$name'",
-            ),
-          },
-      ]);
-    } else if (isNumeric) {
-      setArrayFloat(name, [
-        for (var i = 0; i < values.length; i++)
-          switch (values[i]) {
-            null => null,
-            final double d => d,
-            final int v => v.toDouble(),
-            final bool b => b ? 1.0 : 0.0,
-            final v => throw ArgumentError(
-              "Unsupported value type ${v.runtimeType} in cell $i of '$name'",
-            ),
-          },
-      ]);
-    } else if (first is String) {
-      setArrayString(name, [
-        for (var i = 0; i < values.length; i++)
-          switch (values[i]) {
-            null => null,
-            final String t => t,
-            final v => throw ArgumentError(
-              "Unsupported value type ${v.runtimeType} in cell $i of '$name'",
-            ),
-          },
-      ]);
-    } else if (first is DateTime) {
-      setArrayString(name, [
-        for (var i = 0; i < values.length; i++)
-          switch (values[i]) {
-            null => null,
-            final DateTime d => dateTimeToString(d),
-            final v => throw ArgumentError(
-              "Unsupported value type ${v.runtimeType} in cell $i of '$name'",
-            ),
-          },
-      ]);
-    } else {
-      throw ArgumentError(
-        "Unsupported array element type ${first.runtimeType} for '$name'",
-      );
+  void _setMixedList(String name, List<Object?> values) {
+    final arena = Arena();
+    try {
+      final cells = marshalCells(arena, values, "'$name'", 'array element');
+      final namePtr = name.toNativeUtf8(allocator: arena).cast<Char>();
+      check(switch (cells.type) {
+        quiver_data_type_t.QUIVER_DATA_TYPE_INTEGER => bindings.quiver_element_set_array_integer(
+          _ptr,
+          namePtr,
+          cells.data.cast(),
+          values.length,
+          cells.mask,
+        ),
+        quiver_data_type_t.QUIVER_DATA_TYPE_FLOAT => bindings.quiver_element_set_array_float(
+          _ptr,
+          namePtr,
+          cells.data.cast(),
+          values.length,
+          cells.mask,
+        ),
+        _ => bindings.quiver_element_set_array_string(_ptr, namePtr, cells.data.cast(), values.length, cells.mask),
+      });
+    } finally {
+      arena.releaseAll();
     }
   }
 
@@ -340,4 +295,81 @@ class Element {
       arena.releaseAll();
     }
   }
+}
+
+/// Marshals one array of cells into [arena]-owned memory for the C API's array writers (the
+/// element array setters and the vector/set/time-series group writers), returning its
+/// quiver_data_type_t tag, data and per-cell presence mask (0 = SQL NULL, data slot a placeholder).
+/// [owner] names the array in errors (`'attr'` or `column 'c'`), [noun] the unsupported-family one.
+///
+/// The first non-null cell picks the family and every cell the numeric type: a numeric array is
+/// INTEGER unless some cell is a double, which widens it to FLOAT (so `[1, 2.5]` writes 1.0 and 2.5,
+/// as in the other bindings). An empty or all-null array is INTEGER: the C API ignores the type and
+/// data of a masked-out cell, and an empty one is passed as NULL arrays, never `arena<T>(0)`.
+/// SQLite has no boolean type, so a bool is INTEGER 1/0 and reaches a REAL column, like an int, by
+/// the int-for-REAL coercion. Every cell is converted rather than the list `cast`, which would defer
+/// the check to iteration and throw a raw TypeError naming neither the array nor the cell.
+({int type, Pointer<Void> data, Pointer<Uint8> mask}) marshalCells(
+  Arena arena,
+  List<Object?> values,
+  String owner,
+  String noun,
+) {
+  if (values.isEmpty) {
+    return (type: quiver_data_type_t.QUIVER_DATA_TYPE_INTEGER, data: nullptr, mask: nullptr);
+  }
+  Never unsupported(Object? v, int i) =>
+      throw ArgumentError("Unsupported value type ${v.runtimeType} in cell $i of $owner");
+
+  final mask = arena<Uint8>(values.length);
+  for (var i = 0; i < values.length; i++) {
+    mask[i] = values[i] == null ? 0 : 1;
+  }
+  // A plain loop, not firstWhere(orElse: () => null), which throws on a non-nullable list.
+  Object? first;
+  for (final v in values) {
+    if (v != null) {
+      first = v;
+      break;
+    }
+  }
+
+  if (first == null || first is bool || first is int || first is double) {
+    if (!values.any((v) => v is double)) {
+      final data = arena<Int64>(values.length);
+      for (var i = 0; i < values.length; i++) {
+        data[i] = switch (values[i]) {
+          null => 0,
+          final bool b => b ? 1 : 0,
+          final int v => v,
+          final v => unsupported(v, i),
+        };
+      }
+      return (type: quiver_data_type_t.QUIVER_DATA_TYPE_INTEGER, data: data.cast(), mask: mask);
+    }
+    final data = arena<Double>(values.length);
+    for (var i = 0; i < values.length; i++) {
+      data[i] = switch (values[i]) {
+        null => 0.0,
+        final double d => d,
+        final int v => v.toDouble(),
+        final bool b => b ? 1.0 : 0.0,
+        final v => unsupported(v, i),
+      };
+    }
+    return (type: quiver_data_type_t.QUIVER_DATA_TYPE_FLOAT, data: data.cast(), mask: mask);
+  }
+  if (first is String || first is DateTime) {
+    final data = arena<Pointer<Char>>(values.length);
+    for (var i = 0; i < values.length; i++) {
+      data[i] = switch (values[i]) {
+        null => nullptr,
+        final String t when first is String => t.toNativeUtf8(allocator: arena).cast(),
+        final DateTime d when first is DateTime => dateTimeToString(d).toNativeUtf8(allocator: arena).cast(),
+        final v => unsupported(v, i),
+      };
+    }
+    return (type: quiver_data_type_t.QUIVER_DATA_TYPE_STRING, data: data.cast(), mask: mask);
+  }
+  throw ArgumentError("Unsupported $noun type ${first.runtimeType} for $owner");
 }

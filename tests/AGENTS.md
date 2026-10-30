@@ -39,8 +39,7 @@ C++ core and C API suites live here; binding suites live in each binding's `test
   committed under `tests/schemas/ui/`**, because such a directory would become a live sibling of
   `tests/schemas/migrations` for every `from_migrations` call across six suites plus the
   recursive-copy Lua migrations test.
-- Supporting types: `test_element.cpp`, `test_row_result.cpp`, `test_migrations.cpp`,
-  `test_schema_validator.cpp`
+- Supporting types: `test_element.cpp`, `test_row_result.cpp`, `test_schema_validator.cpp`
 - Lua: `test_sandbox_*.cpp` — per-area split mirroring the database files (`_create`, `_read`,
   `_update`, `_delete`, `_query`, `_describe`, `_return`, `_time_series`, `_transaction`,
   `_errors`, `_csv_export`, `_csv_import`, `_all_types`, `_fk`, `_lifecycle`, `_migrations`). `_return` covers the JSON
@@ -80,7 +79,8 @@ C++ core and C API suites live here; binding suites live in each binding's `test
   `test_binary_time_properties.cpp`, `test_csv_converter.cpp`, `test_iteration.cpp`
 - Expression subsystem: `test_expression.cpp`
 - `test_issues.cpp` - issue-numbered regression tests
-- `test_migrations.cpp` also covers the in-memory `validate_migrations` up-then-down round trip;
+- `test_migrations.cpp` covers migration discovery (which subdirectories count), the migration
+  error messages and the in-memory `validate_migrations` up-then-down round trip;
   `test_c_api_database_lifecycle.cpp` covers its C API success and error propagation;
   `test_sandbox_migrations.cpp` covers the sandboxed `db:validate_migrations` Lua binding.
 - `test_sandbox_read_csv.cpp` covers the Lua-only `db:read_csv`/`db:read_csv_stream` bindings

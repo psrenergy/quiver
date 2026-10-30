@@ -8,18 +8,18 @@ from typing import overload
 
 from quiverdb._c_api import ffi, get_lib
 from quiverdb._helpers import check, column_data_type, decode_string, decode_string_or_none, format_datetime
-from quiverdb.database_csv_export import DatabaseCSVExport
-from quiverdb.database_csv_import import DatabaseCSVImport
+from quiverdb.database_options import _marshal_csv_options
 from quiverdb.element import Element
 from quiverdb.exceptions import QuiverError
 from quiverdb.metadata import (
+    CSVOptions,
     DataType,
     GroupMetadata,
     ScalarMetadata,
 )
 
 
-class Database(DatabaseCSVExport, DatabaseCSVImport):
+class Database:
     """Thin Python wrapper around the Quiver C API database handle."""
 
     def __init__(self, ptr) -> None:
@@ -173,7 +173,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         out = ffi.new("char**")
         check(lib.quiver_database_describe(self._ptr, out))
         try:
-            return ffi.string(out[0]).decode("utf-8")
+            return decode_string(out[0])
         finally:
             lib.quiver_database_free_string(out[0])
 
@@ -184,7 +184,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         out = ffi.new("char**")
         check(lib.quiver_database_describe_collection(self._ptr, collection.encode("utf-8"), out))
         try:
-            return ffi.string(out[0]).decode("utf-8")
+            return decode_string(out[0])
         finally:
             lib.quiver_database_free_string(out[0])
 
@@ -431,7 +431,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         if out_has[0] == 0 or out_value[0] == ffi.NULL:
             return None
         try:
-            return ffi.string(out_value[0]).decode("utf-8")
+            return decode_string(out_value[0])
         finally:
             lib.quiver_database_free_string(out_value[0])
 
@@ -607,14 +607,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         if count == 0 or out_values[0] == ffi.NULL:
             return []
         try:
-            result: list[str | None] = []
-            for i in range(count):
-                ptr = out_values[0][i]
-                if ptr == ffi.NULL:
-                    result.append(None)
-                else:
-                    result.append(ffi.string(ptr).decode("utf-8"))
-            return result
+            return [decode_string_or_none(out_values[0][i]) for i in range(count)]
         finally:
             lib.quiver_database_free_string_array(out_values[0], count)
 
@@ -709,7 +702,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         if out_has[0] == 0 or out_value[0] == ffi.NULL:
             return None
         try:
-            return ffi.string(out_value[0]).decode("utf-8")
+            return decode_string(out_value[0])
         finally:
             lib.quiver_database_free_string(out_value[0])
 
@@ -854,9 +847,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
                     result.append([])
                 else:
                     cells = out_vectors[0][i]
-                    result.append(
-                        [None if cells[j] == ffi.NULL else ffi.string(cells[j]).decode("utf-8") for j in range(size)]
-                    )
+                    result.append([decode_string_or_none(cells[j]) for j in range(size)])
             return result
         finally:
             lib.quiver_database_free_string_vectors(out_vectors[0], out_sizes[0], count)
@@ -974,7 +965,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
             return []
         try:
             cells = out_values[0]
-            return [None if cells[i] == ffi.NULL else ffi.string(cells[i]).decode("utf-8") for i in range(count)]
+            return [decode_string_or_none(cells[i]) for i in range(count)]
         finally:
             lib.quiver_database_free_string_array(out_values[0], count)
 
@@ -1087,9 +1078,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
                     result.append([])
                 else:
                     cells = out_sets[0][i]
-                    result.append(
-                        [None if cells[j] == ffi.NULL else ffi.string(cells[j]).decode("utf-8") for j in range(size)]
-                    )
+                    result.append([decode_string_or_none(cells[j]) for j in range(size)])
             return result
         finally:
             lib.quiver_database_free_string_vectors(out_sets[0], out_sizes[0], count)
@@ -1207,7 +1196,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
             return []
         try:
             cells = out_values[0]
-            return [None if cells[i] == ffi.NULL else ffi.string(cells[i]).decode("utf-8") for i in range(count)]
+            return [decode_string_or_none(cells[i]) for i in range(count)]
         finally:
             lib.quiver_database_free_string_array(out_values[0], count)
 
@@ -1437,7 +1426,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
             # dimension column's mask is always all 1, so it stays dense.
             result: dict[str, list] = {}
             for c in range(col_count):
-                name = ffi.string(out_names[0][c]).decode("utf-8")
+                name = decode_string(out_names[0][c])
                 ctype = out_types[0][c]
                 mask = out_has_value[0][c]
                 if ctype == DataType.INTEGER:
@@ -1450,13 +1439,10 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
                     str_ptr = ffi.cast("char**", out_data[0][c])
                     if name == dim_col:
                         result[name] = [
-                            _parse_datetime(ffi.string(str_ptr[r]).decode("utf-8"), collection, name)
-                            for r in range(row_count)
+                            _parse_datetime(decode_string(str_ptr[r]), collection, name) for r in range(row_count)
                         ]
                     else:
-                        result[name] = [
-                            ffi.string(str_ptr[r]).decode("utf-8") if mask[r] else None for r in range(row_count)
-                        ]
+                        result[name] = [decode_string(str_ptr[r]) if mask[r] else None for r in range(row_count)]
             return result
         finally:
             lib.quiver_database_free_time_series_data(
@@ -1517,10 +1503,10 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
             finally:
                 lib.quiver_database_free_float_array(float_ptr)
                 lib.quiver_database_free_mask(mask)
-        # STRING or DATE_TIME; never ffi.string a masked-out (NULL) pointer
+        # STRING or DATE_TIME; never decode a masked-out (NULL) pointer
         str_ptr = ffi.cast("char**", out_values[0])
         try:
-            return [ffi.string(str_ptr[i]).decode("utf-8") if mask[i] else None for i in range(count)]
+            return [decode_string(str_ptr[i]) if mask[i] else None for i in range(count)]
         finally:
             lib.quiver_database_free_string_array(str_ptr, count)
             lib.quiver_database_free_mask(mask)
@@ -1843,7 +1829,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         if count == 0:
             return []
         try:
-            return [ffi.string(out_columns[0][i]).decode("utf-8") for i in range(count)]
+            return [decode_string(out_columns[0][i]) for i in range(count)]
         finally:
             lib.quiver_database_free_string_array(out_columns[0], count)
 
@@ -1863,14 +1849,7 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         if count == 0:
             return {}
         try:
-            result: dict[str, str | None] = {}
-            for i in range(count):
-                col_name = ffi.string(out_columns[0][i]).decode("utf-8")
-                if out_paths[0][i] == ffi.NULL:
-                    result[col_name] = None
-                else:
-                    result[col_name] = ffi.string(out_paths[0][i]).decode("utf-8")
-            return result
+            return {decode_string(out_columns[0][i]): decode_string_or_none(out_paths[0][i]) for i in range(count)}
         finally:
             lib.quiver_database_free_time_series_files(out_columns[0], out_paths[0], count)
 
@@ -1905,6 +1884,48 @@ class Database(DatabaseCSVExport, DatabaseCSVImport):
         check(
             lib.quiver_database_update_time_series_files(
                 self._ptr, collection.encode("utf-8"), c_columns, c_paths, count
+            )
+        )
+
+    # -- CSV export / import ----------------------------------------------------
+
+    def export_csv(
+        self,
+        collection: str,
+        group: str,
+        path: str,
+        *,
+        options: CSVOptions | None = None,
+    ) -> None:
+        """Export a collection or group to CSV file."""
+        self._ensure_open()
+        lib = get_lib()
+        if options is None:
+            options = CSVOptions()
+        keepalive, c_opts = _marshal_csv_options(options)
+        check(
+            lib.quiver_database_export_csv(
+                self._ptr, collection.encode("utf-8"), group.encode("utf-8"), path.encode("utf-8"), c_opts
+            )
+        )
+
+    def import_csv(
+        self,
+        collection: str,
+        group: str,
+        path: str,
+        *,
+        options: CSVOptions | None = None,
+    ) -> None:
+        """Import CSV data into a collection."""
+        self._ensure_open()
+        lib = get_lib()
+        if options is None:
+            options = CSVOptions()
+        keepalive, c_opts = _marshal_csv_options(options)
+        check(
+            lib.quiver_database_import_csv(
+                self._ptr, collection.encode("utf-8"), group.encode("utf-8"), path.encode("utf-8"), c_opts
             )
         )
 
@@ -2189,7 +2210,7 @@ def _decode_group_rows(
     try:
         columns: dict[str, list] = {}
         for c in range(col_count):
-            name = ffi.string(out_names[0][c]).decode("utf-8")
+            name = decode_string(out_names[0][c])
             ctype = out_types[0][c]
             mask = out_has_value[0][c]
             if ctype == DataType.INTEGER:
@@ -2200,7 +2221,7 @@ def _decode_group_rows(
                 columns[name] = [floats[r] if mask[r] else None for r in range(row_count)]
             else:  # STRING or DATE_TIME
                 strs = ffi.cast("char**", out_data[0][c])
-                texts = [ffi.string(strs[r]).decode("utf-8") if mask[r] else None for r in range(row_count)]
+                texts = [decode_string(strs[r]) if mask[r] else None for r in range(row_count)]
                 columns[name] = (
                     [_parse_datetime(t, collection, name) for t in texts] if ctype == DataType.DATE_TIME else texts
                 )
@@ -2254,15 +2275,9 @@ def _marshal_group_columns(data: dict[str, list]) -> tuple:
             keepalive.append(arr)
             c_col_types[c] = DataType.FLOAT
             c_col_data[c] = ffi.cast("void*", arr)
-        elif column_type == DataType.DATE_TIME:
-            encoded = [(format_datetime(v).encode("utf-8") if v is not None else b"") for v in values]
-            c_strs = [ffi.new("char[]", e) for e in encoded]
-            keepalive.extend(c_strs)
-            c_arr = ffi.new("char*[]", [(s if v is not None else ffi.NULL) for s, v in zip(c_strs, values)])
-            keepalive.append(c_arr)
-            c_col_types[c] = DataType.STRING
-            c_col_data[c] = ffi.cast("void*", c_arr)
-        elif column_type == DataType.STRING:
+        elif column_type in (DataType.STRING, DataType.DATE_TIME):
+            if column_type == DataType.DATE_TIME:
+                values = [None if v is None else format_datetime(v) for v in values]
             encoded = [(v.encode("utf-8") if v is not None else b"") for v in values]
             c_strs = [ffi.new("char[]", e) for e in encoded]
             keepalive.extend(c_strs)

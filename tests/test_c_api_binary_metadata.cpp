@@ -41,7 +41,7 @@ TEST(BinaryCApiMetadata, GetInitialDatetime) {
     ASSERT_NE(datetime, nullptr);
     // Chrono-based, timezone-independent formatting (src/utils/datetime.h format_utc).
     EXPECT_STREQ(datetime, "2025-01-01T00:00:00");
-    quiver_binary_metadata_free_string(datetime);
+    quiver_database_free_string(datetime);
 
     quiver_binary_metadata_free(md);
 }
@@ -107,12 +107,12 @@ labels = ["plant_1", "plant_2"]
     char* unit = nullptr;
     EXPECT_EQ(quiver_binary_metadata_get_unit(md, &unit), QUIVER_OK);
     EXPECT_STREQ(unit, "MW");
-    quiver_binary_metadata_free_string(unit);
+    quiver_database_free_string(unit);
 
     char* version = nullptr;
     EXPECT_EQ(quiver_binary_metadata_get_version(md, &version), QUIVER_OK);
     EXPECT_STREQ(version, "1");
-    quiver_binary_metadata_free_string(version);
+    quiver_database_free_string(version);
 
     size_t dim_count = 0;
     EXPECT_EQ(quiver_binary_metadata_get_dimension_count(md, &dim_count), QUIVER_OK);
@@ -130,9 +130,9 @@ labels = ["plant_1", "plant_2"]
     char* unit2 = nullptr;
     EXPECT_EQ(quiver_binary_metadata_get_unit(md2, &unit2), QUIVER_OK);
     EXPECT_STREQ(unit2, "MW");
-    quiver_binary_metadata_free_string(unit2);
+    quiver_database_free_string(unit2);
 
-    quiver_binary_metadata_free_string(toml_output);
+    quiver_database_free_string(toml_output);
     quiver_binary_metadata_free(md2);
     quiver_binary_metadata_free(md);
 }
@@ -163,7 +163,7 @@ TEST(BinaryCApiMetadata, FromElement) {
     char* unit = nullptr;
     EXPECT_EQ(quiver_binary_metadata_get_unit(md, &unit), QUIVER_OK);
     EXPECT_STREQ(unit, "MW");
-    quiver_binary_metadata_free_string(unit);
+    quiver_database_free_string(unit);
 
     size_t dim_count = 0;
     EXPECT_EQ(quiver_binary_metadata_get_dimension_count(md, &dim_count), QUIVER_OK);
@@ -291,12 +291,8 @@ labels = ["val"]
 // Free function validation
 // ============================================================================
 
-TEST(BinaryCApiMetadata, FreeStringNull) {
-    EXPECT_EQ(quiver_binary_metadata_free_string(nullptr), QUIVER_OK);
-}
-
 TEST(BinaryCApiMetadata, FreeStringArrayNull) {
-    EXPECT_EQ(quiver_binary_metadata_free_string_array(nullptr, 0), QUIVER_OK);
+    EXPECT_EQ(quiver_database_free_string_array(nullptr, 0), QUIVER_OK);
 }
 
 TEST(BinaryCApiMetadata, FreeStringArrayExplicit) {
@@ -321,7 +317,7 @@ labels = ["a", "b", "c"]
     EXPECT_STREQ(out_labels[0], "a");
     EXPECT_STREQ(out_labels[1], "b");
     EXPECT_STREQ(out_labels[2], "c");
-    EXPECT_EQ(quiver_binary_metadata_free_string_array(out_labels, count), QUIVER_OK);
+    EXPECT_EQ(quiver_database_free_string_array(out_labels, count), QUIVER_OK);
 
     quiver_binary_metadata_free(md);
 }

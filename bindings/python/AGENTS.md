@@ -10,8 +10,7 @@ through `uv` (see root Build & Test).
 src/quiverdb/
   __init__.py     # Public exports: Database, QuiverError, Sandbox, CSVOptions, DataType,
                   # LogLevel, ScalarMetadata, GroupMetadata, version()
-  database.py     # Database class (inherits the CSV mixins below)
-  database_csv_export.py / database_csv_import.py  # export_csv / import_csv mixins
+  database.py     # Database class
   database_options.py  # CSVOptions-to-C marshaling
   sandbox.py   # Sandbox class
   metadata.py     # DataType/LogLevel (IntEnums), CSVOptions, ScalarMetadata, GroupMetadata
@@ -48,7 +47,7 @@ ruff.toml         # Lint/format config; lint is isort only (select = ["I"])
   use-after-destroy guard (a destroyed `Element` holds `ffi.NULL`, which the C API rejects as
   `Null argument: element`). Properties are
   regular methods, not `@property` (design decision). `LogLevel` is an `IntEnum` exported from
-  `__init__.py`; internal mixin classes are not exported.
+  `__init__.py`.
 - **Every `**kwargs` method marks its leading parameters positional-only (`/`).** Without it, a
   kwarg that shares a parameter's name binds to the parameter and raises `TypeError: got multiple
   values for argument '<name>'` before the FFI call. All five follow it: `create_element(collection,
@@ -112,8 +111,8 @@ ruff.toml         # Lint/format config; lint is isort only (select = ["I"])
   `update_vector_group` / `update_set_group` / `update_time_series_group` (the element surface stays
   non-null).
 - **`Sandbox.run` owns its result**: `quiver_sandbox_run` takes a `char** out_result` and the
-  JSON string must be freed with `quiver_sandbox_free_string` — *not*
-  `quiver_database_free_string` (both are hand-declared in `_c_api.py`). The free sits in a
+  JSON string is freed with the shared `quiver_database_free_string` (hand-declared in
+  `_c_api.py`). The free sits in a
   `finally` so a `decode_string` failure (the JSON is rejected as non-UTF-8 in C++, but be safe)
   cannot leak the native buffer. The script must be Lua source text: the core loads it in text mode,
   so a precompiled (bytecode) chunk is rejected with `Failed to run Lua script: ...` and surfaces
@@ -179,5 +178,5 @@ ruff.toml         # Lint/format config; lint is isort only (select = ["I"])
   the wheel tag uses `macosx_13_0` because macOS tags omit minor versions after 10.x. Keep the
   default delocate repair for library relocation and signing. Every wheel runs the bundled-load
   validator before pytest. CI publish flow in `.github/AGENTS.md`.
-- Local wheel checks: `scripts/test-wheel.bat`, `scripts/test-wheel-install.bat`,
+- Local wheel checks: `scripts/test-wheel-install.bat` (runs both validators),
   `scripts/validate_wheel.py`, `scripts/validate_wheel_install.py`.

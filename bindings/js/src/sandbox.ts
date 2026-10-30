@@ -28,7 +28,7 @@ export class Sandbox {
     const outResult = allocPtrOut();
     check(lib.quiver_sandbox_run(this._ptr, scriptBuf.buf, outResult.buf));
     const result = decodeStringFromBuf(outResult);
-    lib.quiver_sandbox_free_string(readPtrOut(outResult));
+    lib.quiver_database_free_string(readPtrOut(outResult));
     return result;
   }
 

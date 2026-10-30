@@ -20,9 +20,9 @@ tests/                    # C++/C API suites + shared SQL schemas               
 .github/                  # CI + release/publish workflows, composite actions    -> .github/AGENTS.md
 scripts/                  # build-all/test-all/clean-all.bat, format.bat, tidy.bat,
                           # generator.bat (runs all three FFI generators),
-                          # assert_version.py (check + bump), validate_wheel*.py + test-wheel*.bat,
+                          # assert_version.py (check + bump), validate_wheel*.py + test-wheel-install.bat,
                           # ci/{dispatch_workflow.sh, native_s3.sh}, julia/generate_artifacts.jl
-cmake/                    # CompilerOptions.cmake, Dependencies.cmake, Platform.cmake, quiverConfig.cmake.in
+cmake/                    # CompilerOptions.cmake, Dependencies.cmake, Platform.cmake
 docs/                     # User-facing docs: introduction, rules, attributes, migrations, time_series
 assets/                   # logo.svg
 ```
@@ -427,8 +427,8 @@ Settled questions — don't relitigate without the user; each was decided delibe
   UTF-8 fields and decodes invalid ones as ISO-8859-1, for headers and cells alike, without rewriting
   input files. This per-field fallback is shared by Lua CSV reads and `import_csv`.
   The binary subsystem's
-  `CSVConverter` (`bin_to_csv`/`csv_to_bin`) is not on this path: it splits and joins on `,` and
-  never quotes, so a label holding a comma does not round-trip. Its numbers do share the stack:
+  `bin_to_csv`/`csv_to_bin` are not on this path: they split and join on `,` and
+  never quote, so a label holding a comma does not round-trip. Their numbers do share the stack:
   data cells are written by `utils::append_number` and read by `utils::parse_float`, the same pair
   `export_csv`/`import_csv` use, so a value round-trips exactly in every host locale. rapidcsv,
   which import and export used before, was dropped. Its whole-document reader cannot back `db:read_csv_stream`'s
@@ -595,9 +595,11 @@ JS has no generator — update the hand-written symbol table in `bindings/js/src
   pugixml 1.15, nowide 11.3.1 on Windows); its CMake policy-floor override is scoped to the
   dependency for CMake 4. Documentation/examples/tests/benchmarks/LTO are disabled.
   nlohmann/json v3.12.0 is header-only and build-only; its tests and installation are disabled.
-- **Targets**: `quiver` (core, alias `quiver::database`), `quiver_c` (alias
-  `quiver::database_c`), `quiver_cli`, `quiver_tests`, `quiver_c_tests`, `quiver_benchmark`,
-  `quiver_sandbox`. Outputs: executables/DLLs → `build/bin/`, libs → `build/lib/`.
+- **Targets**: `quiver` (core), `quiver_c`, `quiver_cli`, `quiver_tests`, `quiver_c_tests`,
+  `quiver_benchmark`, `quiver_sandbox`. Outputs: executables/DLLs → `build/bin/`, libs → `build/lib/`.
+  There is no `install()`/`find_package(quiver)` package: a C++ consumer adds Quiver with
+  `add_subdirectory`/FetchContent and links `quiver` / `quiver_c`. The only `install()` rule is
+  the SKBUILD one that puts both libraries into the Python wheel's `quiverdb/_libs`.
 
 ## Versioning
 
@@ -719,7 +721,7 @@ CREATE TABLE Items_time_series_files (
 ```
 
 ### Foreign Keys
-Always use `ON DELETE CASCADE ON UPDATE CASCADE` for parent references. `SchemaValidator` enforces
+Always use `ON DELETE CASCADE ON UPDATE CASCADE` for parent references. `validate_schema` enforces
 it for every vector, set and time-series table: the table's prefix must name an existing
 collection, and its `id` must reference that collection with both actions. Every other foreign
 key, in any table, must use `ON UPDATE CASCADE` with `ON DELETE CASCADE` or `ON DELETE SET NULL`
@@ -866,7 +868,7 @@ Element().set("label", "Item 1").set("value", 42).set("tags", {"a", "b"})
 ```
 
 ### Binary & Expression Subsystems (Julia + Lua)
-`.qvr` binary file I/O with `.toml` metadata sidecars (`BinaryFile`, `CSVConverter`,
+`.qvr` binary file I/O with `.toml` metadata sidecars (`BinaryFile`, `bin_to_csv`/`csv_to_bin`,
 `BinaryMetadata`) and lazy arithmetic expressions over them (`Expression` DAGs with
 broadcast, aggregation, and label projection, materialized via `save()`). Exposed in Julia
 (FFI) and Lua (sol2). `BinaryFile` and `Expression` share the `AbstractExpression` base, so a file
@@ -956,8 +958,8 @@ The rules are mechanical: given any C++ method name, you can derive the equivale
 | Aggregate | `x.aggregate(dim, op, p?)`, `x.aggregate_agents(op, p?)` | `quiver_expression_aggregate()`, `quiver_expression_aggregate_agents()` | `aggregate(x, dim, op, p?)`, `aggregate_agents(x, op, p?)` | `x:aggregate(dim, op, p?)`, `x:aggregate_agents(op, p?)` |
 | Select / rename agents | `x.select_agents(labels)`, `x.rename_agents(mapping)` | `quiver_expression_select_agents()`, `quiver_expression_rename_agents()` | `select_agents(x, labels)`, `rename_agents(x, mapping)` | `x:select_agents(labels)`, `x:rename_agents({old=new})` |
 | Get file path | `binary_file.get_file_path()` | `quiver_binary_file_get_file_path()` | `get_file_path(file)` | `file:get_file_path()` |
-| Bin to CSV | `CSVConverter::bin_to_csv()` | `quiver_csv_converter_bin_to_csv()` | `bin_to_csv()` | `db:bin_to_csv(path, aggregate?)` |
-| CSV to bin | `CSVConverter::csv_to_bin()` | `quiver_csv_converter_csv_to_bin()` | `csv_to_bin()` | `db:csv_to_bin(path)` |
+| Bin to CSV | `bin_to_csv()` | `quiver_csv_converter_bin_to_csv()` | `bin_to_csv()` | `db:bin_to_csv(path, aggregate?)` |
+| CSV to bin | `csv_to_bin()` | `quiver_csv_converter_csv_to_bin()` | `csv_to_bin()` | `db:csv_to_bin(path)` |
 | Metadata from keywords | `BinaryMetadata::from_element()` | `quiver_binary_metadata_from_element()` | `Metadata(; kwargs...)` | `quiver.metadata{kwargs}` |
 | Metadata from TOML | `BinaryMetadata::from_toml_content()` | `quiver_binary_metadata_from_toml()` | `from_toml_content()` | `quiver.metadata_from_toml()` |
 | Metadata from Element | `BinaryMetadata::from_element()` | `quiver_binary_metadata_from_element()` | `from_element()` | `quiver.metadata_from_element()` |

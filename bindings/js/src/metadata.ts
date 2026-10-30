@@ -1,13 +1,7 @@
 import { CString, type Pointer, ptr, read } from "bun:ffi";
 import { Database } from "./database.ts";
 import { check } from "./errors.ts";
-import {
-  allocPtrOut,
-  allocUint64Out,
-  readPtrOut,
-  readUint64Out,
-  toCString,
-} from "./ffi-helpers.ts";
+import { allocPtrOut, readPtrOut, readUint64Out, toCString } from "./ffi-helpers.ts";
 import { getSymbols, type NativePointer } from "./loader.ts";
 
 export interface ScalarMetadata {
@@ -143,7 +137,7 @@ function listMetadata<T>(
 ): T[] {
   const collBuf = toCString(collection);
   const outArray = allocPtrOut();
-  const outCount = allocUint64Out();
+  const outCount = allocPtrOut();
   check((lib as Record<string, Function>)[fn](handle, collBuf.buf, outArray.buf, outCount.buf));
   const count = readUint64Out(outCount);
   if (count === 0) return [];

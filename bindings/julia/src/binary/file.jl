@@ -15,18 +15,6 @@ function open_file(path::String; mode::Char, metadata::Optional{Metadata} = noth
     return File(out_file[])
 end
 
-function File(path::String)
-    out_file = Ref{Ptr{C.quiver_binary_file}}(C_NULL)
-    check(C.quiver_binary_file_create(path, out_file))
-    return File(out_file[])
-end
-
-function open!(file::File; mode::Char, metadata::Optional{Metadata} = nothing)
-    md_ptr = metadata === nothing ? Ptr{C.quiver_binary_metadata}(C_NULL) : metadata.ptr
-    GC.@preserve metadata check(C.quiver_binary_file_open(file.ptr, Cchar(mode), md_ptr))
-    return nothing
-end
-
 function close!(file::File)
     if file.ptr != C_NULL
         C.quiver_binary_file_close(file.ptr)
@@ -68,7 +56,7 @@ function read(file::File; allow_nulls::Bool = false, dims...)
     end
 
     result = [unsafe_load(out_data[], i) for i in 1:count]
-    C.quiver_binary_file_free_float_array(out_data[])
+    C.quiver_database_free_float_array(out_data[])
     return result
 end
 
@@ -99,6 +87,6 @@ function get_file_path(file::File)
     out = Ref{Ptr{Cchar}}(C_NULL)
     check(C.quiver_binary_file_get_file_path(file.ptr, out))
     result = unsafe_string(out[])
-    C.quiver_binary_file_free_string(out[])
+    C.quiver_database_free_string(out[])
     return result
 end

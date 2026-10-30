@@ -16,19 +16,6 @@
 #include <variant>
 #include <vector>
 
-// Helper template for reading numeric scalars
-template <typename T>
-quiver_error_t read_scalars_impl(const std::vector<T>& values, T** out_values, size_t* out_count) {
-    *out_count = values.size();
-    if (values.empty()) {
-        *out_values = nullptr;
-        return QUIVER_OK;
-    }
-    *out_values = new T[values.size()];
-    std::copy(values.begin(), values.end(), *out_values);
-    return QUIVER_OK;
-}
-
 // Helper for reading nullable numeric scalars into a value array + parallel presence mask.
 // mask[i] == 0 means SQL NULL; the data slot then holds a placeholder (0 / 0.0) to be ignored.
 template <typename T>

@@ -3,7 +3,6 @@ import { Database } from "./database.ts";
 import { check } from "./errors.ts";
 import {
   allocNativeInt64,
-  allocNativeString,
   allocNativeStringArray,
   nativeAddress,
   toCString,
@@ -25,7 +24,7 @@ function buildCsvOptionsBuffer(options?: CsvOptions): [Allocation, Allocation[]]
   const dv = new DataView(buf.buffer);
   const keepalive: Allocation[] = [];
 
-  const dtfStr = allocNativeString(options?.dateTimeFormat ?? "");
+  const dtfStr = toCString(options?.dateTimeFormat ?? "");
   keepalive.push(dtfStr);
   dv.setBigUint64(0, nativeAddress(dtfStr.ptr), true);
 

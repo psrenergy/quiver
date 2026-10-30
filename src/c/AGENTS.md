@@ -12,7 +12,8 @@ include/quiver/c/         # C API headers (for FFI)
   options.h               # All option types and defaults: LogLevel, DatabaseOptions, CSVOptions
   database.h / element.h / sandbox.h
 include/quiver/c/binary/    # Binary C API headers
-  binary_file.h               # quiver_binary_file_t opaque handle, open/close/read/write
+  binary_file.h               # quiver_binary_file_t opaque handle, open_file/close/read/write
+                              # (no unopened handle: open_file is the only constructor)
   csv_converter.h             # bin_to_csv, csv_to_bin functions
   binary_metadata.h           # quiver_binary_metadata_t + flat structs (quiver_dimension_t, quiver_time_properties_t)
 include/quiver/c/expression/  # Expression C API header
@@ -37,14 +38,14 @@ src/c/
   element.cpp             # Element builder C API
   sandbox.cpp          # Sandbox C API (errors via quiver_get_last_error); run returns the
                           # script's JSON result via char** out_result (NULLed before anything can
-                          # fail, so a caller that frees unconditionally is safe) + its own
-                          # free_string. run passes the script through unchanged and the core
+                          # fail, so a caller that frees unconditionally is safe; freed with
+                          # quiver_database_free_string). run passes the script through unchanged and the core
                           # loads it as text only, so a precompiled (bytecode) chunk fails like
                           # any script error: `Failed to run Lua script: ... attempt to load a
                           # binary chunk (mode is 't')` through quiver_get_last_error. The sol2
                           # binders it runs live in src/sandbox/ (one file per core file they
                           # bind; see src/AGENTS.md)
-src/c/binary/               # BinaryFile / CSVConverter / BinaryMetadata wrappers
+src/c/binary/               # BinaryFile / bin_to_csv + csv_to_bin / BinaryMetadata wrappers
 src/c/expression/           # Expression node constructors, from_file bridge, save, free
 ```
 
@@ -106,35 +107,31 @@ and CSV alike).
 
 ## Memory Management
 
-`new`/`delete`, provide matching `quiver_{entity}_free_*` functions:
+`new`/`delete`. A handle has its own close/free; a plain string, string array or float array from
+**any** entity (database, element, sandbox, binary file, binary metadata) is freed with the shared
+`quiver_database_free_*` deallocator — there is no per-entity copy:
 ```cpp
 // Factory functions return error code, use out-parameter for handle
 quiver_error_t quiver_database_from_schema(..., quiver_database_t** out_db);
 quiver_error_t quiver_database_close(quiver_database_t* db);
 
-// Database entity free functions (arrays, vectors, metadata, time series)
+// Shared deallocators (every entity's arrays and strings, incl. quiver_sandbox_run's JSON result,
+// binary file paths/reads and binary metadata strings/labels)
 quiver_database_free_integer_array(int64_t*)
 quiver_database_free_float_array(double*)
 quiver_database_free_string_array(char**, size_t)
-
-// Single string cleanup (strings returned by query/read-by-id/element operations)
 quiver_database_free_string(char*)
-
-// Lua script result (JSON returned by quiver_sandbox_run)
-quiver_sandbox_free_string(char*)
 
 // Binary metadata lifecycle (no incremental builder: from_toml / from_element build a handle,
 // quiver_binary_file_get_metadata / quiver_expression_get_metadata return a copy; free releases each)
 quiver_binary_metadata_from_toml/from_element/free
-quiver_binary_metadata_free_string(char*)
-quiver_binary_metadata_free_string_array(char**, size_t)
 quiver_binary_metadata_free_dimension(quiver_dimension_t*)
 
 // Binary file lifecycle
 quiver_binary_file_open_file/close
-quiver_binary_file_free_string(char*)
-quiver_binary_file_free_float_array(double*)
 ```
+`binary/binary_metadata.h` includes `database.h` so the shared deallocators are declared for a
+binary-only consumer.
 
 Conventions that keep the error paths safe:
 - In the **multi-column time series read path** (where marshaling can fail mid-column), out-arrays
@@ -156,7 +153,7 @@ Conventions that keep the error paths safe:
   `free_dimension`, `free_time_series_files`) `QUIVER_REQUIRE` a non-NULL handle.
 
 ### Alloc/Free Co-location
-Allocation functions and their corresponding free functions live in the same translation unit, organized per area: read alloc/free pairs in `database_read.cpp`, metadata alloc/free pairs in `database_metadata.cpp`, time series alloc/free pairs in `database_time_series.cpp`. Cross-area sharing exists where types overlap (query strings are freed by `free_string` in `database_read.cpp`; `list_time_series_groups` metadata by the array free in `database_metadata.cpp`).
+Allocation functions and their corresponding free functions live in the same translation unit, organized per area: read alloc/free pairs in `database_read.cpp`, metadata alloc/free pairs in `database_metadata.cpp`, time series alloc/free pairs in `database_time_series.cpp`. Cross-area sharing exists where types overlap (query strings are freed by `free_string` in `database_read.cpp`; `list_time_series_groups` metadata by the array free in `database_metadata.cpp`; the strings and arrays from `quiver_sandbox_run` (`sandbox.cpp`), `quiver_binary_file_*` and `quiver_binary_metadata_*` (`binary/`) by the shared `quiver_database_free_*` in `database_read.cpp`).
 
 ### String Handling
 Always null-terminate, use `quiver::string::new_c_str()` from `src/utils/string.h` (called with
