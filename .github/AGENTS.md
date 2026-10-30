@@ -17,7 +17,6 @@ before either platform's native tests. The strict check compiles the actual JS b
 | `publish-julia.yml` | `workflow_dispatch` | Mirrors `bindings/julia` into psrenergy/Quiver.jl (see below) |
 | `publish-python.yml` | push/PR to master + `workflow_dispatch` | cibuildwheel on a ubuntu+ubuntu-arm+windows+macos matrix (targets in `bindings/python/AGENTS.md`); validates wheel contents and tests bundled loading before pytest; the PyPI publish job runs only on `workflow_dispatch` and requires all four platform wheels (trusted publishing, `skip-existing: true`, `environment: pypi`) |
 | `publish-js.yml` | `workflow_dispatch` | npm publish with bundled native libs (see below) |
-| `resolve-version.yml` | `workflow_call` (`ref`) | Reusable: checks out `ref` and outputs `version` from `scripts/assert_version.py`; the `version` job of `publish-s3.yml` and `publish-julia.yml` |
 
 The Python publish gate quotes its required glob patterns and counts matching files in an
 array under `nullglob`. Do not use `ls` to detect missing matches: an unmatched glob disappears,
@@ -107,8 +106,7 @@ The publish workflows read the version by inlining `python3 scripts/assert_versi
 script prints to stdout, so both the no-arg and the `bump` form emit the bare version and nothing
 else — everything the callers `$( )` depend on.
 The child publish workflows take no `version` input: each resolves it from its checkout via
-`scripts/assert_version.py` (`publish-s3.yml` and `publish-julia.yml` through the reusable
-`resolve-version.yml`); `ref` is their only override.
+`scripts/assert_version.py`; `ref` is their only override.
 
 ## Release Pipeline
 

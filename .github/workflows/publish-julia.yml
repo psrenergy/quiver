@@ -13,9 +13,18 @@ permissions:
 
 jobs:
   version:
-    uses: ./.github/workflows/resolve-version.yml
-    with:
-      ref: ${{ inputs.ref || github.sha }}
+    name: Resolve version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+      - id: v
+        run: |
+          v="$(python3 scripts/assert_version.py)"
+          echo "version=$v" >> "$GITHUB_OUTPUT"
 
   publish:
     name: Publish Julia
