@@ -454,6 +454,11 @@ impl_->logger->debug("Opening database: {}", path);
   decides UPDATE vs INSERT, and either statement mentions only the caller's columns, so an unnamed
   column keeps its value. Not an `ON CONFLICT` upsert because the table has no PK or UNIQUE
   constraint to target; the table is a singleton, so the UPDATE needs no `WHERE` clause.
+- **`upsert_time_series_row` looks the row up, then UPDATEs or INSERTs**
+  (`database_time_series.cpp`, both inside its `TransactionGuard`). Do not collapse the pair into
+  one `INSERT ... ON CONFLICT DO UPDATE`: SQLite checks NOT NULL on the proposed row before it
+  detects the conflict, so an unnamed `NOT NULL` column (the canonical `value REAL NOT NULL`)
+  aborts a legal patch.
 - **`Impl::update_group_rows`** (`database_update.cpp`) is the shared body of
   `update_vector_group`/`update_set_group`. It validates the **union of every row's keys** (not
   `rows[0]`, which dropped later-row-only columns and skipped validating them) against the group

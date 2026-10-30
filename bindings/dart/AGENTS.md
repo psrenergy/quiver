@@ -89,13 +89,15 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
   and their `ByLabel` forms) marshal the whole payload through `_marshalGroupColumns(Arena, Map)`
   (empty map → NULL arrays; jagged columns → `ArgumentError` naming the column), which calls
   `marshalCells(Arena, List<Object?>, owner, noun)` (`element.dart`) per column. The two row
-  upserts call `marshalCells` directly (no mask in the row C signature), and so does
+  upserts call `marshalCells` directly, wrapping each cell in a one-element list (no mask in the
+  row C signature: a `null` in their `Map<String, Object?>` is sent as a NULL data pointer, which
+  the C API writes as an explicit SQL NULL; an unnamed column keeps its current value), and so does
   `Element._setMixedList`, so a mixed list is typed the same on both write paths; query parameters
   go through `_marshalParams`. `marshalCells` takes the family
   (numeric, String, DateTime) from the first non-null cell and the numeric type from all of them: a
   numeric column is INTEGER unless some cell is a `double`, which widens it to FLOAT (the rule
   Python and JS share, so `[1, 2.5]` writes 1.0 and 2.5 in every binding; it used to throw here).
-  They then convert **every** cell individually — never `as`/`cast` the rest to the dispatched type, which defers the check to iteration and throws a raw `TypeError` naming
+  It then converts **every** cell individually — never `as`/`cast` the rest to the dispatched type, which defers the check to iteration and throws a raw `TypeError` naming
   neither the column nor the cell. An `int` (and a `bool`) is accepted into a REAL column by the
   int-for-REAL coercion. Find the dispatch cell with a plain loop, not `firstWhere(..., orElse: ()
   => null)`: `orElse` must return the list's *runtime* element type, so it throws on every

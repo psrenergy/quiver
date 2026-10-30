@@ -37,6 +37,23 @@ callers to change something are prefixed **BREAKING** and say what to do.
 - **BREAKING (C++ only) — `CSVConverter::bin_to_csv` and `CSVConverter::csv_to_bin` are now the
   free functions `quiver::bin_to_csv` and `quiver::csv_to_bin`**, with the same parameters and
   defaults; the `CSVConverter` class is internal. *Adapt:* drop the `CSVConverter::` qualifier.
+- **BREAKING — `upsert_time_series_row()` patches a row instead of replacing it.** It used
+  `INSERT OR REPLACE`, so every value column you did not name was reset to NULL. Now only the
+  columns you name are written; an unnamed column keeps its value, and a named null still clears
+  it. With no existing row the unnamed columns take their DEFAULT (NULL if none) as before, so
+  name every `NOT NULL` column without a DEFAULT when the row may not exist yet. Applies to
+  `upsert_time_series_row_by_label()` too.
+
+  *Adapt:* if you relied on omission to clear a column, name it with a null value (`nothing` /
+  `None` / `null`; through the C API, a NULL `column_data[c]`). Julia, Python, Dart and JS now
+  accept that null in both upserts; they used to reject it. **Lua cannot do this** —
+  `{ x = nil }` is `{}`, so omission now means *preserve*; clear it with
+  `update_time_series_group`, where a `nil` cell writes NULL.
+
+  Also: a row is now addressed by its primary key only, so a second UNIQUE constraint on a
+  time-series table raises instead of replacing; and a row naming only dimension columns leaves
+  an existing row untouched (it used to null every value column, or raise on a `NOT NULL` one).
+
 - **A read-only open creates no log file.** Opening with `read_only` no longer creates or
   truncates `quiver_database.log` next to the database (it wiped the log of any writer on it).
 - **`quiver_cli` messages for a missing script.** Leaving out the `script` argument is now an

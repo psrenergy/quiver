@@ -130,8 +130,9 @@ Quiver.update_time_series_group!(
 )
 ```
 
-It is also possible to insert (or upsert) a single row. Calling it again with the same
-dimension values overwrites the value columns:
+It is also possible to insert (or patch) a single row. Calling it again with the same
+dimension values patches the row: only the value columns you name are written (an explicit
+`nothing` clears one), and any value column you leave out keeps its current value:
 
 ```julia
 Quiver.upsert_time_series_row!(
@@ -179,8 +180,9 @@ always a `Vector{Union{T, Nothing}}`, `T` taken from the attribute's type (`Int6
 ## Updating data
 
 `update_time_series_group!` replaces **all** rows of the group for the element. To change a
-single row, use `upsert_time_series_row!` with the row's exact dimension values — existing
-value columns at that dimension key are overwritten:
+single row, use `upsert_time_series_row!` with the row's exact dimension values — only the value
+columns you name at that dimension key are written (an explicit `nothing` clears one); any value
+column you don't name keeps its current value:
 
 ```julia
 Quiver.upsert_time_series_row!(
@@ -193,6 +195,10 @@ Quiver.upsert_time_series_row!(
     some_vector3 = 10.0,
 )
 ```
+
+When there is no row at that dimension key the call inserts one instead, and an unnamed column
+has nothing to fall back on — name every `NOT NULL` value column whenever the row may not exist
+yet.
 
 ## Deleting data
 

@@ -1765,12 +1765,14 @@ class Database:
         )
 
     def upsert_time_series_row(self, collection: str, group: str, id: int, /, **kwargs: object) -> None:
-        """Insert or upsert a single time series row for an element.
+        """Insert or patch a single time series row for an element.
 
         Keyword arguments map column names to values. Every dimension column (e.g.
-        date_time) must be provided; a value column left out gets its column default
-        (NULL if it declares none; a NOT NULL column with no default must be provided).
-        Type dispatch uses isinstance: bool -> INTEGER (0/1), int -> INTEGER,
+        date_time) must be provided. On a conflict only the named columns are written:
+        None clears one, and a value column left out keeps its current value. With no
+        existing row there is nothing to keep, so a value column left out gets its column
+        default (NULL if it declares none; a NOT NULL column with no default must be provided).
+        Type dispatch uses isinstance: None -> SQL NULL, bool -> INTEGER (0/1), int -> INTEGER,
         float -> FLOAT, str -> STRING, datetime -> STRING (an aware value is converted
         to UTC); integers are accepted for REAL columns.
         Dict unpacking is supported: db.upsert_time_series_row("Col", "grp", 1, **row_dict).
@@ -2303,9 +2305,10 @@ def _marshal_row_columns(kwargs: dict) -> tuple:
     """Marshal one row of scalars into parallel C arrays for the row-oriented upsert API.
 
     Each value is wrapped in a 1-element typed array; a datetime is formatted by
-    format_datetime and sent as a string. Not `_marshal_group_columns`: the
-    row-upsert C signature carries no per-cell mask, so a None cell would be written as that
-    helper's zeroed placeholder instead of NULL.
+    format_datetime and sent as a string. None leaves the column's data pointer NULL, which the
+    C API writes as an explicit SQL NULL (an unnamed column keeps its current value). Not
+    `_marshal_group_columns`: the row-upsert C signature carries no per-cell mask, so a None cell
+    would be written as that helper's zeroed placeholder instead of NULL.
 
     Returns (keepalive, c_col_names, c_col_types, c_col_data, col_count) where keepalive must
     remain referenced until the C API call completes.
@@ -2315,7 +2318,7 @@ def _marshal_row_columns(kwargs: dict) -> tuple:
 
     c_col_names = ffi.new("const char*[]", col_count)
     c_col_types = ffi.new("int[]", col_count)
-    c_col_data = ffi.new("void*[]", col_count)
+    c_col_data = ffi.new("void*[]", col_count)  # zero-filled: a None column keeps a NULL pointer
 
     for i, (name, v) in enumerate(kwargs.items()):
         name_buf = ffi.new("char[]", name.encode("utf-8"))
@@ -2325,7 +2328,9 @@ def _marshal_row_columns(kwargs: dict) -> tuple:
         if isinstance(v, datetime):
             v = format_datetime(v)  # marshalled by the str branch below
 
-        if isinstance(v, int):  # bool is an int subclass: True/False marshal as 1/0
+        if v is None:
+            c_col_types[i] = DataType.FLOAT  # never read: a NULL data pointer is SQL NULL
+        elif isinstance(v, int):  # bool is an int subclass: True/False marshal as 1/0
             arr = ffi.new("int64_t[]", [v])
             keepalive.append(arr)
             c_col_types[i] = DataType.INTEGER
@@ -2344,7 +2349,8 @@ def _marshal_row_columns(kwargs: dict) -> tuple:
             c_col_data[i] = ffi.cast("void*", c_str_arr)
         else:
             raise TypeError(
-                f"Column '{name}' value has unsupported type {type(v).__name__}; expected int, float, str, or datetime"
+                f"Column '{name}' value has unsupported type {type(v).__name__}; "
+                "expected int, float, str, datetime, or None"
             )
 
     return keepalive, c_col_names, c_col_types, c_col_data, col_count

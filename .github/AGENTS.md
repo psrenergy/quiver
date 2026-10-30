@@ -10,7 +10,7 @@ before either platform's native tests. The strict check compiles the actual JS b
 
 | Workflow | Trigger | Purpose |
 |---|---|---|
-| `ci.yml` | push/PR to master | Build matrix (ubuntu/ubuntu-arm/windows/macos × Release/Debug) + ctest + artifact upload; four coverage jobs uploading to Codecov (through the `codecov` composite action) with flags `cpp`, `julia`, `dart`, `python`; plus `clang-format` check (22.1.8 wheel via `uvx`), `actionlint`, and a `bun-test` matrix (ubuntu+ubuntu-arm+windows) whose `ubuntu-latest` leg uploads flag `js` |
+| `ci.yml` | push/PR to master | Build matrix (ubuntu/ubuntu-arm/windows/macos × Release/Debug) + ctest + artifact upload; four coverage jobs uploading to Codecov (through the `codecov` composite action) with flags `cpp`, `julia`, `dart`, `python`; plus `clang-format` check (22.1.8 wheel via `uvx`), `actionlint`, and a `bun-test` matrix (ubuntu+ubuntu-arm+windows) whose `ubuntu-24.04` leg uploads flag `js` |
 | `bump-version.yml` | `workflow_dispatch` / `workflow_call` (`part`: major/minor/patch) | Runs `scripts/assert_version.py bump <part>` and opens a PR with the five manifests rewritten (see below) |
 | `publish.yml` | `workflow_dispatch` (`bump`: patch/minor/major; default patch) | Release orchestrator with reusable Bump Version (see below) |
 | `publish-s3.yml` | `workflow_dispatch` (usually from publish.yml) | Builds native libs for `linux-x86_64`, `linux-aarch64`, `macos-aarch64`, `windows-x86_64` and stages them on S3 (via `scripts/ci/native_s3.sh upload`) |
@@ -40,12 +40,16 @@ action `pip install codecov-cli` and skip the GPG check of the downloaded binary
 rests on PyPI's TLS. No setup step is needed: GitHub's Ubuntu 24.04 image sets
 `break-system-packages = true` in `/etc/pip.conf`.
 
+**`ci.yml` pins `ubuntu-24.04`.** `ubuntu-latest` becomes Ubuntu 26.04 (actions/runner-images#14748),
+whose GCC 15 fails the test build on standard headers we only got transitively; fix those before
+unpinning. The publish workflows keep `ubuntu-latest`: their Linux libs build in pinned manylinux images.
+
 Composite actions in `.github/actions/`:
 - `build-cpp` — configure/build the core + C API with a FetchContent source cache. The cache key
   includes a **toolchain fingerprint** (default CMake generator): FetchContent subbuilds pin the
   generator in their CMakeCache, so restoring a `_deps` cache built under a different default
   generator (e.g. windows-latest moving VS 17 → 18) fails configure. Every key also carries
-  `runner.arch`: `ubuntu-latest` and `ubuntu-24.04-arm` both report `runner.os == Linux`, and a
+  `runner.arch`: `ubuntu-24.04` and `ubuntu-24.04-arm` both report `runner.os == Linux`, and a
   restored cache of the other arch's `_deps` sub-builds / sccache objects breaks the build.
   **Used by macOS/Windows only in `publish-s3.yml`** (`if: runner.os != 'Linux'`); `ci.yml` still
   uses it for all three OSes, in every job that loads the native library except `dart-coverage`,

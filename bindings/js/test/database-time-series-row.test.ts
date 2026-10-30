@@ -182,20 +182,66 @@ describe("upsertTimeSeriesRow", () => {
     }
   });
 
-  test("rejects a cell that is neither string, number, bigint nor boolean", () => {
+  test("rejects a cell that is neither string, number, bigint, boolean nor null", () => {
     const db = Database.fromSchema(":memory:", MIXED_TS_SCHEMA);
     try {
       const id = db.createElement("Sensor", { label: "S1" });
 
-      // The FLOAT branch used to be an untyped fallback: Number(null) is 0 and anything else is
-      // NaN, both written with no error. JS callers reach this even though the types forbid it.
+      // The FLOAT branch used to be an untyped fallback: Number() of a non-number is NaN, written
+      // with no error. JS callers reach this even though the types forbid it. `null` is no longer
+      // in this set - it is a deliberate SQL NULL, covered below.
       expect(() =>
         db.upsertTimeSeriesRow("Sensor", "readings", id, {
           date_time: "2024-01-01T00:00:00",
           // biome-ignore lint/suspicious/noExplicitAny: exercising the untyped JS-caller path
-          humidity: null as any,
+          humidity: undefined as any,
         }),
       ).toThrow(/column 'humidity' has unsupported value type/);
+    } finally {
+      db.close();
+    }
+  });
+
+  test("a conflict patches only the named columns", () => {
+    const db = Database.fromSchema(":memory:", NULLABLE_TS_SCHEMA);
+    try {
+      const id = db.createElement("Sensor", { label: "S1" });
+
+      db.upsertTimeSeriesRow("Sensor", "readings", id, {
+        date_time: "2024-01-01T00:00:00",
+        temperature: 20.0,
+        counter: 5,
+      });
+
+      // Naming only `temperature`: the unnamed `counter` keeps its value.
+      db.upsertTimeSeriesRow("Sensor", "readings", id, {
+        date_time: "2024-01-01T00:00:00",
+        temperature: 21.5,
+      });
+
+      let result = db.readTimeSeriesGroup("Sensor", "readings", id);
+      expect(result.temperature).toEqual([21.5]);
+      expect(result.counter).toEqual([5]);
+
+      // A named `null` writes an explicit SQL NULL.
+      db.upsertTimeSeriesRow("Sensor", "readings", id, {
+        date_time: "2024-01-01T00:00:00",
+        counter: null,
+      });
+
+      result = db.readTimeSeriesGroup("Sensor", "readings", id);
+      expect(result.temperature).toEqual([21.5]);
+      expect(result.counter).toEqual([null]);
+
+      // A new row has nothing to preserve: the unnamed columns are NULL.
+      db.upsertTimeSeriesRow("Sensor", "readings", id, {
+        date_time: "2024-01-02T00:00:00",
+        temperature: 1.0,
+      });
+
+      result = db.readTimeSeriesGroup("Sensor", "readings", id);
+      expect(result.temperature).toEqual([21.5, 1.0]);
+      expect(result.counter).toEqual([null, null]);
     } finally {
       db.close();
     }

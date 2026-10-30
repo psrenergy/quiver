@@ -336,15 +336,16 @@ extension DatabaseUpdate on Database {
   // Add time series row
   // ==========================================================================
 
-  /// Adds or updates a single time series row by element ID.
-  /// Takes a Map of column names to scalar values.
+  /// Adds or patches a single time series row by element ID.
+  /// Takes a Map of column names to scalar values; a `null` value is a SQL NULL.
   /// Supported value types: int, bool (INTEGER 1/0), double, String, DateTime.
-  /// Calling with the same dimension PK upserts (value columns overwritten).
+  /// Calling with the same dimension PK patches: only the columns named in [row] are written,
+  /// an explicit `null` clears one, and a value column left out keeps its current value.
   void upsertTimeSeriesRow(
     String collection,
     String group,
     int id,
-    Map<String, Object> row,
+    Map<String, Object?> row,
   ) {
     _ensureNotClosed();
 
@@ -360,7 +361,9 @@ extension DatabaseUpdate on Database {
         columnNames[i] = entry.key.toNativeUtf8(allocator: arena).cast();
         final column = marshalCells(arena, [entry.value], "column '${entry.key}'", 'value');
         columnTypes[i] = column.type;
-        columnData[i] = column.data;
+        // A `null` is a NULL data pointer, which the C API writes as an explicit SQL NULL (the
+        // zeroed placeholder behind it would otherwise be written as data).
+        columnData[i] = entry.value == null ? nullptr : column.data;
         i++;
       }
 
@@ -387,7 +390,7 @@ extension DatabaseUpdate on Database {
     String collection,
     String group,
     String label,
-    Map<String, Object> row,
+    Map<String, Object?> row,
   ) {
     _ensureNotClosed();
 
@@ -403,7 +406,9 @@ extension DatabaseUpdate on Database {
         columnNames[i] = entry.key.toNativeUtf8(allocator: arena).cast();
         final column = marshalCells(arena, [entry.value], "column '${entry.key}'", 'value');
         columnTypes[i] = column.type;
-        columnData[i] = column.data;
+        // A `null` is a NULL data pointer, which the C API writes as an explicit SQL NULL (the
+        // zeroed placeholder behind it would otherwise be written as data).
+        columnData[i] = entry.value == null ? nullptr : column.data;
         i++;
       }
 
