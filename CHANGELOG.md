@@ -75,11 +75,13 @@ callers to change something are prefixed **BREAKING** and say what to do.
   named argument in every binding: `run!(sandbox, script; timeout_ms = 100)` in Julia,
   `run(script, timeout_ms=100)` in Python, `run(script, timeoutMs: 100)` in Dart and
   `run(script, { timeoutMs: 100 })` in JS; `0`, the default, means no limit, and a negative value
-  throws. A script still running at its limit fails with `Cannot
-  run: script exceeded its time limit of <N> ms`, and `pcall`/`xpcall` cannot catch it. The limit
-  is soft: it is checked between Lua instructions and between SQLite VM steps, so a runaway loop,
-  coroutine or recursive query stops, but one long call (`export_csv` on a huge collection, an
-  expression `save`, a large XLSX load, a write) finishes first, and memory is not limited. A
+  throws. A script still running at its limit fails with `Cannot run: script exceeded its time
+  limit of <N> ms`, and no Lua call that catches errors (`pcall`, `xpcall`, `coroutine.resume`)
+  can catch it. The limit is soft: it is checked between Lua instructions and between SQLite VM
+  steps, so a runaway loop, coroutine or recursive query stops, but work outside both (an
+  expression `save`, a large XLSX load, a write, `export_csv`'s file write, a Lua string pattern
+  match) finishes first. Lua runs `__gc` finalizers, and the `__close` of a coroutine the limit
+  killed, with hooks off, so a loop inside one is not stopped, and memory is not limited. A
   timeout is an ordinary script error: `db:transaction(fn)` rolls back, and a transaction the
   script opened by hand stays open for the host. With a limit set, a tight pure-Lua loop runs about
   2x slower; with none, nothing changes.

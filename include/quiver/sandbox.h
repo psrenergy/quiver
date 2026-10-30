@@ -36,10 +36,12 @@ public:
     ///
     /// timeout_ms > 0 limits how long the script runs, in wall-clock milliseconds; 0 (the default)
     /// means no limit, and a negative value throws. The limit is soft: it is checked between Lua
-    /// instructions and between SQLite VM steps, so a single long C++ call (export_csv on a huge
-    /// collection, an expression save, a typed write) finishes first. A script past its limit fails
-    /// with "Cannot run: script exceeded its time limit of <N> ms", which pcall cannot catch. Memory
-    /// is not limited.
+    /// instructions and between SQLite VM steps, so a long read query is interrupted, but work outside
+    /// both (an expression save, an XLSX load, a typed write, export_csv's file write, a Lua string
+    /// pattern match) finishes first. Lua runs __gc finalizers, and the __close of a coroutine the
+    /// limit killed, with hooks off, so a loop inside one is not stopped. A script past its limit
+    /// fails with "Cannot run: script exceeded its time limit of <N> ms", which pcall cannot catch.
+    /// Memory is not limited.
     std::string run(const std::string& script, int64_t timeout_ms = 0);
 
 private:

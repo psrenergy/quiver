@@ -827,7 +827,8 @@ Implementation conventions in `src/sandbox/`:
   `load` is replaced by a wrapper that forces mode `"t"` whatever the caller passed, installed by a
   prelude chunk (`lua.load(...)`, called with `raise_if_past_deadline` as its one argument) in the
   constructor next to that nil-out (not through `set_function`, which the sync test would reject).
-  The same prelude wraps `pcall`/`xpcall` for the time limit (see the time-limit bullet below). The wrapper forwards `env` through `...`, so a missing env still means
+  The same prelude wraps `pcall`/`xpcall`, `coroutine.resume`/`close`/`wrap` and `load`'s result for
+  the time limit (see the time-limit bullet below). The `load` wrapper forwards `env` through `...`, so a missing env still means
   the global environment and an explicit `nil` stays `nil`. `Sandbox::run` loads the script
   itself with `sol::load_mode::text` as well. `string.dump` stays: its output is inert once both
   refuse binary chunks.
@@ -1038,24 +1039,44 @@ Implementation conventions in `src/sandbox/`:
   deadline the hook raises `Cannot run: script exceeded its time limit of <N> ms` with `lua_error`
   (never a C++ throw, it runs inside the VM), and the progress handler returns 1 so the statement
   fails with `SQLITE_INTERRUPT`. Coroutines copy the hook at `lua_newthread`; one created by an
-  earlier run without a limit has none (ceiling). **pcall cannot swallow it**: the prelude's
-  `pcall`/`xpcall` call `raise_if_past_deadline` after a failed call, which re-raises the stored
-  message once the deadline has passed, so the error climbs through every protected call (an
-  `xpcall` handler that itself loops is cut off by Lua's own error-in-handler limit). Results are
-  otherwise exactly the stock ones (`TimeLimitPcallKeepsStockResults`). **The progress handler never
-  interrupts a write** (a busy statement that is not `sqlite3_stmt_readonly`): SQLite answers an
-  interrupted write by rolling back the whole transaction, the host's included
-  (`Sandbox_TimeLimit.DoesNotInterruptWrite` fails without the check). `query_*` is read-only, so
-  every statement a script writes itself is still covered. **Cleanup**: `run()` calls
+  earlier run without a limit has none (ceiling). **No catching call can swallow it**: the prelude's
+  `pcall`/`xpcall`/`coroutine.resume`/`coroutine.close` call `raise_if_past_deadline` after a failed
+  call, and its `load` after a `nil` result (a reader function runs inside load's own protected
+  call), which re-raises the stored message once the deadline has passed, so the error climbs
+  through every one of them. An `xpcall` handler is wrapped to check first: when the hook raised,
+  Lua runs the handler with hooks off, so a looping handler is only stopped by that check, which
+  then fails inside the handler and ends in Lua's error-in-handler limit (`LUA_ERRERR`).
+  `coroutine.resume`/`close` and the function `coroutine.wrap` returns check before they start as
+  well: every coroutine has its own hook count, so a coroutine that finishes inside its 10000
+  instructions never fires the hook, and each level of nesting would multiply the work done past
+  the deadline by about a thousand (`TimeLimitStopsNestedCoroutines`). Results are otherwise exactly
+  the stock ones (`TimeLimitWrappersKeepStockResults`); like the `load` wrapper, an error a stock
+  function raises itself now carries the prelude's position. **The progress handler interrupts only
+  while a read is running**: never a busy statement that is not `sqlite3_stmt_readonly`, because
+  SQLite answers an interrupted write by rolling back the whole transaction, the host's included
+  (`Sandbox_TimeLimit.DoesNotInterruptWrite` fails without the check), and never when no statement
+  is busy, because SQLite calls the handler once more at `vdbe_return` after `OP_Halt`, when a
+  finished write is no longer busy and would be reported interrupted
+  (`DoesNotInterruptFinishedWrite`). `query_*` is read-only, so every statement a script writes
+  itself is still covered. `run()` points `TimeLimit::connection` at the borrowed `Database`'s
+  connection before each `start`, never once at construction: a move-assigned `Database` closes the
+  old one (`TimeLimitFollowsAMoveAssignedDatabase`). A lazy schema load can run inside a limited
+  run, so `Schema::load_from_database` throws when its `sqlite_master` scan ends on anything but
+  `SQLITE_DONE` instead of publishing a truncated table list. **Cleanup**: `run()` calls
   `TimeLimit::stop` right after `safe_script` (so `encode_return_json` and the host's next calls run
   unlimited), and `TimeLimitGuard`, declared after `GcGuard`, calls it again on the exception path;
   it is idempotent and runs before `GcGuard`'s collection, whose `__gc` finalizers must not be
   interrupted. A coroutine created during a limited run keeps its hook, which is a no-op once
   `limit_ms` is 0. When `timed_out` is set and the script failed, `run()` throws the timeout message
   itself instead of the `Failed to run Lua script:` wrapper. **Ceiling** (a `ponytail:` comment on
-  `TimeLimit::start`): the check runs between Lua instructions and SQLite VM steps, so one long C++
-  call — `export_csv` on a huge collection, an expression `save`, an XLSX load, a typed write — runs
-  to completion first, and memory is not capped. **Cost**: with a hook set, Lua 5.4 traps every
+  `TimeLimit::start`): the check runs between Lua instructions and SQLite VM steps, so a long read
+  (`query_*`, a bulk reader, `export_csv`'s SELECT) is interrupted, but work outside both — an
+  expression `save`, an XLSX load, a typed write, `export_csv`'s file write, a Lua string pattern
+  call (`string.find`/`match`/`gsub`) backtracking over a long input — runs to completion first.
+  Lua runs `__gc` finalizers (`GCTM`), and the `__close` of a coroutine the limit killed (that
+  thread keeps `allowhook == 0`), with hooks off, so a loop inside one is never stopped; refusing
+  `__gc` in `setmetatable` would not close it, since sol2 leaves usertype metatables writable.
+  Memory is not capped. **Cost**: with a hook set, Lua 5.4 traps every
   instruction into `luaG_traceexec`, so a tight pure-Lua arithmetic loop runs about 2x slower in
   Release; loops dominated by C calls (`string.format`, `db:` methods) pay a few percent. No limit,
   no cost. Every explicit callback into Lua from C++ (`db:transaction`/`db:dry_run`'s `fn`,

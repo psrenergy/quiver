@@ -22,9 +22,10 @@ namespace quiver::lua_internal {
 
 constexpr int kTimeLimitCheckEvery = 10000;
 
-// run()'s time limit, read by the Lua count hook, the prelude's pcall/xpcall and SQLite's progress
-// handler. limit_ms == 0 means no limit: between runs, and in a run without one.
+// run()'s time limit, read by the Lua count hook, the prelude's wrappers and SQLite's progress handler.
+// limit_ms == 0 means no limit: between runs, and in a run without one.
 struct TimeLimit {
+    // Set by run() before start(): the Database the Sandbox borrows can be move-assigned between runs.
     sqlite3* connection = nullptr;
     int64_t limit_ms = 0;
     std::chrono::steady_clock::time_point deadline;
@@ -56,9 +57,8 @@ std::string fold(std::string name) {
 // Its address keys the Sandbox's TimeLimit in the Lua registry.
 const char time_limit_key = 0;
 
-// The Lua half of the time limit: the count hook, and the check the prelude's pcall/xpcall run after a
-// failed call, so a protected call cannot swallow the error. lua_error, never a C++ throw: this runs
-// inside the Lua VM.
+// The Lua half of the time limit: the count hook, and the check the prelude's wrappers run (see the
+// prelude in Impl). lua_error, never a C++ throw: this runs inside the Lua VM.
 int raise_if_past_deadline(lua_State* L) {
     lua_rawgetp(L, LUA_REGISTRYINDEX, &time_limit_key);
     auto* limit = static_cast<TimeLimit*>(lua_touserdata(L, -1));
@@ -75,23 +75,29 @@ void time_limit_hook(lua_State* L, lua_Debug* /*ar*/) {
 }
 
 // The SQLite half: a runaway query (a recursive CTE through query_*) fails with SQLITE_INTERRUPT. It
-// never interrupts a write, because SQLite answers an interrupted write by rolling back the whole
-// transaction, which may be the host's; query_* is read-only, so every statement a script writes itself
-// is still covered.
+// interrupts only while a read is running. Never a write, because SQLite answers an interrupted write by
+// rolling back the whole transaction, which may be the host's; query_* is read-only, so every statement
+// a script writes itself is still covered. Never a halted statement either: SQLite calls the handler
+// once more after OP_Halt, when the finished write is no longer busy, and would report it interrupted.
 int interrupt_if_past_deadline(void* data) {
     auto& limit = *static_cast<TimeLimit*>(data);
     if (!limit.exceeded()) {
         return 0;
     }
+    bool reading = false;
     for (
         auto* stmt = sqlite3_next_stmt(limit.connection, nullptr); stmt != nullptr;
         stmt = sqlite3_next_stmt(limit.connection, stmt)
     ) {
-        if (sqlite3_stmt_busy(stmt) != 0 && sqlite3_stmt_readonly(stmt) == 0) {
+        if (sqlite3_stmt_busy(stmt) == 0) {
+            continue;
+        }
+        if (sqlite3_stmt_readonly(stmt) == 0) {
             return 0;
         }
+        reading = true;
     }
-    return 1;
+    return reading ? 1 : 0;
 }
 
 }  // namespace
@@ -106,11 +112,13 @@ bool TimeLimit::exceeded() {
     return timed_out;
 }
 
-// ponytail: a soft limit, checked every kTimeLimitCheckEvery Lua instructions and SQLite VM steps. A
-// single long C++ call (export_csv on a huge collection, an expression save over a large .qvr, an XLSX
-// load, a typed write) runs to completion before the limit is seen; a coroutine created by an earlier
-// run() without a limit carries no hook; memory stays uncapped. A hard limit means running the sandbox
-// in a process the host can kill.
+// ponytail: a soft limit, checked every kTimeLimitCheckEvery Lua instructions and SQLite VM steps. A long
+// read query is interrupted, but work outside both runs to completion before the limit is seen: an
+// expression save over a large .qvr, an XLSX load, a typed write, export_csv's file write, a Lua string
+// pattern call (string.find/match/gsub) backtracking over a long input. Lua runs __gc finalizers, and the
+// __close of a coroutine the limit killed, with hooks off, so a loop inside one is not stopped. A
+// coroutine created by an earlier run() without a limit carries no hook; memory stays uncapped. A hard
+// limit means running the sandbox in a process the host can kill.
 void TimeLimit::start(lua_State* L, int64_t timeout_ms) {
     timed_out = false;
     limit_ms = timeout_ms;
@@ -266,19 +274,40 @@ struct Sandbox::Impl {
         // verify bytecode, so a crafted binary chunk could read and write host memory. The wrapper
         // forces mode "t" whatever the caller passed; `...` forwards env only when one was given,
         // because stock load tells a missing env (global environment) from an explicit nil.
-        // pcall/xpcall re-raise a failed call once the time limit has passed, so a script cannot
-        // swallow the timeout; otherwise they return exactly what the stock ones do.
+        // Every Lua call that catches an error re-raises once the time limit has passed, so a script
+        // cannot swallow the timeout: pcall, xpcall, coroutine.resume/close, and load, whose reader
+        // function runs in a protected call. An xpcall handler checks first, because Lua runs it with
+        // hooks off when the hook raised. A resume checks before it starts too: every coroutine has its
+        // own hook count, so one that finishes inside it never fires the hook, and nested ones would
+        // multiply the work done past the deadline. Otherwise they return exactly what the stock ones do.
         lua["dofile"] = sol::lua_nil;
         lua["loadfile"] = sol::lua_nil;
         sol::protected_function prelude = lua.load(R"lua(
-            local load, pcall, xpcall, raise_if_past_deadline = load, pcall, xpcall, ...
-            _G.load = function(chunk, chunkname, _, ...) return load(chunk, chunkname, "t", ...) end
+            local load, pcall, xpcall, type, raise_if_past_deadline = load, pcall, xpcall, type, ...
+            local resume, close, wrap = coroutine.resume, coroutine.close, coroutine.wrap
             local function checked(ok, ...)
                 if not ok then raise_if_past_deadline() end
                 return ok, ...
             end
+            local function checked_load(f, ...)
+                if f == nil then raise_if_past_deadline() end
+                return f, ...
+            end
+            _G.load = function(chunk, chunkname, _, ...) return checked_load(load(chunk, chunkname, "t", ...)) end
             _G.pcall = function(...) return checked(pcall(...)) end
-            _G.xpcall = function(...) return checked(xpcall(...)) end
+            _G.xpcall = function(f, h, ...)
+                if type(h) == "function" then
+                    local handler = h
+                    h = function(e) raise_if_past_deadline() return handler(e) end
+                end
+                return checked(xpcall(f, h, ...))
+            end
+            coroutine.resume = function(...) raise_if_past_deadline() return checked(resume(...)) end
+            coroutine.close = function(...) raise_if_past_deadline() return checked(close(...)) end
+            coroutine.wrap = function(f)
+                local w = wrap(f)
+                return function(...) raise_if_past_deadline() return w(...) end
+            end
         )lua");
         prelude(&lua_internal::raise_if_past_deadline);
         sol::table ns = lua.create_named_table("quiver");
@@ -308,7 +337,6 @@ Sandbox::Sandbox(Database& db) : impl_(std::make_unique<Impl>(db)) {
     namespace fs = std::filesystem;
     auto& handles = impl_->handles;
     handles.read_only = db.impl_->read_only;
-    impl_->time_limit.connection = db.impl_->db;
     // SQLite's absolute name for the file, fixed at open; db.path() may be relative to a working
     // directory that has since changed. Empty for an in-memory database.
     const char* file = sqlite3_db_filename(db.impl_->db, "main");
@@ -377,6 +405,7 @@ std::string Sandbox::run(const std::string& script, int64_t timeout_ms) {
 
     // Text only, like load(): a precompiled chunk passed as the script would skip the same check.
     auto& lua = impl_->lua;
+    impl_->time_limit.connection = impl_->db.impl_->db;
     impl_->time_limit.start(lua.lua_state(), timeout_ms);
     auto result =
         lua.safe_script(script, sol::script_pass_on_error, sol::detail::default_chunk_name(), sol::load_mode::text);

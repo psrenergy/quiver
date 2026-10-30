@@ -133,10 +133,12 @@ midnight.
 - **Time limit, and what the sandbox does not limit.** The sandbox controls which files a script
   can touch and which standard libraries exist. The host may also give \`run()\` a time limit; a
   script still running past it fails with \`Cannot run: script exceeded its time limit of <N> ms\`,
-  and \`pcall\`/\`xpcall\` cannot catch that. The limit is checked between Lua instructions and SQL
-  query steps, so a single long library call (\`db:export_csv\` on a huge collection, a large
-  expression \`save\`, an XLSX load) finishes before it is seen. Without a limit,
-  \`while true do end\` runs until the host stops it. There is no memory cap. Globals persist
+  and \`pcall\`/\`xpcall\`/\`coroutine.resume\` cannot catch that. The limit is checked between Lua
+  instructions and SQL query steps, so a long query is stopped, but a single long library call (a
+  large expression \`save\`, an XLSX load, a write) or a string pattern call
+  (\`string.find\`/\`match\`/\`gsub\`) backtracking over a long input finishes before it is seen, and
+  a loop inside a \`__gc\` finalizer is never stopped. Without a limit, \`while true do end\` runs
+  until the host stops it. There is no memory cap. Globals persist
   across \`run()\` calls on the same Sandbox, so a global one script sets is visible to the next;
   use \`local\`.
 - **Output.** A script can \`return\` one value and the host receives it as JSON — prefer this over

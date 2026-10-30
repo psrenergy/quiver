@@ -9,14 +9,17 @@ namespace {
 constexpr int64_t kLimitMs = 100;
 const std::string kTimeoutMessage = "Cannot run: script exceeded its time limit of 100 ms";
 
-// Exactly the timeout message: no "Failed to run Lua script" wrapper, no Lua position prefix.
+// Exactly the timeout message: no "Failed to run Lua script" wrapper, no Lua position prefix. Well under
+// 2 s, because a script that only defers the error (a fresh hook count per coroutine) still ends in it.
 void expect_timeout(quiver::Sandbox& sandbox, const std::string& script) {
+    const auto start = std::chrono::steady_clock::now();
     try {
         sandbox.run(script, kLimitMs);
         FAIL() << "expected script to time out: " << script;
     } catch (const std::exception& e) {
         EXPECT_EQ(std::string(e.what()), kTimeoutMessage);
     }
+    EXPECT_LT(std::chrono::steady_clock::now() - start, std::chrono::milliseconds(2000)) << script;
 }
 
 // More than kTimeLimitCheckEvery (10000) VM steps, so a progress handler left installed would fire.
@@ -29,9 +32,7 @@ TEST_F(SandboxTest, TimeLimitStopsInfiniteLoop) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     quiver::Sandbox sandbox(db);
 
-    const auto start = std::chrono::steady_clock::now();
     expect_timeout(sandbox, "while true do end");
-    EXPECT_LT(std::chrono::steady_clock::now() - start, std::chrono::milliseconds(2000));
 }
 
 TEST_F(SandboxTest, TimeLimitCannotBeSwallowedByPcall) {
@@ -48,7 +49,23 @@ TEST_F(SandboxTest, TimeLimitCannotBeSwallowedByXpcall) {
     expect_timeout(sandbox, "while true do xpcall(function() while true do end end, function(e) return e end) end");
 }
 
-TEST_F(SandboxTest, TimeLimitPcallKeepsStockResults) {
+// Lua calls the handler with hooks off when the hook raised, so only the prelude's check stops it.
+TEST_F(SandboxTest, TimeLimitStopsLoopingXpcallHandler) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    quiver::Sandbox sandbox(db);
+
+    expect_timeout(sandbox, "xpcall(function() while true do end end, function() while true do end end)");
+}
+
+// load runs a reader function inside its own protected call and returns nil, msg.
+TEST_F(SandboxTest, TimeLimitCannotBeSwallowedByLoadReader) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    quiver::Sandbox sandbox(db);
+
+    expect_timeout(sandbox, "while true do load(function() while true do end end) end");
+}
+
+TEST_F(SandboxTest, TimeLimitWrappersKeepStockResults) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     quiver::Sandbox sandbox(db);
 
@@ -58,11 +75,17 @@ TEST_F(SandboxTest, TimeLimitPcallKeepsStockResults) {
                 local a = table.pack(pcall(function(...) return ... end, 1, nil, 3, nil))
                 local b = table.pack(pcall(error, "boom", 0))
                 local c = table.pack(xpcall(function() error("x", 0) end, function(e) return e .. "!" end))
-                return { a.n, a[1], a[4], b.n, b[1], b[2], c.n, c[2] }
+                local d = table.pack(coroutine.resume(coroutine.create(function(...) return ... end), 1, nil, 3))
+                local e = table.pack(load("return +"))
+                local f = table.pack(load("return 7"))
+                local g = coroutine.wrap(function(x) local y = coroutine.yield(x + 1) return y * 2 end)
+                local h = table.pack(coroutine.close(coroutine.create(function() end)))
+                return { a.n, a[1], a[4], b.n, b[1], b[2], c.n, c[2], d.n, d[4], e.n, e[1] == nil, f.n, f[1](),
+                         g(1), g(5), h.n, h[1] }
             )",
             kLimitMs
         ),
-        R"([5,true,3,2,false,"boom",2,"x!"])"
+        R"([5,true,3,2,false,"boom",2,"x!",4,3,2,true,1,7,2,10,1,true])"
     );
 }
 
@@ -74,6 +97,29 @@ TEST_F(SandboxTest, TimeLimitStopsCoroutine) {
         while true do
             coroutine.resume(coroutine.create(function() while true do end end))
         end
+    )");
+}
+
+// Every coroutine starts with a fresh hook count, so a leaf that finishes inside it never fires the hook,
+// and main fires its own only after about a thousand mids: minutes, without the check on every resume.
+TEST_F(SandboxTest, TimeLimitStopsNestedCoroutines) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    quiver::Sandbox sandbox(db);
+
+    expect_timeout(sandbox, R"(
+        local function leaf() for i = 1, 4000 do end end
+        local function mid() for i = 1, 1000 do coroutine.resume(coroutine.create(leaf)) end end
+        while true do coroutine.resume(coroutine.create(mid)) end
+    )");
+    expect_timeout(sandbox, R"(
+        local function leaf() for i = 1, 4000 do end end
+        local function mid() for i = 1, 1000 do coroutine.wrap(leaf)() end end
+        while true do coroutine.wrap(mid)() end
+    )");
+    expect_timeout(sandbox, R"(
+        local function inner() while true do end end
+        local function mid() while true do coroutine.resume(coroutine.create(inner)) end end
+        while true do coroutine.resume(coroutine.create(mid)) end
     )");
 }
 
@@ -132,6 +178,19 @@ TEST_F(SandboxTest, TimeLimitIsRemovedAfterTimeout) {
     EXPECT_EQ(sandbox.run("return db:query_integer('" + kLongQuery + "')"), "100000");
 }
 
+// The progress handler follows the Database the Sandbox borrows, not the connection it had at construction.
+TEST_F(SandboxTest, TimeLimitFollowsAMoveAssignedDatabase) {
+    auto db = quiver::Database::from_schema(":memory:", collections_schema);
+    quiver::Sandbox sandbox(db);
+    db = quiver::Database::from_schema(":memory:", collections_schema);
+
+    expect_timeout(
+        sandbox,
+        "return db:query_integer('WITH RECURSIVE c(x) AS (SELECT 1 UNION ALL SELECT x + 1 FROM c) SELECT count(*) FROM "
+        "c')"
+    );
+}
+
 TEST_F(SandboxTest, TimeLimitNegativeIsRejected) {
     auto db = quiver::Database::from_schema(":memory:", collections_schema);
     quiver::Sandbox sandbox(db);
@@ -178,4 +237,29 @@ TEST_F(Sandbox_TimeLimit, DoesNotInterruptWrite) {
     EXPECT_TRUE(db.read_element_ids("Collection").empty());
     db.rollback();
     EXPECT_EQ(db.read_element_ids("Collection").size(), 1);
+}
+
+// SQLite runs the progress handler once more after a statement halts, when the finished write is no
+// longer busy. Without a loop, the CHECK's 5000-value IN list is about 15000 VM steps with no check in
+// between, so that last call is the first one, and it must not report the completed UPDATE as interrupted.
+TEST_F(Sandbox_TimeLimit, DoesNotInterruptFinishedWrite) {
+    std::string values;
+    for (int i = 1; i <= 5000; ++i) {
+        values += (i == 1 ? "" : ",") + std::to_string(-i);
+    }
+    const auto schema = (sandbox_path / "schema.sql").string();
+    std::ofstream(schema) << "CREATE TABLE Configuration (id INTEGER PRIMARY KEY, label TEXT UNIQUE NOT NULL) STRICT;\n"
+                             "CREATE TABLE Items (id INTEGER PRIMARY KEY AUTOINCREMENT, label TEXT UNIQUE NOT NULL, "
+                             "value INTEGER CHECK (value NOT IN ("
+                          << values << "))) STRICT;\n";
+    auto db = quiver::Database::from_schema(db_path(), schema);
+    db.create_element("Items", quiver::Element().set("label", "Item 1").set("value", int64_t{1}));
+    quiver::Sandbox sandbox(db);
+
+    // string.rep spends far more than 1 ms in one C call, so the deadline has passed when the UPDATE runs.
+    EXPECT_EQ(
+        sandbox.run(R"(local s = string.rep("x", 2e7) db:update_element("Items", 1, { value = 5 }) return "done")", 1),
+        R"("done")"
+    );
+    EXPECT_EQ(db.read_scalar_integer_by_id("Items", "value", 1), 5);
 }
