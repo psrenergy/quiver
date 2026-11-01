@@ -22,6 +22,9 @@ pubspec.yaml      # Version must match CMakeLists.txt (checked by scripts/assert
 - **Collection reports for agents**: `describeCollection` returns structure, UI metadata (including
   tooltips), scalar statistics and group coverage. `describe` appends these same complete reports
   after its database/version header; both forward the C string without binding-side formatting.
+- **Sandbox prints use the database logger.** Each `print()` emits one flushed INFO entry
+  with normal Lua conversions and tabs. Writable databases use the existing `quiver_database.log`;
+  in-memory and read-only databases use only the console. `consoleLevel` still controls console output.
 - **Regenerate after C API changes**: `generator/generator.bat` rewrites
   `lib/src/ffi/bindings.dart` from the `ffigen:` block in **pubspec.yaml** (plain
   `dart run ffigen` reads it; there is no separate `ffigen.yaml`).

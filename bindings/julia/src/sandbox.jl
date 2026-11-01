@@ -5,6 +5,13 @@ mutable struct Sandbox
     db::Database
 end
 
+"""
+    Sandbox(db::Database)
+
+Lua `print()` writes and flushes an INFO entry through the database logger. Writable
+databases use `quiver_database.log`; in-memory and read-only databases use only the console.
+Console output follows the database's `console_level` setting.
+"""
 function Sandbox(db::Database)
     out_sandbox = Ref{Ptr{C.quiver_sandbox}}(C_NULL)
     check(C.quiver_sandbox_new(db.ptr, out_sandbox))

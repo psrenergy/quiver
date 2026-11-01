@@ -27,6 +27,9 @@ Project.toml      # Deps: Artifacts, CEnum, Dates, Libdl; julia 1.11 compat
   after its database/version header; both forward the C string without binding-side formatting.
 - **Sandbox array types are handled in C++.** `test/test_sandbox.jl` checks mixed Lua REAL
   arrays on create/update; Julia passes the script through without converting its cells.
+- **Sandbox prints use the database logger.** Each `print()` emits one flushed INFO entry
+  with normal Lua conversions and tabs. Writable databases use the existing `quiver_database.log`;
+  in-memory and read-only databases use only the console. `console_level` still controls console output.
 - **Regenerate after C API changes**: `generator/generator.bat` rewrites `src/c_api.jl`
   (`prologue.jl`/`epilogue.jl` are spliced around the generated body).
 - **Always `GC.@preserve`**: refs produced by `marshal_params` (and any `Ref`s passed as pointers)

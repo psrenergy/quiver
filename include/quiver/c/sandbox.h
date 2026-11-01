@@ -21,6 +21,8 @@ QUIVER_C_API quiver_error_t quiver_sandbox_free(quiver_sandbox_t* sandbox);
 // out_result receives the script's return value encoded as JSON, or an empty string if the script
 // returned nothing; it is set to NULL on failure. The caller frees it with
 // quiver_database_free_string.
+// print() writes an INFO entry to the database's logger and flushes it immediately,
+// following the database's file logging and console_level settings instead of process stdout.
 // To execute a script without keeping its writes, wrap this call in
 // quiver_database_begin_dry_run / quiver_database_end_dry_run.
 // timeout_ms > 0 limits how long the script runs, in wall-clock milliseconds; 0 means no limit, and

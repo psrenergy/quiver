@@ -142,8 +142,12 @@ midnight.
   across \`run()\` calls on the same Sandbox, so a global one script sets is visible to the next;
   use \`local\`.
 - **Output.** A script can \`return\` one value and the host receives it as JSON — prefer this over
-  \`print()\` when you need structured data back (\`print()\` writes to the host process's standard
-  output, which the library does not capture; whether you see it depends on the host). Only the
+  \`print()\` when you need structured data back. Each completed \`print()\` writes and flushes one
+  INFO entry through the database logger: normal Lua string conversion, tab-separated arguments,
+  and the logger's prefix and newline. It follows existing database logging settings:
+  \`quiver_database.log\` plus console for writable file databases, console only for read-only or
+  in-memory databases. The host's console level can suppress these INFO messages; prints do not
+  go to stdout. Only the
   **first** returned value is encoded. Arrays are 1-indexed. Iterate with \`ipairs\` only where no
   NULL can appear: a read of a nullable column (a bulk scalar read, a vector/set inner list, a
   time-series value column, \`db:read_time_series_row\`) has \`nil\` holes, and \`ipairs\` stops at

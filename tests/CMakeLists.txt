@@ -42,6 +42,7 @@ add_executable(quiver_tests
     test_sandbox_fk.cpp
     test_sandbox_lifecycle.cpp
     test_sandbox_migrations.cpp
+    test_sandbox_output.cpp
     test_sandbox_path.cpp
     test_sandbox_query.cpp
     test_sandbox_read_csv.cpp

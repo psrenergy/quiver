@@ -203,6 +203,10 @@ The describe methods give agents the schema, attribute meanings and data coverag
   many milliseconds (default 0, no limit)
 - `close()` -- Close the Sandbox
 
+Lua `print()` writes and flushes an INFO entry through the database logger, using its existing
+`quiver_database.log` and console settings. Read-only and in-memory databases use console logging
+only; `LOG_LEVEL_OFF` suppresses console output. Script return values remain separate JSON.
+
 ## Types
 
 Exported types available for TypeScript consumers:

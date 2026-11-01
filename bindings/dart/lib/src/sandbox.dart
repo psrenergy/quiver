@@ -27,6 +27,10 @@ class Sandbox {
   bool _isDisposed = false;
 
   /// Creates a new Sandbox for the given database.
+  ///
+  /// Lua `print()` writes and flushes an INFO entry through the database logger.
+  /// Writable databases use `quiver_database.log`; in-memory and read-only
+  /// databases use only the console, respecting the database's `consoleLevel`.
   Sandbox(Database db) : _ptr = nullptr {
     final arena = Arena();
     try {

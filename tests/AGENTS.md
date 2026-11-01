@@ -43,7 +43,10 @@ C++ core and C API suites live here; binding suites live in each binding's `test
 - Lua: `test_sandbox_*.cpp` — per-area split mirroring the database files (`_create`, `_read`,
   `_update`, `_delete`, `_query`, `_describe`, `_return`, `_time_series`, `_transaction`,
   `_errors`, `_csv_export`, `_csv_import`, `_all_types`, `_fk`, `_lifecycle`, `_migrations`,
-  `_timeout`). `_return` covers the JSON
+  `_timeout`, `_output`). `_output` checks `print()` through the database logger: INFO formatting,
+  immediate flushing before errors/timeouts, console filtering without stdout writes, read-only
+  log preservation, Sandbox moves/finalizers, and using the current logger after Database move assignment.
+  `_return` covers the JSON
   encoding of a script's return value; `_timeout` covers `run`'s time limit (a loop, `pcall`/`xpcall`
   and a looping handler, `load`'s reader, single and nested coroutines, a recursive CTE, a
   `db:transaction`/`read_csv_stream` callback, a write that must not be interrupted, running or

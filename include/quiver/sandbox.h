@@ -28,6 +28,8 @@ public:
     ///
     /// Returns the script's return value encoded as JSON, or an empty string if the script
     /// returned nothing. Only the first returned value is encoded.
+    /// print() writes an INFO entry to the database's logger and flushes it immediately.
+    /// It follows the database's file logging and console_level settings, not process stdout.
     ///
     /// To execute a script without keeping its writes, wrap the call in
     /// Database::begin_dry_run / Database::end_dry_run. A transaction or dry run open when run()
