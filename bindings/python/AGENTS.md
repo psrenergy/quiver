@@ -120,6 +120,9 @@ ruff.toml         # Lint/format config; lint is isort only (select = ["I"])
   straight through; the C API validates it and raises the time-limit error.
   `tests/test_sandbox.py` checks mixed Lua REAL arrays on create/update; cell conversion and
   schema validation stay in C++.
+- **Lua `print()` uses the database's current logger.** Each completed call logs and flushes one
+  INFO entry with tab-separated arguments, following existing file/console policy. No capture API,
+  log-path option or wrapper-side formatting; script results remain JSON.
 - **`Sandbox.__init__` starts with `_closed = True` and sets it to `False` only after `_ptr` is
   assigned.** Python runs `__del__` even when `__init__` raised, so a runner whose construction
   failed (e.g. `Sandbox(closed_db)`, which the C API rejects with `Null argument: db`) must

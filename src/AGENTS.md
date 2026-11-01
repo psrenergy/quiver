@@ -680,6 +680,14 @@ impl_->logger->debug("Opening database: {}", path);
 
 ## Sandbox
 
+`Sandbox::Impl` installs a small Lua `print()` wrapper before user scripts. It captures the
+original `tostring`/`select`/`table.concat`, converts and joins arguments with tabs, then emits
+one INFO entry through the database's logger and flushes it. Conversion stays in Lua so errors
+and timeouts unwind normally; completed prints survive a later failure. The callback captures
+the Database by reference and reads its current logger on each call, including after move-assignment.
+Existing logger formatting, sinks, levels and error handling apply. No extra log, output buffer,
+constructor option or getter exists; read-only/in-memory databases retain console-only logging.
+
 Executes Lua scripts with database access (sol2). The `db` userdata exposes the same API as the
 other bindings (root cross-layer tables):
 ```cpp

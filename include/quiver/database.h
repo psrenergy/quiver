@@ -359,8 +359,8 @@ private:
     struct Impl;
     std::unique_ptr<Impl> impl_;
 
-    // Reads whether the handle was opened read-only, which its Lua file sandbox enforces; a public
-    // accessor would have to be bound in every layer for a policy that lives only in the Sandbox.
+    // Shares the logger and reads the read-only flag for Lua file policy, without public accessors
+    // that would have to be bound in every layer just for the Sandbox.
     friend class Sandbox;
 
     // Internal methods

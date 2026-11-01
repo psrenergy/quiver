@@ -9,6 +9,14 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 ### Changed
 
+- **BREAKING — Lua `print()` uses the database's existing logger instead of stdout.** Each
+  completed print is an INFO entry, flushed immediately to the logger's existing destinations.
+  Writable databases share `quiver_database.log`; read-only/in-memory databases keep console-only
+  logging. `console_level` filters console messages, and `run()` still returns JSON independently.
+
+  *Adapt:* use INFO console verbosity (`quiver_cli --log-level info`) to see prints on stderr,
+  or read the existing database log. Use a Lua return value for structured results on stdout.
+
 - **BREAKING — a Lua script cannot end a transaction or dry run its host opened.** A scope that is
   open when `Sandbox::run` starts belongs to the host, including one an earlier `run()` left open.
   Inside it, the script's `db:commit()` and `db:rollback()` (under a host transaction) and
@@ -128,8 +136,8 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 ### Fixed
 
-- The Lua reference (`SANDBOX_API_REFERENCE`) said `print()` output "is captured"; it goes to the
-  host process's standard output, which the library does not capture.
+- The Lua reference (`SANDBOX_API_REFERENCE`) describes the database logger's destinations and
+  console filtering for `print()`.
 
 ## [0.13.5] — released
 

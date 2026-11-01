@@ -108,6 +108,9 @@ and CSV alike).
 
 ## Memory Management
 
+`quiver_sandbox_run` sends Lua prints through the database's logger; only the JSON return value
+is allocated as `out_result`. There is no separate print-output allocation or getter.
+
 `new`/`delete`. A handle has its own close/free; a plain string, string array or float array from
 **any** entity (database, element, sandbox, binary file, binary metadata) is freed with the shared
 `quiver_database_free_*` deallocator — there is no per-entity copy:

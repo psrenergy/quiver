@@ -894,6 +894,12 @@ takes every expression operation and method in C++, Lua and Julia; the C API con
 `quiver_expression_from_file()`. Full reference: `src/AGENTS.md`.
 
 ### Sandbox Class
+
+`print()` writes one INFO entry to the database's current logger and flushes it immediately.
+Arguments use Lua's `tostring` and tab separators; the logger supplies its usual prefix/newline.
+Writable databases use their existing `quiver_database.log`; read-only/in-memory databases use
+only the console, filtered by `console_level`. There is no separate sandbox log or output API.
+The CLI uses the same policy (`--log-level info` shows prints on stderr); stdout holds JSON results.
 Executes Lua scripts against a database; the `db` userdata exposes the same API surface
 (see cross-layer tables below). `run(script, timeout_ms = 0)` returns the script's return value
 encoded as **JSON** (empty string if it returned nothing) — every binding passes that string

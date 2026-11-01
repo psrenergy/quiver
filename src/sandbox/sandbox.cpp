@@ -16,6 +16,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace quiver::lua_internal {
@@ -268,6 +269,22 @@ struct Sandbox::Impl {
             sol::lib::coroutine,
             sol::lib::utf8
         );
+        // Keep string conversion in Lua so __tostring errors and timeouts unwind normally.
+        sol::protected_function install_print = lua.load(R"lua(
+            local tostring, select, concat, log = tostring, select, table.concat, ...
+            print = function(...)
+                local parts = {}
+                for index = 1, select('#', ...) do
+                    parts[index] = tostring(select(index, ...))
+                end
+                log(concat(parts, '\t'))
+            end
+        )lua");
+        install_print([&database](std::string_view message) {
+            // Read the current logger: the host may move-assign the Database between runs.
+            database.impl_->logger->info("{}", message);
+            database.impl_->logger->flush();
+        });
         lua_pushlightuserdata(lua.lua_state(), &time_limit);
         lua_rawsetp(lua.lua_state(), LUA_REGISTRYINDEX, &lua_internal::time_limit_key);
         // Scripts may not load Lua source from disk, and load() takes text chunks only: Lua does not
