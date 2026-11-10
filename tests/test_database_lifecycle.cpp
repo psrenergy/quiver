@@ -578,6 +578,62 @@ TEST_F(DatabaseLogTest, ExistingHardlinkToDatabaseCannotBeTruncated) {
     EXPECT_EQ(read_log_file(database), original);
 }
 
+TEST_F(DatabaseLogTest, DanglingSymlinksCannotCreateDatabaseOrJournalFiles) {
+    for (const auto* suffix : {"", "-journal", "-wal", "-shm"}) {
+        const fs::path target(database.string() + suffix);
+        for (bool directory_link : {false, true}) {
+            SCOPED_TRACE(std::string(suffix) + (directory_link ? " directory" : " file"));
+            const auto alias = directory / "alias";
+            std::error_code ec;
+            if (directory_link) {
+                fs::create_directory_symlink(target, alias, ec);
+            } else {
+                fs::create_symlink(target, alias, ec);
+            }
+            if (ec) {
+                GTEST_SKIP() << "cannot create a symlink here: " << ec.message();
+            }
+            const auto destination = directory_link ? alias / "nested" / "run.log" : alias;
+            try {
+                quiver::Database db(
+                    database.string(),
+                    {.console_level = quiver::LogLevel::Off, .log_path = destination.string()}
+                );
+                FAIL() << "Expected dangling log symlink to fail";
+            } catch (const std::runtime_error& error) {
+                EXPECT_NE(std::string(error.what()).find("contains a dangling symbolic link"), std::string::npos)
+                    << error.what();
+            }
+            EXPECT_FALSE(fs::exists(database));
+            EXPECT_FALSE(fs::exists(target));
+            fs::remove(alias);
+        }
+    }
+}
+
+TEST_F(DatabaseLogTest, DanglingDatabaseAndJournalSymlinksCannotHideTheLogDestination) {
+    const auto destination = directory / "run.log";
+    for (const auto* suffix : {"", "-journal", "-wal", "-shm"}) {
+        SCOPED_TRACE(suffix);
+        const fs::path alias(database.string() + suffix);
+        std::error_code ec;
+        fs::create_symlink(destination, alias, ec);
+        if (ec) {
+            GTEST_SKIP() << "cannot create a symlink here: " << ec.message();
+        }
+        EXPECT_THROW(
+            quiver::Database(
+                database.string(),
+                {.console_level = quiver::LogLevel::Off, .log_path = destination.string()}
+            ),
+            std::runtime_error
+        );
+        EXPECT_FALSE(fs::exists(database));
+        EXPECT_FALSE(fs::exists(destination));
+        fs::remove(alias);
+    }
+}
+
 TEST_F(DatabaseLogTest, SymlinkDestinationsAndDatabaseAliasesAreProtected) {
     {
         auto db = quiver::Database::from_schema(

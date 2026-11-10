@@ -105,6 +105,20 @@ spdlog::level::level_enum to_spdlog_level(quiver::LogLevel level) {
 // catch symlinks; equivalent also catches an existing hardlink to the database or a journal.
 void validate_log_path(const std::filesystem::path& log_path, const std::string& db_path) {
     namespace fs = std::filesystem;
+    const auto named_log = fs::absolute(log_path);
+    // weakly_canonical cannot resolve a symlink whose target does not exist yet.
+    const auto reject_dangling_links = [](const fs::path& path) {
+        for (auto part = path; !part.empty(); part = part.parent_path()) {
+            std::error_code ignored;
+            if (fs::is_symlink(part, ignored) && !fs::exists(part)) {
+                throw std::runtime_error("database, journal or log path contains a dangling symbolic link");
+            }
+            if (part == part.root_path()) {
+                break;
+            }
+        }
+    };
+    reject_dangling_links(named_log);
     if (db_path == ":memory:") {
         return;
     }
@@ -116,10 +130,10 @@ void validate_log_path(const std::filesystem::path& log_path, const std::string&
         return result;
     };
     const auto named_db = fs::absolute(db_path);
-    const auto named_log = fs::absolute(log_path);
     for (const auto& database : {named_db, fs::weakly_canonical(named_db)}) {
         for (const auto* suffix : {"", "-journal", "-wal", "-shm"}) {
             const fs::path protected_path(database.string() + suffix);
+            reject_dangling_links(protected_path);
             const auto protected_key = key(protected_path);
             std::error_code ignored;
             bool collision = fs::equivalent(named_log, protected_path, ignored);

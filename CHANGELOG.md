@@ -90,8 +90,8 @@ callers to change something are prefixed **BREAKING** and say what to do.
   Relative paths start at the database directory (`:memory:` uses CWD). An explicit path enables
   file logging for read-only/in-memory databases too; a log-open failure aborts opening, and
   `from_schema` preserves an existing database on that failure. Files are truncated on open and
-  parent directories are created. Database and journal paths are refused before files are
-  touched. Empty/unset paths keep the existing defaults and console fallback.
+  parent directories are created. Log setup rejects database/journal destinations and dangling
+  symlinks in either path before writing. Empty/unset paths keep the existing defaults and console fallback.
 
 - **`Sandbox::run` takes an optional time limit.** `run(script, timeout_ms)` in C++,
   `quiver_sandbox_run(sandbox, script, timeout_ms, out_result)` in the C API, and an optional

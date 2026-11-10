@@ -434,6 +434,8 @@ spdlog creates missing parent directories. Explicit failures throw `Failed to op
 '<destination>': <cause>`; default sink failures retain the console fallback. Before either
 sink can create directories or truncate, `validate_log_path` refuses the database and its
 `-journal`/`-wal`/`-shm`, including parent directory components, symlinks and existing hardlinks.
+Dangling symlinks in the log, database or journal paths are rejected before opening a log, since
+canonicalization cannot resolve missing targets; ordinary missing log files/directories remain supported.
 It checks both named and canonical database paths, using `utils::filesystem_name` for the same
 case-folded/Win32 stream/trailing-dot aliases as the sandbox. The CLI exposes `--log-path`:
 ```cpp
