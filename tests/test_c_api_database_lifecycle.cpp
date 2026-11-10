@@ -5,6 +5,9 @@
 #include <quiver/c/element.h>
 
 #include <filesystem>
+#include <fstream>
+#include <iterator>
+#include <string>
 
 namespace fs = std::filesystem;
 
@@ -153,6 +156,7 @@ TEST_F(TempFileFixture, DefaultOptions) {
 
     EXPECT_EQ(options.read_only, 0);
     EXPECT_EQ(options.console_level, QUIVER_LOG_INFO);
+    EXPECT_EQ(options.log_path, nullptr);
 }
 
 TEST_F(TempFileFixture, OpenWithNullOptions) {
@@ -390,4 +394,101 @@ TEST_F(TempFileFixture, FromSchemaValidPath) {
     EXPECT_EQ(healthy, 1);
 
     quiver_database_close(db);
+}
+
+namespace {
+
+std::string read_log_file(const fs::path& path) {
+    std::ifstream file(path, std::ios::binary);
+    return {std::istreambuf_iterator<char>(file), {}};
+}
+
+class CApiDatabaseLogTest : public ::testing::Test {
+protected:
+    void SetUp() override {
+        directory = fs::temp_directory_path() /
+                    ("quiver_c_log_" + std::string(::testing::UnitTest::GetInstance()->current_test_info()->name()));
+        fs::create_directories(directory);
+    }
+    void TearDown() override {
+        fs::remove_all(directory);
+    }
+    fs::path directory;
+};
+
+}  // namespace
+
+TEST_F(CApiDatabaseLogTest, EveryFactoryCopiesTheBorrowedLogPath) {
+    for (int factory = 0; factory < 3; ++factory) {
+        const auto database = (directory / ("factory" + std::to_string(factory) + ".db")).string();
+        const auto filename = "logs/factory" + std::to_string(factory) + ".log";
+        quiver_database_t* db = nullptr;
+        {
+            std::string borrowed_path = filename;
+            auto options = quiver::test::quiet_options();
+            options.log_path = borrowed_path.c_str();
+            const auto result =
+                factory == 0 ? quiver_database_open(database.c_str(), &options, &db)
+                : factory == 1
+                    ? quiver_database_from_schema(database.c_str(), VALID_SCHEMA("basic.sql").c_str(), &options, &db)
+                    : quiver_database_from_migrations(
+                          database.c_str(),
+                          SCHEMA_PATH("schemas/migrations").c_str(),
+                          &options,
+                          &db
+                      );
+            ASSERT_EQ(result, QUIVER_OK) << quiver_get_last_error();
+            borrowed_path.assign(4096, 'x');
+        }
+        int64_t version = -1;
+        EXPECT_EQ(quiver_database_current_version(db, &version), QUIVER_OK);
+        EXPECT_EQ(version, factory == 2 ? 3 : 0);
+        EXPECT_EQ(quiver_database_close(db), QUIVER_OK);
+        EXPECT_NE(read_log_file(directory / filename).find("Opening database:"), std::string::npos);
+    }
+    EXPECT_FALSE(fs::exists(directory / "quiver_database.log"));
+}
+
+TEST_F(CApiDatabaseLogTest, EmptyLogPathUsesTheDefault) {
+    auto options = quiver::test::quiet_options();
+    options.log_path = "";
+    const auto database = (directory / "study.db").string();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(quiver_database_open(database.c_str(), &options, &db), QUIVER_OK) << quiver_get_last_error();
+    EXPECT_EQ(quiver_database_close(db), QUIVER_OK);
+    EXPECT_NE(read_log_file(directory / "quiver_database.log").find("Opening database:"), std::string::npos);
+}
+
+TEST_F(CApiDatabaseLogTest, EveryFactoryReportsLogFailuresAndPreservesTheDatabase) {
+    auto options = quiver::test::quiet_options();
+    const auto database = (directory / "study.db").string();
+    quiver_database_t* db = nullptr;
+    ASSERT_EQ(
+        quiver_database_from_schema(database.c_str(), VALID_SCHEMA("basic.sql").c_str(), &options, &db),
+        QUIVER_OK
+    );
+    ASSERT_EQ(quiver_database_close(db), QUIVER_OK);
+    const auto original = read_log_file(database);
+    const auto invalid_log = directory.string();
+    options.log_path = invalid_log.c_str();
+    for (int factory = 0; factory < 3; ++factory) {
+        db = nullptr;
+        const auto result =
+            factory == 0 ? quiver_database_open(database.c_str(), &options, &db)
+            : factory == 1
+                ? quiver_database_from_schema(database.c_str(), VALID_SCHEMA("basic.sql").c_str(), &options, &db)
+                : quiver_database_from_migrations(
+                      database.c_str(),
+                      SCHEMA_PATH("schemas/migrations").c_str(),
+                      &options,
+                      &db
+                  );
+        EXPECT_EQ(result, QUIVER_ERROR);
+        EXPECT_NE(
+            std::string(quiver_get_last_error()).find("Failed to open log file '" + invalid_log + "':"),
+            std::string::npos
+        );
+        EXPECT_EQ(db, nullptr);
+        EXPECT_EQ(read_log_file(database), original);
+    }
 }

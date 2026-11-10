@@ -5,14 +5,20 @@ All notable changes to Quiver are recorded here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Entries that require
 callers to change something are prefixed **BREAKING** and say what to do.
 
-## [0.13.6] — unreleased
+## [0.14.0] — unreleased
 
 ### Changed
 
+- **BREAKING (C/C++ ABI) — database options include a log file path.**
+  `DatabaseOptions` gains `std::string log_path`; `quiver_database_options_t` appends a borrowed
+  `const char* log_path`, defaulting to NULL. *Adapt:* rebuild native consumers against the new
+  headers, regenerate foreign struct declarations, and use matching native libraries/bindings.
+
 - **BREAKING — Lua `print()` uses the database's existing logger instead of stdout.** Each
   completed print is an INFO entry, flushed immediately to the logger's existing destinations.
-  Writable databases share `quiver_database.log`; read-only/in-memory databases keep console-only
-  logging. `console_level` filters console messages, and `run()` still returns JSON independently.
+  Writable databases default to `quiver_database.log`; read-only/in-memory databases default to
+  console-only logging. An explicit `log_path` chooses the file in every mode. `console_level`
+  filters console messages, and `run()` still returns JSON independently.
 
   *Adapt:* use INFO console verbosity (`quiver_cli --log-level info`) to see prints on stderr,
   or read the existing database log. Use a Lua return value for structured results on stdout.
@@ -62,8 +68,9 @@ callers to change something are prefixed **BREAKING** and say what to do.
   time-series table raises instead of replacing; and a row naming only dimension columns leaves
   an existing row untouched (it used to null every value column, or raise on a `NOT NULL` one).
 
-- **A read-only open creates no log file.** Opening with `read_only` no longer creates or
-  truncates `quiver_database.log` next to the database (it wiped the log of any writer on it).
+- **A read-only open creates no default log file.** Opening with `read_only` no longer creates or
+  truncates `quiver_database.log` next to the database unless `log_path` explicitly selects it
+  (it wiped the log of any writer on it).
 - **`quiver_cli` messages for a missing script.** Leaving out the `script` argument is now an
   argument error (`script: 1 argument(s) expected. 0 provided.`, still exit 2), and a script that
   cannot be read reports `Failed to read script file: <p>` (still exit 1, still before the database
@@ -77,6 +84,14 @@ callers to change something are prefixed **BREAKING** and say what to do.
   *Adapt:* pass `0` for no limit, which is the old behaviour.
 
 ### Added
+
+- **Choose the log file when opening a database.** Pass `log_path` in C++/Julia/Python,
+  `logPath` in Dart/JS, or `--log-path` to the CLI, including schema/migrations factories.
+  Relative paths start at the database directory (`:memory:` uses CWD). An explicit path enables
+  file logging for read-only/in-memory databases too; a log-open failure aborts opening, and
+  `from_schema` preserves an existing database on that failure. Files are truncated on open and
+  parent directories are created. Database and journal paths are refused before files are
+  touched. Empty/unset paths keep the existing defaults and console fallback.
 
 - **`Sandbox::run` takes an optional time limit.** `run(script, timeout_ms)` in C++,
   `quiver_sandbox_run(sandbox, script, timeout_ms, out_result)` in the C API, and an optional
@@ -1642,7 +1657,7 @@ are functionally identical to 0.10.0.
   `read_time_series_group` emits for a NULL STRING cell — so feeding a read result back with the
   mask stripped was UB. A NULL entry, or a NULL per-column data pointer, is now SQL NULL.
 
-[0.13.6]: https://github.com/psrenergy/quiver/compare/v0.13.5...v0.13.6
+[0.14.0]: https://github.com/psrenergy/quiver/compare/v0.13.5...v0.14.0
 [0.13.5]: https://github.com/psrenergy/quiver/compare/v0.13.4...v0.13.5
 [0.13.4]: https://github.com/psrenergy/quiver/compare/v0.13.3...v0.13.4
 [0.13.3]: https://github.com/psrenergy/quiver/compare/v0.13.2...v0.13.3

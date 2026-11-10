@@ -68,6 +68,14 @@ bun run example.ts
 - `Database.validateMigrations(migrationsPath)` -- Validate a migrations directory (every `up.sql`, then every `down.sql`, ending with no table left behind) in-memory; throws on failure
 - `close()` -- Close the database connection
 
+All opening methods accept `logPath`, for example
+`Database.open("study.db", { logPath: "logs/study.log" })`. Relative paths use the database's
+directory, or the current working directory for `:memory:`. A nonempty path enables file
+logging for read-only and in-memory databases too. Parent directories are created, the file is
+truncated on open, and an unusable explicit path throws `QuiverError`. Omitting `logPath` or
+passing `""` keeps the defaults: `quiver_database.log` beside a writable file database and
+console-only logging for read-only/in-memory databases. `consoleLevel` filters only the console.
+
 ### Create / Delete
 
 - `createElement(collection, data)` -- Create element, returns numeric ID
@@ -203,9 +211,10 @@ The describe methods give agents the schema, attribute meanings and data coverag
   many milliseconds (default 0, no limit)
 - `close()` -- Close the Sandbox
 
-Lua `print()` writes and flushes an INFO entry through the database logger, using its existing
-`quiver_database.log` and console settings. Read-only and in-memory databases use console logging
-only; `LOG_LEVEL_OFF` suppresses console output. Script return values remain separate JSON.
+Lua `print()` writes and flushes an INFO entry through the database logger. An explicit `logPath`
+selects the file even for read-only and in-memory databases. Without it, writable file databases
+use `quiver_database.log`, while read-only and in-memory databases use console logging only.
+`LOG_LEVEL_OFF` suppresses console output. Script return values remain separate JSON.
 
 ## Types
 
@@ -223,7 +232,7 @@ Exported types available for TypeScript consumers:
 - `GroupMetadata` -- Vector/set/time series group metadata
 - `TimeSeriesData` -- Time series column data
 - `CsvOptions` -- CSV import/export options
-- `DatabaseOptions` -- `{ readOnly?: boolean; consoleLevel?: number }` (a `LOG_LEVEL_*` constant)
+- `DatabaseOptions` -- `{ readOnly?: boolean; consoleLevel?: number; logPath?: string }` (`consoleLevel` is a `LOG_LEVEL_*` constant)
 - `LOG_LEVEL_DEBUG | INFO | WARN | ERROR | OFF`, `DATA_TYPE_INTEGER | FLOAT | STRING | DATE_TIME | NULL`
   -- constants for `DatabaseOptions.consoleLevel` and metadata `dataType`
 

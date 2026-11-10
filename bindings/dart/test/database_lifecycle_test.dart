@@ -9,6 +9,99 @@ void main() {
   final schemaPath = path.join(testsPath, 'schemas', 'valid', 'basic.sql');
   final migrationsPath = path.join(testsPath, 'schemas', 'migrations');
 
+  group('Database logPath', () {
+    late Directory tempDir;
+    late String dbPath;
+    const quiet = quiver_log_level_t.QUIVER_LOG_OFF;
+
+    setUp(() {
+      tempDir = Directory.systemTemp.createTempSync('quiver_log_test_');
+      dbPath = path.join(tempDir.path, 'test.db');
+    });
+    tearDown(() => tempDir.deleteSync(recursive: true));
+
+    for (final factory in ['open', 'fromSchema', 'fromMigrations']) {
+      test('selects the file for $factory and receives Lua prints', () {
+        final logPath = path.join(tempDir.path, 'logs', '$factory.log');
+        final selectedPath = factory == 'fromSchema' ? logPath : path.join('logs', '$factory.log');
+        final db = switch (factory) {
+          'open' => Database.open(dbPath, consoleLevel: quiet, logPath: selectedPath),
+          'fromSchema' => Database.fromSchema(dbPath, schemaPath, consoleLevel: quiet, logPath: selectedPath),
+          _ => Database.fromMigrations(dbPath, migrationsPath, consoleLevel: quiet, logPath: selectedPath),
+        };
+        try {
+          final sandbox = Sandbox(db);
+          try {
+            sandbox.run("print('custom $factory')");
+            expect(File(logPath).readAsStringSync(), contains('[info] custom $factory'));
+          } finally {
+            sandbox.dispose();
+          }
+        } finally {
+          db.close();
+        }
+        expect(File(logPath).readAsStringSync(), contains('Opening database:'));
+        expect(File(path.join(tempDir.path, 'quiver_database.log')).existsSync(), isFalse);
+      });
+    }
+
+    test('enables read-only and in-memory file logging explicitly', () {
+      Database.fromMigrations(dbPath, migrationsPath, consoleLevel: quiet).close();
+      final readonlyLog = path.join(tempDir.path, 'readonly.log');
+      Database.open(dbPath, readOnly: true, consoleLevel: quiet, logPath: readonlyLog).close();
+      final migrationsLog = path.join(tempDir.path, 'migrations-readonly.log');
+      Database.fromMigrations(
+        dbPath,
+        migrationsPath,
+        readOnly: true,
+        consoleLevel: quiet,
+        logPath: migrationsLog,
+      ).close();
+      expect(File(readonlyLog).readAsStringSync(), contains('Database opened successfully:'));
+      expect(File(migrationsLog).readAsStringSync(), contains('Database opened successfully:'));
+      final memoryLog = path.join(tempDir.path, 'memory.log');
+      Database.fromSchema(':memory:', schemaPath, consoleLevel: quiet, logPath: path.relative(memoryLog)).close();
+      expect(File(memoryLog).readAsStringSync(), contains('Database opened successfully: :memory:'));
+    });
+
+    test('omitted and empty paths keep defaults and explicit files truncate', () {
+      final log = File(path.join(tempDir.path, 'quiver_database.log'));
+      Database.open(dbPath, consoleLevel: quiet).close();
+      final original = log.readAsStringSync();
+      Database.open(dbPath, readOnly: true, consoleLevel: quiet, logPath: '').close();
+      expect(log.readAsStringSync(), original);
+      log.deleteSync();
+      Database.open(dbPath, consoleLevel: quiet, logPath: '').close();
+      expect(log.existsSync(), isTrue);
+      log.writeAsStringSync('old log history');
+      Database.open(dbPath, consoleLevel: quiet, logPath: log.path).close();
+      expect(log.readAsStringSync(), isNot(contains('old log history')));
+    });
+
+    test('failures propagate through every factory and preserve the database', () {
+      final db = Database.fromSchema(dbPath, schemaPath, consoleLevel: quiet);
+      db.createElement('Configuration', {'label': 'preserved'});
+      db.close();
+      for (final open in [
+        () => Database.open(dbPath, consoleLevel: quiet, logPath: tempDir.path),
+        () => Database.fromSchema(dbPath, schemaPath, consoleLevel: quiet, logPath: tempDir.path),
+        () => Database.fromMigrations(dbPath, migrationsPath, consoleLevel: quiet, logPath: tempDir.path),
+      ]) {
+        expect(open, throwsA(isA<DatabaseException>()));
+        final reopened = Database.open(dbPath, readOnly: true, consoleLevel: quiet);
+        try {
+          expect(reopened.readScalarStrings('Configuration', 'label'), ['preserved']);
+        } finally {
+          reopened.close();
+        }
+      }
+      expect(
+        () => Database.open(dbPath, consoleLevel: quiet, logPath: dbPath),
+        throwsA(isA<DatabaseException>()),
+      );
+    });
+  });
+
   group('Database fromSchema', () {
     test('creates database from schema file', () {
       final db = Database.fromSchema(':memory:', schemaPath);

@@ -27,14 +27,19 @@ class Database:
         self._closed = False
 
     @staticmethod
-    def _make_options(read_only: bool, console_level: int | None):
+    def _make_options(read_only: bool, console_level: int | None, log_path: str | None):
         lib = get_lib()
         options = ffi.new("quiver_database_options_t*")
         options[0] = lib.quiver_database_options_default()
         options.read_only = 1 if read_only else 0
         if console_level is not None:
             options.console_level = console_level
-        return options
+        keepalive = []
+        if log_path is not None:
+            log_path_buf = ffi.new("char[]", log_path.encode("utf-8"))
+            keepalive.append(log_path_buf)
+            options.log_path = log_path_buf
+        return keepalive, options
 
     @staticmethod
     def from_schema(
@@ -43,13 +48,15 @@ class Database:
         *,
         read_only: bool = False,
         console_level: int | None = None,
+        log_path: str | None = None,
     ) -> Database:
         """Create a database from a SQL schema file.
 
         console_level takes a LogLevel constant (e.g. LogLevel.OFF).
+        log_path selects the log file, relative to the database directory if not absolute.
         """
         lib = get_lib()
-        options = Database._make_options(read_only, console_level)
+        keepalive, options = Database._make_options(read_only, console_level, log_path)
         out_db = ffi.new("quiver_database_t**")
         check(
             lib.quiver_database_from_schema(
@@ -68,10 +75,11 @@ class Database:
         *,
         read_only: bool = False,
         console_level: int | None = None,
+        log_path: str | None = None,
     ) -> Database:
         """Create a database using a migrations directory."""
         lib = get_lib()
-        options = Database._make_options(read_only, console_level)
+        keepalive, options = Database._make_options(read_only, console_level, log_path)
         out_db = ffi.new("quiver_database_t**")
         check(
             lib.quiver_database_from_migrations(
@@ -98,10 +106,11 @@ class Database:
         *,
         read_only: bool = False,
         console_level: int | None = None,
+        log_path: str | None = None,
     ) -> Database:
         """Open an existing database file."""
         lib = get_lib()
-        options = Database._make_options(read_only, console_level)
+        keepalive, options = Database._make_options(read_only, console_level, log_path)
         out_db = ffi.new("quiver_database_t**")
         check(
             lib.quiver_database_open(

@@ -42,6 +42,89 @@ end
     end
 end
 
+@testset "Configurable log path" begin
+    path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
+    path_migrations = joinpath(tests_path(), "schemas", "migrations")
+
+    for factory in (:from_schema, :from_migrations, :open), relative in (false, true)
+        mktempdir() do dir
+            db_path = joinpath(dir, "test.db")
+            if factory == :open
+                Quiver.close!(Quiver.from_schema(db_path, path_schema))
+            end
+            args = if factory == :from_schema
+                (db_path, path_schema)
+            elseif factory == :from_migrations
+                (db_path, path_migrations)
+            else
+                (db_path,)
+            end
+            log_path = joinpath(dir, "logs", "custom.log")
+            option_path = relative ? joinpath("logs", "custom.log") : log_path
+            # Exercise the do-block overloads' keyword forwarding for all three factories.
+            getfield(Quiver, factory)(args...; log_path = option_path) do db
+                sandbox = Quiver.Sandbox(db)
+                try
+                    Quiver.run!(sandbox, "print('custom log destination')")
+                    @test occursin("custom log destination", read(log_path, String))
+                finally
+                    Quiver.close!(sandbox)
+                end
+            end
+
+            # Opening the same destination truncates it.
+            Quiver.open(db_path; log_path = option_path) do db
+                @test !occursin("custom log destination", read(log_path, String))
+            end
+            return nothing
+        end
+    end
+
+    mktempdir() do dir
+        db_path = joinpath(dir, "test.db")
+        default_log = joinpath(dir, "quiver_database.log")
+        Quiver.close!(Quiver.from_schema(db_path, path_schema))
+        @test isfile(default_log)
+        Quiver.open(db_path; log_path = "") do db
+            @test isfile(default_log)
+        end
+        write(default_log, "default unchanged")
+        Quiver.open(db_path; read_only = true) do db
+            @test read(default_log, String) == "default unchanged"
+        end
+
+        read_only_log = joinpath(dir, "read-only.log")
+        Quiver.open(db_path; read_only = true, log_path = read_only_log) do db
+            @test isfile(read_only_log)
+        end
+
+        cd(dir) do
+            Quiver.from_schema(":memory:", path_schema; log_path = "memory.log") do db
+                @test isfile("memory.log")
+            end
+        end
+        return nothing
+    end
+
+    for factory in (:from_schema, :from_migrations, :open)
+        mktempdir() do dir
+            db_path = joinpath(dir, "test.db")
+            Quiver.close!(Quiver.from_schema(db_path, path_schema))
+            original = read(db_path)
+            blocked_path = joinpath(dir, "blocked")
+            write(blocked_path, "not a directory")
+            source_path = factory == :from_schema ? path_schema : path_migrations
+            args = factory == :open ? (db_path,) : (db_path, source_path)
+            exception = @test_throws Quiver.DatabaseException getfield(Quiver, factory)(
+                args...; log_path = joinpath(blocked_path, "custom.log"),
+            )
+            @test occursin("custom.log", exception.value.msg)
+            @test read(db_path) == original
+            return nothing
+        end
+    end
+end
+
 @testset "Scoped database factories" begin
     path_schema = joinpath(tests_path(), "schemas", "valid", "basic.sql")
     path_migrations = joinpath(tests_path(), "schemas", "migrations")
@@ -131,7 +214,8 @@ end
     path_migrations = joinpath(tests_path(), "schemas", "migrations")
 
     @testset "Behind its migrations throws" begin
-        exc = @test_throws Quiver.DatabaseException Quiver.from_migrations(":memory:", path_migrations; read_only = true)
+        exc =
+            @test_throws Quiver.DatabaseException Quiver.from_migrations(":memory:", path_migrations; read_only = true)
         @test occursin("a read-only open cannot apply them", exc.value.msg)
     end
 

@@ -3403,6 +3403,8 @@ final class quiver_database_options_t extends ffi.Struct {
 
   @ffi.UnsignedInt()
   external int console_level;
+
+  external ffi.Pointer<ffi.Char> log_path;
 }
 
 final class quiver_csv_options_t extends ffi.Struct {

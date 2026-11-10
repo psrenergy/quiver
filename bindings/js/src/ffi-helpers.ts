@@ -4,15 +4,21 @@ import { type Allocation, type DatabaseOptions, LOG_LEVEL_INFO } from "./types.t
 const encoder = new TextEncoder();
 
 /**
- * Construct the 8-byte quiver_database_options_t struct as an Allocation.
- * Layout: offset 0 = int32 read_only (default 0), offset 4 = int32 console_level (default 1 = QUIVER_LOG_INFO).
+ * Build the 16-byte quiver_database_options_t plus its borrowed string's keepalive.
+ * Layout: int32 read_only at 0, int32 console_level at 4, char* log_path at 8.
  */
-export function makeDefaultOptions(options?: DatabaseOptions): Allocation {
-  const buf = new Uint8Array(8);
+export function makeDefaultOptions(options?: DatabaseOptions): [Allocation, Allocation[]] {
+  const buf = new Uint8Array(16);
   const dv = new DataView(buf.buffer);
   dv.setInt32(0, options?.readOnly ? 1 : 0, true);
   dv.setInt32(4, options?.consoleLevel ?? LOG_LEVEL_INFO, true);
-  return { ptr: ptr(buf), buf };
+  const keepalive: Allocation[] = [];
+  if (options?.logPath) {
+    const logPath = toCString(options.logPath);
+    keepalive.push(logPath);
+    dv.setBigUint64(8, nativeAddress(logPath.ptr), true);
+  }
+  return [{ ptr: ptr(buf), buf }, keepalive];
 }
 
 /** Allocate an 8-byte buffer for a pointer or uint64 out-parameter. */

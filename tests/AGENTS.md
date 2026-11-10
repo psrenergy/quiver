@@ -20,6 +20,12 @@ C++ core and C API suites live here; binding suites live in each binding's `test
   `upsert_time_series_row`/`read_time_series_row`; the C++ core has no `_nulls` file),
   `test_database_transaction.cpp`, `test_database_csv_export.cpp`, `test_database_csv_import.cpp`,
   `test_database_errors.cpp`
+- `DatabaseLogTest` in the lifecycle file covers `log_path`: relative/absolute destinations,
+  directory creation/truncation, default fallback, read-only/in-memory opt-in, all factories,
+  explicit failure preserving an existing database, database/journal collisions (directory
+  components, case/Win32 aliases, symlinks and hardlinks), and the default log name used as a
+  database name. `CApiDatabaseLogTest` covers all three factories, borrowed-path lifetime,
+  default/empty options and error propagation through the C ABI.
 - `test_database_describe.cpp` covers the reports for agents: combined declaration/statistics
   lines, NULL counts, coverage for all group kinds, primary-key/float/text histogram exclusion
   and the 64/65 boundary.
@@ -45,7 +51,8 @@ C++ core and C API suites live here; binding suites live in each binding's `test
   `_errors`, `_csv_export`, `_csv_import`, `_all_types`, `_fk`, `_lifecycle`, `_migrations`,
   `_timeout`, `_output`). `_output` checks `print()` through the database logger: INFO formatting,
   immediate flushing before errors/timeouts, console filtering without stdout writes, read-only
-  log preservation, Sandbox moves/finalizers, and using the current logger after Database move assignment.
+  log preservation, a host-configured log path, Sandbox moves/finalizers, and using the current
+  logger after Database move assignment.
   `_return` covers the JSON
   encoding of a script's return value; `_timeout` covers `run`'s time limit (a loop, `pcall`/`xpcall`
   and a looping handler, `load`'s reader, single and nested coroutines, a recursive CTE, a

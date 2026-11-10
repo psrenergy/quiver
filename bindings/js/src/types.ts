@@ -19,6 +19,8 @@ export type DatabaseOptions = {
   readOnly?: boolean;
   /** A LOG_LEVEL_* constant; defaults to LOG_LEVEL_INFO. */
   consoleLevel?: number;
+  /** Log file path; relative to the database directory, or CWD for :memory:. */
+  logPath?: string;
 };
 
 /** A `boolean` is stored as the INTEGER 1 or 0 (see `readScalarBooleans` for the read side). */

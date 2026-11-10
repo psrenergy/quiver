@@ -11,28 +11,39 @@ end
 function build_quiver_database_options(;
     read_only::Optional{Bool} = nothing,
     console_level::Optional{C.quiver_log_level_t} = nothing,
+    log_path::Optional{String} = nothing,
 )
     options = Ref(C.quiver_database_options_default())
+    temps = Any[options]
     if !isnothing(read_only)
         options[].read_only = read_only ? 1 : 0
     end
     if !isnothing(console_level)
         options[].console_level = console_level
     end
-    return options
+    if !isnothing(log_path)
+        log_path_buf = Vector{UInt8}([codeunits(log_path)..., 0x00])
+        push!(temps, log_path_buf)
+        options[].log_path = pointer(log_path_buf)
+    end
+    return options, temps
 end
 
 function from_schema(db_path::String, schema_path::String; kwargs...)
-    options = build_quiver_database_options(; kwargs...)
+    options, temps = build_quiver_database_options(; kwargs...)
     out_db = Ref{Ptr{C.quiver_database}}(C_NULL)
-    check(C.quiver_database_from_schema(db_path, schema_path, options, out_db))
+    GC.@preserve temps begin
+        check(C.quiver_database_from_schema(db_path, schema_path, options, out_db))
+    end
     return Database(out_db[])
 end
 
 function from_migrations(db_path::String, migrations_path::String; kwargs...)
-    options = build_quiver_database_options(; kwargs...)
+    options, temps = build_quiver_database_options(; kwargs...)
     out_db = Ref{Ptr{C.quiver_database}}(C_NULL)
-    check(C.quiver_database_from_migrations(db_path, migrations_path, options, out_db))
+    GC.@preserve temps begin
+        check(C.quiver_database_from_migrations(db_path, migrations_path, options, out_db))
+    end
     return Database(out_db[])
 end
 
@@ -42,9 +53,11 @@ function validate_migrations(migrations_path::String)
 end
 
 function open(db_path::String; kwargs...)
-    options = build_quiver_database_options(; kwargs...)
+    options, temps = build_quiver_database_options(; kwargs...)
     out_db = Ref{Ptr{C.quiver_database}}(C_NULL)
-    check(C.quiver_database_open(db_path, options, out_db))
+    GC.@preserve temps begin
+        check(C.quiver_database_open(db_path, options, out_db))
+    end
     return Database(out_db[])
 end
 

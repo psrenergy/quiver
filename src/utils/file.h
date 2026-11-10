@@ -1,6 +1,8 @@
 #ifndef QUIVER_FILE_H
 #define QUIVER_FILE_H
 
+#include <algorithm>
+#include <cctype>
 #include <filesystem>
 #include <fstream>
 #include <optional>
@@ -8,6 +10,16 @@
 #include <system_error>
 
 namespace quiver::utils {
+
+// Match names as NTFS/APFS do, including Win32 aliases for streams and trailing dots/spaces.
+inline std::string filesystem_name(std::string name) {
+    name.resize(std::min(name.find(':'), name.size()));
+    while (!name.empty() && (name.back() == '.' || name.back() == ' ')) {
+        name.pop_back();
+    }
+    std::ranges::transform(name, name.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    return name;
+}
 
 // The whole file, read in binary mode (as toml++'s parse_file reads it); nullopt when it is not a
 // regular file, cannot be opened or the read fails. The read asks for the file's full size, so a

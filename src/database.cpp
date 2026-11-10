@@ -101,10 +101,47 @@ spdlog::level::level_enum to_spdlog_level(quiver::LogLevel level) {
     }
 }
 
+// Compare components before a sink can truncate a file or create a directory. Canonical paths
+// catch symlinks; equivalent also catches an existing hardlink to the database or a journal.
+void validate_log_path(const std::filesystem::path& log_path, const std::string& db_path) {
+    namespace fs = std::filesystem;
+    if (db_path == ":memory:") {
+        return;
+    }
+    const auto key = [](const fs::path& path) {
+        std::string result;
+        for (const auto& part : path) {
+            result += quiver::utils::filesystem_name(part.string()) + '/';
+        }
+        return result;
+    };
+    const auto named_db = fs::absolute(db_path);
+    const auto named_log = fs::absolute(log_path);
+    for (const auto& database : {named_db, fs::weakly_canonical(named_db)}) {
+        for (const auto* suffix : {"", "-journal", "-wal", "-shm"}) {
+            const fs::path protected_path(database.string() + suffix);
+            const auto protected_key = key(protected_path);
+            std::error_code ignored;
+            bool collision = fs::equivalent(named_log, protected_path, ignored);
+            for (int resolve_links = 0; resolve_links < 2 && !collision; ++resolve_links) {
+                const auto candidate = resolve_links ? fs::weakly_canonical(named_log) : named_log;
+                for (auto part = candidate; !part.empty(); part = part.parent_path()) {
+                    collision = collision || key(part) == protected_key;
+                    if (part == part.root_path()) {
+                        break;
+                    }
+                }
+            }
+            if (collision) {
+                throw std::runtime_error("destination is the database file or one of its journals");
+            }
+        }
+    }
+}
+
 std::shared_ptr<spdlog::logger> create_database_logger(
     const std::string& db_path,
-    quiver::LogLevel console_level,
-    bool read_only
+    const quiver::DatabaseOptions& options
 ) {
     namespace fs = std::filesystem;
 
@@ -114,56 +151,56 @@ std::shared_ptr<spdlog::logger> create_database_logger(
 
     // Create console sink (thread-safe)
     auto console_sink = std::make_shared<spdlog::sinks::stderr_color_sink_mt>();
-    console_sink->set_level(to_spdlog_level(console_level));
+    console_sink->set_level(to_spdlog_level(options.console_level));
 
-    // No file logging in memory, nor for a read-only handle, which writes nothing to disk: the file
-    // sink would create or truncate quiver_database.log next to the database, wiping the trail of
-    // any writer on it.
-    if (db_path == ":memory:" || read_only) {
-        const auto logger = std::make_shared<spdlog::logger>(logger_name, console_sink);
-        logger->set_level(spdlog::level::debug);
+    const auto logger = std::make_shared<spdlog::logger>(logger_name, console_sink);
+    logger->set_level(spdlog::level::debug);
+
+    // Only an explicit path opts memory/read-only databases into file logging. Otherwise a
+    // read-only open would truncate the default log and wipe a writer's history.
+    if (options.log_path.empty() && (db_path == ":memory:" || options.read_only)) {
         if (db_path == ":memory:") {
             logger->warn("Database is in-memory only; no file logging will be performed.");
         }
         return logger;
-    } else {
-        // File-based database: use database directory
-        auto db_dir = fs::path(db_path).parent_path();
-        if (db_dir.empty()) {
-            // Database file in current directory (no path separator)
-            db_dir = fs::current_path();
-        }
-
-        // Create file sink (thread-safe)
-        std::shared_ptr<spdlog::sinks::basic_file_sink_mt> file_sink = nullptr;
-        try {
-            const auto log_file_path = (db_dir / "quiver_database.log").string();
-            file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(log_file_path, true);
-            file_sink->set_level(spdlog::level::debug);
-
-            std::vector<spdlog::sink_ptr> sinks{console_sink, file_sink};
-            auto logger = std::make_shared<spdlog::logger>(logger_name, sinks.begin(), sinks.end());
-            logger->set_level(spdlog::level::debug);
-
-            return logger;
-        } catch (const spdlog::spdlog_ex& ex) {
-            // If file sink creation fails, continue with console-only logging
-            const auto logger = std::make_shared<spdlog::logger>(logger_name, console_sink);
-            logger->set_level(spdlog::level::debug);
-            logger->warn("Failed to create file sink: {}. Logging to console only.", ex.what());
-            return logger;
-        }
     }
+
+    fs::path log_path = options.log_path.empty() ? "quiver_database.log" : options.log_path;
+    try {
+        if (log_path.is_relative()) {
+            const auto directory = db_path == ":memory:" ? fs::current_path() : fs::absolute(db_path).parent_path();
+            log_path = directory / log_path;
+        }
+        validate_log_path(log_path, db_path);
+        log_path = fs::weakly_canonical(log_path);
+        auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(log_path.string(), true);
+        file_sink->set_level(spdlog::level::debug);
+        logger->sinks().push_back(file_sink);
+    } catch (const std::exception& ex) {
+        if (!options.log_path.empty()) {
+            throw std::runtime_error("Failed to open log file '" + log_path.string() + "': " + ex.what());
+        }
+        logger->warn("Failed to create file sink: {}. Logging to console only.", ex.what());
+    }
+    return logger;
 }
 
 }  // anonymous namespace
 
 namespace quiver {
 
-Database::Database(const std::string& path, const DatabaseOptions& options) : impl_(std::make_unique<Impl>()) {
+Database::Database(const std::string& path, const DatabaseOptions& options) : Database(path, options, false) {}
+
+Database::Database(const std::string& path, const DatabaseOptions& options, bool recreate)
+    : impl_(std::make_unique<Impl>()) {
     impl_->path = path;
     impl_->read_only = options.read_only;
-    impl_->logger = create_database_logger(path, options.console_level, options.read_only);
+    impl_->logger = create_database_logger(path, options);
+
+    // A bad explicit log destination must not destroy the database from_schema would replace.
+    if (recreate && path != ":memory:") {
+        std::filesystem::remove(path);
+    }
 
     impl_->logger->debug("Opening database: {}", path);
 
@@ -394,10 +431,7 @@ Database Database::from_schema(
     if (!fs::exists(schema_path)) {
         throw std::runtime_error("Schema file not found: " + schema_path);
     }
-    if (db_path != ":memory:") {
-        fs::remove(db_path);
-    }
-    auto db = Database(db_path, options);
+    auto db = Database(db_path, options, true);
     db.apply_schema(schema_path);
     return db;
 }

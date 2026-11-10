@@ -37,6 +37,11 @@ ruff.toml         # Lint/format config; lint is isort only (select = ["I"])
 - **CFFI ABI-mode** — no compiler required at install time; `_c_api.py` declarations must match
   the C headers exactly (struct layout mismatches corrupt silently). After C API changes, run
   `generator/generator.bat` and diff its output against `_c_api.py`.
+- **Database log paths**: `open` / `from_schema` / `from_migrations` accept keyword-only
+  `log_path: str | None`. The C options append a `const char* log_path`; `_make_options` returns
+  `(keepalive, options)` so the allocated path remains referenced through the FFI call (a CFFI
+  struct pointer field does not own its buffer). Core resolves relative paths from the database
+  directory (CWD for `:memory:`), validates database/journal collisions, and reports failures.
 - **`_loader.py` pre-loads `libquiver.dll`** on Windows so the OS resolves `libquiver_c.dll`'s
   dependency chain. `tests/test.bat` prepends `build/bin/` to PATH for DLL discovery.
   On macOS it loads `.dylib` files and pre-loads `libquiver.0.dylib`, matching the C API's
@@ -121,8 +126,9 @@ ruff.toml         # Lint/format config; lint is isort only (select = ["I"])
   `tests/test_sandbox.py` checks mixed Lua REAL arrays on create/update; cell conversion and
   schema validation stay in C++.
 - **Lua `print()` uses the database's current logger.** Each completed call logs and flushes one
-  INFO entry with tab-separated arguments, following existing file/console policy. No capture API,
-  log-path option or wrapper-side formatting; script results remain JSON.
+  INFO entry with tab-separated arguments, following `log_path` when provided, including for
+  read-only/in-memory databases. Without it the existing file/console policy applies. No capture
+  API or wrapper-side formatting; script results remain JSON.
 - **`Sandbox.__init__` starts with `_closed = True` and sets it to `False` only after `_ptr` is
   assigned.** Python runs `__del__` even when `__init__` raised, so a runner whose construction
   failed (e.g. `Sandbox(closed_db)`, which the C API rejects with `Null argument: db`) must

@@ -28,3 +28,11 @@ values = db.read_scalar_integers("Collection", "value")
 
 db.close()
 ```
+
+Pass `log_path="logs/run.log"` to `Database.open`, `from_schema`, or `from_migrations` to
+choose the log file (`logPath` in Dart/JavaScript). Relative paths start at the database's
+directory; `:memory:` uses the current directory. An explicit path enables file logging even
+in read-only/in-memory mode, creates missing parent directories, and raises if the log cannot
+be opened. The file is truncated on each open. Without a path, writable databases use
+`quiver_database.log` beside the database, while read-only/in-memory databases use only the
+console. The CLI accepts the same setting as `--log-path logs/run.log`.

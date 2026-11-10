@@ -145,8 +145,9 @@ midnight.
   \`print()\` when you need structured data back. Each completed \`print()\` writes and flushes one
   INFO entry through the database logger: normal Lua string conversion, tab-separated arguments,
   and the logger's prefix and newline. It follows existing database logging settings:
-  \`quiver_database.log\` plus console for writable file databases, console only for read-only or
-  in-memory databases. The host's console level can suppress these INFO messages; prints do not
+  the host's explicit \`logPath\` plus console when configured, otherwise \`quiver_database.log\`
+  plus console for writable file databases, console only for read-only or in-memory databases.
+  The host's console level can suppress these INFO messages; prints do not
   go to stdout. Only the
   **first** returned value is encoded. Arrays are 1-indexed. Iterate with \`ipairs\` only where no
   NULL can appear: a read of a nullable column (a bulk scalar read, a vector/set inner list, a

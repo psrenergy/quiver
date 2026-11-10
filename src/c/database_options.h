@@ -10,6 +10,7 @@ inline quiver::DatabaseOptions convert_database_options(const quiver_database_op
     return {
         .read_only = c_opts.read_only != 0,
         .console_level = static_cast<quiver::LogLevel>(c_opts.console_level),
+        .log_path = c_opts.log_path ? c_opts.log_path : "",
     };
 }
 

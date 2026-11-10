@@ -5,11 +5,11 @@
 #include "quiver/binary/binary_file.h"
 #include "quiver/database.h"
 #include "sandbox/internal.h"
+#include "utils/file.h"
 
 #include <sol/sol.hpp>
 
 #include <algorithm>
-#include <cctype>
 #include <chrono>
 #include <cstdint>
 #include <filesystem>
@@ -40,20 +40,6 @@ struct TimeLimit {
 };
 
 namespace {
-
-// A name as the filesystems quiver ships on (NTFS, APFS) match it, because the part of a path that
-// does not exist yet keeps the script's spelling: case-folded, and spelled the way Win32 opens it --
-// a name ends at its first ':' ("x::$DATA" is x's own data, "x::$INDEX_ALLOCATION" makes directory
-// x) and loses trailing dots and spaces ("x." and "x " open x). Elsewhere that only refuses a few
-// names that would not have collided.
-std::string fold(std::string name) {
-    name.resize(std::min(name.find(':'), name.size()));
-    while (!name.empty() && (name.back() == '.' || name.back() == ' ')) {
-        name.pop_back();
-    }
-    std::ranges::transform(name, name.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-    return name;
-}
 
 // Its address keys the Sandbox's TimeLimit in the Lua registry.
 const char time_limit_key = 0;
@@ -173,7 +159,7 @@ std::string RunHandles::resolve_write_path(
         const auto first = relative.begin()->string();
         const bool is_file = std::next(relative.begin()) == relative.end();
         for (const auto suffix : written) {
-            const auto name = fold(is_file ? first + std::string(suffix) : first);
+            const auto name = utils::filesystem_name(is_file ? first + std::string(suffix) : first);
             if (name == base || name == base + "-journal" || name == base + "-wal" || name == base + "-shm") {
                 throw std::runtime_error(
                     "Cannot " + operation + ": path '" + path + "' is the database file or one of its journals"
@@ -365,7 +351,7 @@ Sandbox::Sandbox(Database& db) : impl_(std::make_unique<Impl>(db)) {
             auto directory = fs::weakly_canonical(entry.parent_path(), ignored);
             handles.database_entries.emplace_back(
                 directory.empty() ? entry.parent_path() : directory,
-                lua_internal::fold(entry.filename().string())
+                utils::filesystem_name(entry.filename().string())
             );
         }
     }
