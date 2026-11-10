@@ -101,56 +101,59 @@ spdlog::level::level_enum to_spdlog_level(quiver::LogLevel level) {
     }
 }
 
-// Compare components before a sink can truncate a file or create a directory. Canonical paths
-// catch symlinks; equivalent also catches an existing hardlink to the database or a journal.
-void validate_log_path(const std::filesystem::path& log_path, const std::string& db_path) {
+// weakly_canonical, plus following a dangling symbolic link to the file it would create:
+// weakly_canonical stops at a link whose target does not exist yet and keeps it as spelled.
+std::filesystem::path resolve_links(std::filesystem::path path) {
+    namespace fs = std::filesystem;
+    for (int hops = 0; hops < 40; ++hops) {
+        path = fs::weakly_canonical(path);
+        std::error_code ignored;
+        if (fs::exists(path, ignored)) {
+            return path;
+        }
+        auto missing = path;  // the first component that does not exist, the only one that can dangle
+        while (missing.has_relative_path() && !fs::exists(missing.parent_path(), ignored)) {
+            missing = missing.parent_path();
+        }
+        if (!fs::is_symlink(missing, ignored)) {
+            return path;
+        }
+        auto target = missing.parent_path() / fs::read_symlink(missing);
+        // A trailing "." would normalize to a trailing separator, so only a real tail is appended.
+        path = path == missing ? target : target / path.lexically_relative(missing);
+    }
+    throw std::runtime_error("too many levels of symbolic links");
+}
+
+// The log file to open, once it is known not to be the database or a journal, nor inside a
+// directory named like one. Runs before a sink can truncate a file or create a directory. The
+// lexical spelling is how Win32 opens a path (.. before symlinks), the resolved one how POSIX does;
+// equivalent also catches an existing hardlink.
+std::filesystem::path resolve_log_path(const std::filesystem::path& log_path, const std::string& db_path) {
     namespace fs = std::filesystem;
     const auto named_log = fs::absolute(log_path);
-    // weakly_canonical cannot resolve a symlink whose target does not exist yet.
-    const auto reject_dangling_links = [](const fs::path& path) {
-        for (auto part = path; !part.empty(); part = part.parent_path()) {
-            std::error_code ignored;
-            if (fs::is_symlink(part, ignored) && !fs::exists(part)) {
-                throw std::runtime_error("database, journal or log path contains a dangling symbolic link");
-            }
-            if (part == part.root_path()) {
-                break;
-            }
-        }
-    };
-    reject_dangling_links(named_log);
-    if (db_path == ":memory:") {
-        return;
+    const auto resolved_log = resolve_links(named_log);
+    if (db_path == ":memory:" || db_path.empty()) {  // no database file to protect
+        return resolved_log;
     }
-    const auto key = [](const fs::path& path) {
-        std::string result;
-        for (const auto& part : path) {
-            result += quiver::utils::filesystem_name(part.string()) + '/';
-        }
-        return result;
+    const auto writes = [&](const fs::path& database) {
+        return quiver::utils::writes_database_file(named_log, database) ||
+               quiver::utils::writes_database_file(resolved_log, database);
     };
     const auto named_db = fs::absolute(db_path);
-    for (const auto& database : {named_db, fs::weakly_canonical(named_db)}) {
-        for (const auto* suffix : {"", "-journal", "-wal", "-shm"}) {
-            const fs::path protected_path(database.string() + suffix);
-            reject_dangling_links(protected_path);
-            const auto protected_key = key(protected_path);
-            std::error_code ignored;
-            bool collision = fs::equivalent(named_log, protected_path, ignored);
-            for (int resolve_links = 0; resolve_links < 2 && !collision; ++resolve_links) {
-                const auto candidate = resolve_links ? fs::weakly_canonical(named_log) : named_log;
-                for (auto part = candidate; !part.empty(); part = part.parent_path()) {
-                    collision = collision || key(part) == protected_key;
-                    if (part == part.root_path()) {
-                        break;
-                    }
-                }
-            }
-            if (collision) {
-                throw std::runtime_error("destination is the database file or one of its journals");
-            }
-        }
+    const auto database = resolve_links(named_db);
+    bool collision = writes(named_db) || writes(database);
+    for (const auto* suffix : {"", "-journal", "-wal", "-shm"}) {
+        const fs::path file(database.string() + suffix);
+        std::error_code ignored;
+        // A journal that is a symbolic link is written through it, so its target is protected too.
+        collision = collision || fs::equivalent(named_log, file, ignored) ||
+                    (*suffix != '\0' && fs::is_symlink(file, ignored) && writes(resolve_links(file)));
     }
+    if (collision) {
+        throw std::runtime_error("destination is the database file or one of its journals");
+    }
+    return resolved_log;
 }
 
 std::shared_ptr<spdlog::logger> create_database_logger(
@@ -182,11 +185,10 @@ std::shared_ptr<spdlog::logger> create_database_logger(
     fs::path log_path = options.log_path.empty() ? "quiver_database.log" : options.log_path;
     try {
         if (log_path.is_relative()) {
-            const auto directory = db_path == ":memory:" ? fs::current_path() : fs::absolute(db_path).parent_path();
-            log_path = directory / log_path;
+            // ":memory:" and "" (SQLite's temporary database) have no directory, so they log to the CWD.
+            log_path = fs::current_path() / fs::path(db_path).parent_path() / log_path;
         }
-        validate_log_path(log_path, db_path);
-        log_path = fs::weakly_canonical(log_path);
+        log_path = resolve_log_path(log_path, db_path);
         auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(log_path.string(), true);
         file_sink->set_level(spdlog::level::debug);
         logger->sinks().push_back(file_sink);

@@ -5,7 +5,7 @@ All notable changes to Quiver are recorded here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Entries that require
 callers to change something are prefixed **BREAKING** and say what to do.
 
-## [0.14.0] — unreleased
+## [0.13.8] — unreleased
 
 ### Changed
 
@@ -90,8 +90,8 @@ callers to change something are prefixed **BREAKING** and say what to do.
   Relative paths start at the database directory (`:memory:` uses CWD). An explicit path enables
   file logging for read-only/in-memory databases too; a log-open failure aborts opening, and
   `from_schema` preserves an existing database on that failure. Files are truncated on open and
-  parent directories are created. Log setup rejects database/journal destinations and dangling
-  symlinks in either path before writing. Empty/unset paths keep the existing defaults and console fallback.
+  parent directories are created. Log setup rejects database/journal destinations before writing,
+  following a dangling symlink to the file it would create. Empty/unset paths keep the existing defaults and console fallback.
 
 - **`Sandbox::run` takes an optional time limit.** `run(script, timeout_ms)` in C++,
   `quiver_sandbox_run(sandbox, script, timeout_ms, out_result)` in the C API, and an optional
@@ -1657,7 +1657,7 @@ are functionally identical to 0.10.0.
   `read_time_series_group` emits for a NULL STRING cell — so feeding a read result back with the
   mask stripped was UB. A NULL entry, or a NULL per-column data pointer, is now SQL NULL.
 
-[0.14.0]: https://github.com/psrenergy/quiver/compare/v0.13.5...v0.14.0
+[0.13.8]: https://github.com/psrenergy/quiver/compare/v0.13.5...v0.13.8
 [0.13.5]: https://github.com/psrenergy/quiver/compare/v0.13.4...v0.13.5
 [0.13.4]: https://github.com/psrenergy/quiver/compare/v0.13.3...v0.13.4
 [0.13.3]: https://github.com/psrenergy/quiver/compare/v0.13.2...v0.13.3

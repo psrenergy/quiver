@@ -72,7 +72,7 @@ src/                      # C++ implementation
   utils/datetime.h        # ISO 8601 parse/format helpers
   utils/number.h          # quiver::utils::append_number (std::to_chars shortest round-trip) and
                           # parse_float (its whole-cell, host-locale-proof reader)
-  utils/file.h            # read_file: whole file, binary mode; filesystem_name: shared Win32/case aliases
+  utils/file.h            # read_file: whole file, binary mode; filesystem_name/writes_database_file: shared db/journal collision rule
 src/csv/                    # Standalone CSV file reader/writer (see below)
   csv_read.h / csv_read.cpp   # Internal CSV reader (csv-parser, Pimpl'd) behind db:read_csv /
                               # db:read_csv_stream and import_csv -- no include/quiver/ counterpart
@@ -432,12 +432,15 @@ and read-only opens unless `DatabaseOptions::log_path` is nonempty. An explicit 
 both into logging; relative paths start in the database directory (`:memory:` uses the CWD).
 spdlog creates missing parent directories. Explicit failures throw `Failed to open log file
 '<destination>': <cause>`; default sink failures retain the console fallback. Before either
-sink can create directories or truncate, `validate_log_path` refuses the database and its
+sink can create directories or truncate, `resolve_log_path` refuses the database and its
 `-journal`/`-wal`/`-shm`, including parent directory components, symlinks and existing hardlinks.
-Dangling symlinks in the log, database or journal paths are rejected before opening a log, since
-canonicalization cannot resolve missing targets; ordinary missing log files/directories remain supported.
-It checks both named and canonical database paths, using `utils::filesystem_name` for the same
-case-folded/Win32 stream/trailing-dot aliases as the sandbox. The CLI exposes `--log-path`:
+A dangling symlink (log, database or journal) is followed to the file it would create
+(`resolve_links`), since `weakly_canonical` stops at one; a harmless target is allowed, and the
+sink opens that resolved path. It checks the named (lexically normal, as Win32 opens it) and
+resolved (as POSIX opens it) spellings of both paths through `utils::writes_database_file`, the
+same predicate the sandbox write gate uses: drives compare case-folded, every other component
+through `utils::filesystem_name`. A database path of `""` (SQLite's temporary file) has nothing
+to protect and logs to the CWD like `:memory:`. The CLI exposes `--log-path`:
 ```cpp
 impl_->logger->debug("Opening database: {}", path);
 ```
@@ -818,7 +821,8 @@ Implementation conventions in `src/sandbox/`:
   `RunHandles::read_only` (copied from `Database::Impl::read_only` in the `Sandbox` constructor,
   through `friend class Sandbox`), then `Cannot <op>: path '<p>' is the database file or one of
   its journals` for the db file or its `-journal`/`-wal`/`-shm`. The file is located through
-  `RunHandles::database_entries`, built in the `Sandbox` constructor from `sqlite3_db_filename`
+  `RunHandles::database_entries` and checked by `utils::writes_database_file` (shared with the
+  log-path check), built in the `Sandbox` constructor from `sqlite3_db_filename`
   (SQLite's absolute name, from which it derives the journal names; `db.path()` may be relative to
   a working directory that has since changed) both as named and with symlinks resolved. The check
   is on the **first** path component under the database's directory: a deeper path refuses a

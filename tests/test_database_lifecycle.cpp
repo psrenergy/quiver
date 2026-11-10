@@ -1,9 +1,12 @@
 #include "test_utils.h"
+#include "utils/file.h"
 
 #include <gtest/gtest.h>
 #include <quiver/database.h>
 #include <quiver/element.h>
 
+#include <algorithm>
+#include <cctype>
 #include <filesystem>
 #include <fstream>
 #include <iterator>
@@ -601,14 +604,67 @@ TEST_F(DatabaseLogTest, DanglingSymlinksCannotCreateDatabaseOrJournalFiles) {
                 );
                 FAIL() << "Expected dangling log symlink to fail";
             } catch (const std::runtime_error& error) {
-                EXPECT_NE(std::string(error.what()).find("contains a dangling symbolic link"), std::string::npos)
-                    << error.what();
+                EXPECT_NE(
+                    std::string(error.what()).find("destination is the database file or one of its journals"),
+                    std::string::npos
+                ) << error.what();
             }
             EXPECT_FALSE(fs::exists(database));
             EXPECT_FALSE(fs::exists(target));
             fs::remove(alias);
         }
     }
+}
+
+TEST_F(DatabaseLogTest, DanglingSymlinkToAHarmlessTargetIsFollowed) {
+    const auto target = directory / "elsewhere" / "run.log";
+    const auto alias = database.parent_path() / "run.log";
+    std::error_code ec;
+    fs::create_symlink(target, alias, ec);
+    if (ec) {
+        GTEST_SKIP() << "cannot create a symlink here: " << ec.message();
+    }
+    {
+        quiver::Database db(database.string(), {.console_level = quiver::LogLevel::Off, .log_path = "run.log"});
+    }
+    EXPECT_NE(read_log_file(target).find("Opening database:"), std::string::npos);
+}
+
+TEST_F(DatabaseLogTest, DirectoryCaseAliasOfAJournalIsRefused) {
+    auto upper = database.parent_path().string();
+    std::ranges::transform(upper, upper.begin(), [](unsigned char c) { return static_cast<char>(std::toupper(c)); });
+    const auto destination = fs::path(upper) / "test.db-wal";
+    EXPECT_THROW(
+        quiver::Database(database.string(), {.console_level = quiver::LogLevel::Off, .log_path = destination.string()}),
+        std::runtime_error
+    );
+    EXPECT_FALSE(fs::exists(database.string() + "-wal"));
+}
+
+TEST(DatabaseLogPaths, WritesDatabaseFileComparesDrivesAndDotComponents) {
+    using quiver::utils::writes_database_file;
+    const auto root = fs::temp_directory_path().root_path();
+    const auto database = root / "data" / "study.db";
+    EXPECT_TRUE(writes_database_file(root / "DATA" / "Study.DB-wal", database));
+    EXPECT_TRUE(writes_database_file(root / "data" / "study.db-journal" / "run.log", database));
+    EXPECT_TRUE(writes_database_file(root / "data" / "sub" / ".." / "study.db", database));
+    EXPECT_FALSE(writes_database_file(root / "data" / "sub" / "." / "study.db", database));
+    EXPECT_FALSE(writes_database_file(root / "data" / "study.db.log", database));
+    EXPECT_FALSE(writes_database_file(root / "data", database));
+#ifdef _WIN32
+    EXPECT_TRUE(writes_database_file("c:\\data\\study.db", "C:\\data\\study.db"));
+    EXPECT_FALSE(writes_database_file("D:\\data\\study.db\\run.log", "C:\\data\\study.db"));
+    EXPECT_FALSE(writes_database_file("D:\\data\\study.db", "C:\\data\\study.db"));
+#endif
+}
+
+TEST(DatabaseLogPaths, EmptyDatabasePathLogsToTheWorkingDirectory) {
+    const auto log = fs::temp_directory_path() / "quiver_empty_path.log";
+    {
+        quiver::Database db("", {.console_level = quiver::LogLevel::Off, .log_path = log.string()});
+    }
+    EXPECT_NE(read_log_file(log).find("Opening database:"), std::string::npos);
+    fs::remove(log);
 }
 
 TEST_F(DatabaseLogTest, DanglingDatabaseAndJournalSymlinksCannotHideTheLogDestination) {

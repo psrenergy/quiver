@@ -23,7 +23,9 @@ C++ core and C API suites live here; binding suites live in each binding's `test
 - `DatabaseLogTest` in the lifecycle file covers `log_path`: relative/absolute destinations,
   directory creation/truncation, default fallback, read-only/in-memory opt-in, all factories,
   explicit failure preserving an existing database, database/journal collisions (directory
-  components, case/Win32 aliases, live/dangling symlinks and hardlinks), and the default log name used as a
+  components, case/Win32 aliases including directory case, live/dangling symlinks and hardlinks), a dangling
+  symlink to a harmless target being followed, the empty (temporary) database path, the shared
+  `writes_database_file` predicate across drives and dot components, and the default log name used as a
   database name. `CApiDatabaseLogTest` covers all three factories, borrowed-path lifetime,
   default/empty options and error propagation through the C ABI.
 - `test_database_describe.cpp` covers the reports for agents: combined declaration/statistics
