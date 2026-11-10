@@ -28,8 +28,8 @@ Project.toml      # Deps: Artifacts, CEnum, Dates, Libdl; julia 1.11 compat
 - **Sandbox array types are handled in C++.** `test/test_sandbox.jl` checks mixed Lua REAL
   arrays on create/update; Julia passes the script through without converting its cells.
 - **Database log paths**: `open` / `from_schema` / `from_migrations` (their `do` forms too) accept
-  `log_path::Optional{String}`. `build_quiver_database_options` returns `(options, temps)`;
-  preserve `temps` across the FFI call to keep its NUL-terminated path buffer and options alive.
+  `log_path::Optional{String}`. `build_quiver_database_options` returns `(options, log_path)`;
+  the struct borrows the String's own NUL-terminated bytes, so preserve `log_path` across the FFI call.
   Core resolves relative paths from the database directory (`pwd()` for `:memory:`), validates
   protected database/journal destinations, and reports explicit destination failures.
 - **Sandbox prints use the database logger.** Each `print()` emits one flushed INFO entry
