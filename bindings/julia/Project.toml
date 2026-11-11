@@ -10,7 +10,7 @@ Libdl = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
 
 [compat]
 Artifacts = "1"
-CEnum = "0.5"
+CEnum = "0.5, 1.0"
 Dates = "1"
 Libdl = "1"
 Test = "1"
