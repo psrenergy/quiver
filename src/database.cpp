@@ -140,15 +140,18 @@ std::filesystem::path resolve_log_path(const std::filesystem::path& log_path, co
         return quiver::utils::writes_database_file(named_log, database) ||
                quiver::utils::writes_database_file(resolved_log, database);
     };
-    const auto named_db = fs::absolute(db_path);
+    const auto named_db = fs::absolute(quiver::utils::path_from_utf8(db_path));
     const auto database = resolve_links(named_db);
     bool collision = writes(named_db) || writes(database);
-    for (const auto* suffix : {"", "-journal", "-wal", "-shm"}) {
-        const fs::path file(database.string() + suffix);
-        std::error_code ignored;
-        // A journal that is a symbolic link is written through it, so its target is protected too.
-        collision = collision || fs::equivalent(named_log, file, ignored) ||
-                    (*suffix != '\0' && fs::is_symlink(file, ignored) && writes(resolve_links(file)));
+    for (const auto& base : {named_db, database}) {
+        for (const auto* suffix : {"", "-journal", "-wal", "-shm"}) {
+            auto file = base;
+            file += suffix;
+            std::error_code ignored;
+            // A journal that is a symbolic link is written through it, so its target is protected too.
+            collision = collision || fs::equivalent(named_log, file, ignored) ||
+                        (*suffix != '\0' && fs::is_symlink(file, ignored) && writes(resolve_links(file)));
+        }
     }
     if (collision) {
         throw std::runtime_error("destination is the database file or one of its journals");
@@ -182,19 +185,20 @@ std::shared_ptr<spdlog::logger> create_database_logger(
         return logger;
     }
 
-    fs::path log_path = options.log_path.empty() ? "quiver_database.log" : options.log_path;
     try {
+        auto log_path =
+            quiver::utils::path_from_utf8(options.log_path.empty() ? "quiver_database.log" : options.log_path);
         if (log_path.is_relative()) {
             // ":memory:" and "" (SQLite's temporary database) have no directory, so they log to the CWD.
-            log_path = fs::current_path() / fs::path(db_path).parent_path() / log_path;
+            log_path = fs::current_path() / quiver::utils::path_from_utf8(db_path).parent_path() / log_path;
         }
         log_path = resolve_log_path(log_path, db_path);
-        auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(log_path.string(), true);
+        auto file_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(log_path.native(), true);
         file_sink->set_level(spdlog::level::debug);
         logger->sinks().push_back(file_sink);
     } catch (const std::exception& ex) {
         if (!options.log_path.empty()) {
-            throw std::runtime_error("Failed to open log file '" + log_path.string() + "': " + ex.what());
+            throw std::runtime_error("Failed to open log file '" + options.log_path + "': " + ex.what());
         }
         logger->warn("Failed to create file sink: {}. Logging to console only.", ex.what());
     }
@@ -215,7 +219,7 @@ Database::Database(const std::string& path, const DatabaseOptions& options, bool
 
     // A bad explicit log destination must not destroy the database from_schema would replace.
     if (recreate && path != ":memory:") {
-        std::filesystem::remove(path);
+        std::filesystem::remove(utils::path_from_utf8(path));
     }
 
     impl_->logger->debug("Opening database: {}", path);

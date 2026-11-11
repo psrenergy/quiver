@@ -151,6 +151,9 @@ callers to change something are prefixed **BREAKING** and say what to do.
 
 ### Fixed
 
+- Log paths use UTF-8 on Windows and protect journal aliases beside both the named and resolved
+  database. Explicit log errors preserve the caller's destination spelling on every platform.
+
 - The Lua reference (`SANDBOX_API_REFERENCE`) describes the database logger's destinations and
   console filtering for `print()`.
 

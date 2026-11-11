@@ -7,9 +7,19 @@
 #include <fstream>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <system_error>
 
 namespace quiver::utils {
+
+inline std::filesystem::path path_from_utf8(std::string_view path) {
+    return std::filesystem::path(std::u8string(path.begin(), path.end()));
+}
+
+inline std::string path_to_utf8(const std::filesystem::path& path) {
+    const auto utf8 = path.u8string();
+    return {utf8.begin(), utf8.end()};
+}
 
 // Match names as NTFS/APFS do, including Win32 aliases for streams and trailing dots/spaces.
 inline std::string filesystem_name(std::string name) {
@@ -26,10 +36,10 @@ inline std::string filesystem_name(std::string name) {
 // nothing. Normalized first (Win32 folds .. before following a symlink), since "." and ".." fold to "".
 inline std::string filesystem_key(const std::filesystem::path& path) {
     const auto normal = path.lexically_normal();
-    auto key = normal.root_path().string();
+    auto key = path_to_utf8(normal.root_path());
     std::ranges::transform(key, key.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
     for (const auto& part : normal.relative_path()) {
-        key += filesystem_name(part.string()) + '/';
+        key += filesystem_name(path_to_utf8(part)) + '/';
     }
     return key;
 }
@@ -43,7 +53,7 @@ inline bool writes_database_file(const std::filesystem::path& path, const std::f
         return false;
     }
     const auto name = key.substr(directory.size(), key.find('/', directory.size()) - directory.size());
-    const auto base = filesystem_name(database.filename().string());
+    const auto base = filesystem_name(path_to_utf8(database.filename()));
     return name == base || name == base + "-journal" || name == base + "-wal" || name == base + "-shm";
 }
 

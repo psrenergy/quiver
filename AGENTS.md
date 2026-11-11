@@ -57,8 +57,9 @@ Settled questions — don't relitigate without the user; each was decided delibe
   open/factory methods of every binding (`logPath` in Dart/JS). A nonempty `log_path` names the
   log file, enables it even for read-only/in-memory databases, and fails opening on a log error.
   Relative paths start at the database directory (`:memory:` uses CWD). Files are truncated on
-  open; spdlog creates parent directories. An unset/empty path keeps the default policy. The
-  C API borrows the path only during the call; bindings must keep its storage alive until return.
+  open; spdlog creates parent directories. An unset/empty path keeps the default policy.
+  Database and log paths are UTF-8, including on Windows (spdlog uses wide filenames there).
+  The C API borrows the path only during the call; bindings must keep its storage alive until return.
 - **Schema metadata loads lazily, on first use** (`Impl::require_schema`, `src/database_impl.h`).
   `Database(path, options)` — the only implementation behind `quiver_database_open` and every
   binding's `open()` — opens the file without reading the schema, so eager loading would have to

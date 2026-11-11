@@ -430,10 +430,15 @@ logger (`quiver_database_<id>`) with stderr + file sinks, stored as `Impl::logge
 sink defaults to `<db dir>/quiver_database.log`, truncated on open, and is skipped for `:memory:`
 and read-only opens unless `DatabaseOptions::log_path` is nonempty. An explicit file path opts
 both into logging; relative paths start in the database directory (`:memory:` uses the CWD).
+Database and log paths are decoded as UTF-8; Windows enables spdlog's `SPDLOG_WCHAR_FILENAMES`
+and passes the native wide path to its sink. Path comparison keys also use UTF-8, never ANSI.
 spdlog creates missing parent directories. Explicit failures throw `Failed to open log file
-'<destination>': <cause>`; default sink failures retain the console fallback. Before either
+'<destination>': <cause>` using the caller's original UTF-8 destination, even if resolution or
+decoding fails; default sink failures retain the console fallback. Before either
 sink can create directories or truncate, `resolve_log_path` refuses the database and its
 `-journal`/`-wal`/`-shm`, including parent directory components, symlinks and existing hardlinks.
+Journal hardlinks and symlink targets are checked beside both the named and resolved database
+(SQLite on Windows journals beside the named path when the database is a symlink).
 A dangling symlink (log, database or journal) is followed to the file it would create
 (`resolve_links`), since `weakly_canonical` stops at one; a harmless target is allowed, and the
 sink opens that resolved path. It checks the named (lexically normal, as Win32 opens it) and

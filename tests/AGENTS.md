@@ -28,6 +28,8 @@ C++ core and C API suites live here; binding suites live in each binding's `test
   `writes_database_file` predicate across drives and dot components, and the default log name used as a
   database name. `CApiDatabaseLogTest` covers all three factories, borrowed-path lifetime,
   default/empty options and error propagation through the C ABI.
+  UTF-8 paths cover filenames outside Windows' ANSI code page, recreation and collisions;
+  journal aliases cover both database spellings, including a live Windows rollback journal.
 - `test_database_describe.cpp` covers the reports for agents: combined declaration/statistics
   lines, NULL counts, coverage for all group kinds, primary-key/float/text histogram exclusion
   and the 64/65 boundary.

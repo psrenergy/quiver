@@ -42,6 +42,7 @@ ruff.toml         # Lint/format config; lint is isort only (select = ["I"])
   `(keepalive, options)` so the allocated path remains referenced through the FFI call (a CFFI
   struct pointer field does not own its buffer). Core resolves relative paths from the database
   directory (CWD for `:memory:`), validates database/journal collisions, and reports failures.
+  The lifecycle suite pins distinct UTF-8 names (`cafÃ©.db` and `café.db`) against ANSI aliasing.
 - **`_loader.py` pre-loads `libquiver.dll`** on Windows so the OS resolves `libquiver_c.dll`'s
   dependency chain. `tests/test.bat` prepends `build/bin/` to PATH for DLL discovery.
   On macOS it loads `.dylib` files and pre-loads `libquiver.0.dylib`, matching the C API's

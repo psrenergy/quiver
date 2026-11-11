@@ -94,6 +94,18 @@ def test_custom_log_path(
         assert "custom log destination" not in log_path.read_text(encoding="utf-8")
 
 
+def test_utf8_log_path_preserves_distinct_database(valid_schema_path: Path, tmp_path: Path) -> None:
+    db_path = tmp_path / "cafÃ©.db"
+    Database.from_schema(str(db_path), str(valid_schema_path)).close()
+    original = db_path.read_bytes()
+
+    with Database.open(str(db_path), log_path="café.db") as db:
+        assert db.is_healthy()
+
+    assert db_path.read_bytes() == original
+    assert "Opening database:" in (tmp_path / "café.db").read_text(encoding="utf-8")
+
+
 def test_custom_log_path_read_only(valid_schema_path: Path, tmp_path: Path) -> None:
     db_path = str(tmp_path / "test.db")
     Database.from_schema(db_path, str(valid_schema_path)).close()
