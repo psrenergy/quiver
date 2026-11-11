@@ -53,6 +53,10 @@ int main(int argc, char* argv[]) {
 
     program.add_argument("--read-only").help("open database in read-only mode").flag();
 
+    program.add_argument("--log-path")
+        .help("log file path (relative to the database directory)")
+        .default_value(std::string());
+
     program.add_argument("--log-level")
         .help("set log verbosity (debug, info, warn, error, off)")
         .default_value(std::string("warn"));
@@ -78,6 +82,7 @@ int main(int argc, char* argv[]) {
         quiver::DatabaseOptions options{};
         options.read_only = program.get<bool>("--read-only");
         options.console_level = parse_log_level(program.get<std::string>("--log-level"));
+        options.log_path = program.get<std::string>("--log-path");
 
         // Construct database (one of three modes)
         auto db_path = program.get<std::string>("database");

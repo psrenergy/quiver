@@ -5,11 +5,11 @@
 #include "quiver/binary/binary_file.h"
 #include "quiver/database.h"
 #include "sandbox/internal.h"
+#include "utils/file.h"
 
 #include <sol/sol.hpp>
 
 #include <algorithm>
-#include <cctype>
 #include <chrono>
 #include <cstdint>
 #include <filesystem>
@@ -40,20 +40,6 @@ struct TimeLimit {
 };
 
 namespace {
-
-// A name as the filesystems quiver ships on (NTFS, APFS) match it, because the part of a path that
-// does not exist yet keeps the script's spelling: case-folded, and spelled the way Win32 opens it --
-// a name ends at its first ':' ("x::$DATA" is x's own data, "x::$INDEX_ALLOCATION" makes directory
-// x) and loses trailing dots and spaces ("x." and "x " open x). Elsewhere that only refuses a few
-// names that would not have collided.
-std::string fold(std::string name) {
-    name.resize(std::min(name.find(':'), name.size()));
-    while (!name.empty() && (name.back() == '.' || name.back() == ' ')) {
-        name.pop_back();
-    }
-    std::ranges::transform(name, name.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-    return name;
-}
 
 // Its address keys the Sandbox's TimeLimit in the Lua registry.
 const char time_limit_key = 0;
@@ -161,20 +147,10 @@ std::string RunHandles::resolve_write_path(
         throw std::runtime_error("Cannot " + operation + ": database is open read-only, so scripts cannot write files");
     }
 
-    const std::filesystem::path candidate(resolved);
-    for (const auto& [directory, base] : database_entries) {
-        const auto relative = candidate.lexically_relative(directory);
-        if (relative.empty() || relative.begin()->string() == "..") {
-            continue;
-        }
-        // The first component is what the write creates in the database's directory: the file
-        // itself, or a directory export_csv creates on the way to a deeper one. A directory named
-        // like the journal would stop SQLite from ever opening its journal again.
-        const auto first = relative.begin()->string();
-        const bool is_file = std::next(relative.begin()) == relative.end();
+    // A suffix changes only the last component, so it matters only when that is the database's sibling.
+    for (const auto& database : database_entries) {
         for (const auto suffix : written) {
-            const auto name = fold(is_file ? first + std::string(suffix) : first);
-            if (name == base || name == base + "-journal" || name == base + "-wal" || name == base + "-shm") {
+            if (utils::writes_database_file(resolved + std::string(suffix), database)) {
                 throw std::runtime_error(
                     "Cannot " + operation + ": path '" + path + "' is the database file or one of its journals"
                 );
@@ -363,9 +339,8 @@ Sandbox::Sandbox(Database& db) : impl_(std::make_unique<Impl>(db)) {
         auto resolved = fs::weakly_canonical(named, ignored);
         for (const auto& entry : {named, resolved.empty() ? named : resolved}) {
             auto directory = fs::weakly_canonical(entry.parent_path(), ignored);
-            handles.database_entries.emplace_back(
-                directory.empty() ? entry.parent_path() : directory,
-                lua_internal::fold(entry.filename().string())
+            handles.database_entries.push_back(
+                (directory.empty() ? entry.parent_path() : directory) / entry.filename()
             );
         }
     }

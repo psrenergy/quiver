@@ -20,6 +20,8 @@ enum class LogLevel {
 struct QUIVER_API DatabaseOptions {
     bool read_only = false;
     LogLevel console_level = LogLevel::Info;
+    // Empty uses the default log; relative paths start at the database directory (CWD for :memory:).
+    std::string log_path;
 };
 
 struct QUIVER_API CSVOptions {

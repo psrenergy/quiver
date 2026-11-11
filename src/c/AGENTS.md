@@ -105,6 +105,11 @@ quiver_database_close(db);
 
 A `NULL` options pointer means defaults — in **every** function that takes options (lifecycle
 and CSV alike).
+`quiver_database_options_t` ends with a borrowed `const char* log_path` (`NULL` by default).
+The converter copies it into `DatabaseOptions::log_path` during the call, so the caller can
+release its storage immediately afterward. `NULL` and empty mean the default destination;
+a nonempty path selects a file in all three lifecycle calls, including read-only/in-memory
+opens. Relative-path resolution, collision protection and open failures stay in C++.
 
 ## Memory Management
 

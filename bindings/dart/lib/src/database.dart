@@ -32,6 +32,12 @@ bool? _integerToBoolean(int? value, [String collection = '', String attribute = 
 ///
 /// Use [Database.fromSchema] to create a new database from a SQL schema file.
 /// After use, call [close] to free native resources.
+///
+/// All factories accept `logPath`: a log file path relative to the database's
+/// directory (the working directory for `:memory:`), or an absolute path.
+/// A nonempty path enables file logging even with `readOnly` or `:memory:`.
+/// The file is truncated on open; an unusable explicit path throws.
+/// Omitting it or passing an empty string keeps the default logging behavior.
 class Database {
   Pointer<quiver_database_t> _ptr;
   bool _isClosed = false;
@@ -45,6 +51,7 @@ class Database {
     Arena arena,
     bool readOnly,
     int? consoleLevel,
+    String? logPath,
   ) {
     final optionsPtr = arena<quiver_database_options_t>();
     optionsPtr.ref = bindings.quiver_database_options_default();
@@ -52,6 +59,7 @@ class Database {
     if (consoleLevel != null) {
       optionsPtr.ref.console_level = consoleLevel;
     }
+    optionsPtr.ref.log_path = logPath == null ? nullptr : logPath.toNativeUtf8(allocator: arena).cast();
     return optionsPtr;
   }
 
@@ -64,10 +72,11 @@ class Database {
     String schemaPath, {
     bool readOnly = false,
     int? consoleLevel,
+    String? logPath,
   }) {
     final arena = Arena();
     try {
-      final optionsPtr = _makeOptions(arena, readOnly, consoleLevel);
+      final optionsPtr = _makeOptions(arena, readOnly, consoleLevel, logPath);
       final outDbPtr = arena<Pointer<quiver_database_t>>();
 
       check(
@@ -93,10 +102,11 @@ class Database {
     String migrationsPath, {
     bool readOnly = false,
     int? consoleLevel,
+    String? logPath,
   }) {
     final arena = Arena();
     try {
-      final optionsPtr = _makeOptions(arena, readOnly, consoleLevel);
+      final optionsPtr = _makeOptions(arena, readOnly, consoleLevel, logPath);
       final outDbPtr = arena<Pointer<quiver_database_t>>();
 
       check(
@@ -135,10 +145,11 @@ class Database {
     String dbPath, {
     bool readOnly = false,
     int? consoleLevel,
+    String? logPath,
   }) {
     final arena = Arena();
     try {
-      final optionsPtr = _makeOptions(arena, readOnly, consoleLevel);
+      final optionsPtr = _makeOptions(arena, readOnly, consoleLevel, logPath);
       final outDbPtr = arena<Pointer<quiver_database_t>>();
 
       check(

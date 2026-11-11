@@ -8,8 +8,9 @@ end
 """
     Sandbox(db::Database)
 
-Lua `print()` writes and flushes an INFO entry through the database logger. Writable
-databases use `quiver_database.log`; in-memory and read-only databases use only the console.
+Lua `print()` writes and flushes an INFO entry through the database logger. `log_path`
+selects its file destination, including for in-memory and read-only databases. Without it,
+writable databases use `quiver_database.log` and other databases use only the console.
 Console output follows the database's `console_level` setting.
 """
 function Sandbox(db::Database)

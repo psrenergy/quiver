@@ -95,6 +95,7 @@ end
 mutable struct quiver_database_options_t
     read_only::Cint
     console_level::quiver_log_level_t
+    log_path::Ptr{Cchar}
 end
 
 mutable struct quiver_csv_options_t

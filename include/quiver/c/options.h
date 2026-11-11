@@ -18,6 +18,8 @@ typedef enum {
 typedef struct {
     int read_only;
     quiver_log_level_t console_level;
+    // Borrowed during the call; NULL or empty uses the default log destination.
+    const char* log_path;
 } quiver_database_options_t;
 
 // CSV options for controlling enum resolution and date formatting.

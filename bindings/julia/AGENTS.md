@@ -27,9 +27,15 @@ Project.toml      # Deps: Artifacts, CEnum, Dates, Libdl; julia 1.11 compat
   after its database/version header; both forward the C string without binding-side formatting.
 - **Sandbox array types are handled in C++.** `test/test_sandbox.jl` checks mixed Lua REAL
   arrays on create/update; Julia passes the script through without converting its cells.
+- **Database log paths**: `open` / `from_schema` / `from_migrations` (their `do` forms too) accept
+  `log_path::Optional{String}`. `build_quiver_database_options` returns `(options, log_path)`;
+  the struct borrows the String's own NUL-terminated bytes, so preserve `log_path` across the FFI call.
+  Core resolves relative paths from the database directory (`pwd()` for `:memory:`), validates
+  protected database/journal destinations, and reports explicit destination failures.
 - **Sandbox prints use the database logger.** Each `print()` emits one flushed INFO entry
-  with normal Lua conversions and tabs. Writable databases use the existing `quiver_database.log`;
-  in-memory and read-only databases use only the console. `console_level` still controls console output.
+  with normal Lua conversions and tabs. Explicit `log_path` works for every database; without it,
+  writable databases use `quiver_database.log` and in-memory/read-only databases use only the
+  console. `console_level` still controls console output.
 - **Regenerate after C API changes**: `generator/generator.bat` rewrites `src/c_api.jl`
   (`prologue.jl`/`epilogue.jl` are spliced around the generated body).
 - **Always `GC.@preserve`**: refs produced by `marshal_params` (and any `Ref`s passed as pointers)

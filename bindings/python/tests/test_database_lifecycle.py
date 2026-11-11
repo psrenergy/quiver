@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 import quiverdb
-from quiverdb import Database, QuiverError
+from quiverdb import Database, QuiverError, Sandbox
 
 
 def test_from_schema_creates_database(valid_schema_path: Path, tmp_path: Path) -> None:
@@ -71,6 +71,82 @@ def test_open_existing_database(valid_schema_path: Path, tmp_path: Path) -> None
     reopened = Database.open(db_path)
     assert reopened.is_healthy()
     reopened.close()
+
+
+@pytest.mark.parametrize("factory", ["from_schema", "from_migrations", "open"])
+@pytest.mark.parametrize("relative", [False, True])
+def test_custom_log_path(
+    factory: str, relative: bool, valid_schema_path: Path, migrations_path: Path, tmp_path: Path
+) -> None:
+    db_path = str(tmp_path / "test.db")
+    if factory == "open":
+        Database.from_schema(db_path, str(valid_schema_path)).close()
+    source_path = valid_schema_path if factory == "from_schema" else migrations_path
+    args = (db_path,) if factory == "open" else (db_path, str(source_path))
+    log_path = tmp_path / "logs" / "custom.log"
+    option_path = str(Path("logs") / "custom.log") if relative else str(log_path)
+    with getattr(Database, factory)(*args, log_path=option_path) as db:
+        with Sandbox(db) as sandbox:
+            sandbox.run("print('custom log destination')")
+        assert "custom log destination" in log_path.read_text(encoding="utf-8")
+
+    with Database.open(db_path, log_path=option_path):
+        assert "custom log destination" not in log_path.read_text(encoding="utf-8")
+
+
+def test_utf8_log_path_preserves_distinct_database(valid_schema_path: Path, tmp_path: Path) -> None:
+    db_path = tmp_path / "cafÃ©.db"
+    Database.from_schema(str(db_path), str(valid_schema_path)).close()
+    original = db_path.read_bytes()
+
+    with Database.open(str(db_path), log_path="café.db") as db:
+        assert db.is_healthy()
+
+    assert db_path.read_bytes() == original
+    assert "Opening database:" in (tmp_path / "café.db").read_text(encoding="utf-8")
+
+
+def test_custom_log_path_read_only(valid_schema_path: Path, tmp_path: Path) -> None:
+    db_path = str(tmp_path / "test.db")
+    Database.from_schema(db_path, str(valid_schema_path)).close()
+    default_log = tmp_path / "quiver_database.log"
+    assert default_log.is_file()
+    with Database.open(db_path, log_path=""):
+        assert default_log.is_file()
+    default_log.write_text("default unchanged", encoding="utf-8")
+    with Database.open(db_path, read_only=True):
+        assert default_log.read_text(encoding="utf-8") == "default unchanged"
+
+    log_path = tmp_path / "read-only.log"
+    with Database.open(db_path, read_only=True, log_path=str(log_path)) as db:
+        with Sandbox(db) as sandbox:
+            sandbox.run("print('read-only log destination')")
+        assert "read-only log destination" in log_path.read_text(encoding="utf-8")
+
+
+def test_custom_log_path_in_memory(valid_schema_path: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    with Database.from_schema(":memory:", str(valid_schema_path), log_path="memory.log") as db:
+        with Sandbox(db) as sandbox:
+            sandbox.run("print('memory log destination')")
+        assert "memory log destination" in Path("memory.log").read_text(encoding="utf-8")
+    assert not Path("quiver_database.log").exists()
+
+
+@pytest.mark.parametrize("factory", ["from_schema", "from_migrations", "open"])
+def test_custom_log_path_failure_preserves_database(
+    factory: str, valid_schema_path: Path, migrations_path: Path, tmp_path: Path
+) -> None:
+    db_path = str(tmp_path / "test.db")
+    Database.from_schema(db_path, str(valid_schema_path)).close()
+    original = Path(db_path).read_bytes()
+    blocked_path = tmp_path / "blocked"
+    blocked_path.write_text("not a directory", encoding="utf-8")
+    source_path = valid_schema_path if factory == "from_schema" else migrations_path
+    args = (db_path,) if factory == "open" else (db_path, str(source_path))
+    with pytest.raises(QuiverError, match="custom.log"):
+        getattr(Database, factory)(*args, log_path=str(blocked_path / "custom.log"))
+    assert Path(db_path).read_bytes() == original
 
 
 def test_open_read_only_rejects_writes(valid_schema_path: Path, tmp_path: Path) -> None:

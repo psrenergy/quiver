@@ -72,7 +72,7 @@ src/                      # C++ implementation
   utils/datetime.h        # ISO 8601 parse/format helpers
   utils/number.h          # quiver::utils::append_number (std::to_chars shortest round-trip) and
                           # parse_float (its whole-cell, host-locale-proof reader)
-  utils/file.h            # quiver::utils::read_file: whole file, binary mode, nullopt unless read in full
+  utils/file.h            # read_file: whole file, binary mode; filesystem_name/writes_database_file: shared db/journal collision rule
 src/csv/                    # Standalone CSV file reader/writer (see below)
   csv_read.h / csv_read.cpp   # Internal CSV reader (csv-parser, Pimpl'd) behind db:read_csv /
                               # db:read_csv_stream and import_csv -- no include/quiver/ counterpart
@@ -418,15 +418,34 @@ and then every down migration, and finally rejects any table left behind; the di
 execution helpers remain private. Their errors name the public caller, not the helper:
 `migrate_up` takes it as `operation` (`from_migrations` or `validate_migrations`), while
 `migrate_down` and `apply_schema` write their only caller's name in directly.
+The public constructor delegates to a private `(path, options, recreate)` constructor;
+`from_schema` checks its preconditions, then uses `recreate = true`. The logger is prepared once,
+before removing an existing database, so an invalid explicit log destination preserves that file.
 
 ## Logging
 
 spdlog with debug/info/warn/error levels, through a **per-database logger instance** — never the
 `spdlog::` global functions. `create_database_logger` (`database.cpp`) builds a uniquely named
 logger (`quiver_database_<id>`) with stderr + file sinks, stored as `Impl::logger`. The file
-sink (`<db dir>/quiver_database.log`, truncated on open) is skipped for `:memory:` and for a
-read-only open, which must leave the database's directory alone — it used to wipe the trail of
-any writer on the same database:
+sink defaults to `<db dir>/quiver_database.log`, truncated on open, and is skipped for `:memory:`
+and read-only opens unless `DatabaseOptions::log_path` is nonempty. An explicit file path opts
+both into logging; relative paths start in the database directory (`:memory:` uses the CWD).
+Database and log paths are decoded as UTF-8; Windows enables spdlog's `SPDLOG_WCHAR_FILENAMES`
+and passes the native wide path to its sink. Path comparison keys also use UTF-8, never ANSI.
+spdlog creates missing parent directories. Explicit failures throw `Failed to open log file
+'<destination>': <cause>` using the caller's original UTF-8 destination, even if resolution or
+decoding fails; default sink failures retain the console fallback. Before either
+sink can create directories or truncate, `resolve_log_path` refuses the database and its
+`-journal`/`-wal`/`-shm`, including parent directory components, symlinks and existing hardlinks.
+Journal hardlinks and symlink targets are checked beside both the named and resolved database
+(SQLite on Windows journals beside the named path when the database is a symlink).
+A dangling symlink (log, database or journal) is followed to the file it would create
+(`resolve_links`), since `weakly_canonical` stops at one; a harmless target is allowed, and the
+sink opens that resolved path. It checks the named (lexically normal, as Win32 opens it) and
+resolved (as POSIX opens it) spellings of both paths through `utils::writes_database_file`, the
+same predicate the sandbox write gate uses: drives compare case-folded, every other component
+through `utils::filesystem_name`. A database path of `""` (SQLite's temporary file) has nothing
+to protect and logs to the CWD like `:memory:`. The CLI exposes `--log-path`:
 ```cpp
 impl_->logger->debug("Opening database: {}", path);
 ```
@@ -686,7 +705,8 @@ one INFO entry through the database's logger and flushes it. Conversion stays in
 and timeouts unwind normally; completed prints survive a later failure. The callback captures
 the Database by reference and reads its current logger on each call, including after move-assignment.
 Existing logger formatting, sinks, levels and error handling apply. No extra log, output buffer,
-constructor option or getter exists; read-only/in-memory databases retain console-only logging.
+Sandbox constructor option or getter exists; host-configured `DatabaseOptions::log_path` also
+receives prints, including on read-only/in-memory handles that opt into file logging.
 
 Executes Lua scripts with database access (sol2). The `db` userdata exposes the same API as the
 other bindings (root cross-layer tables):
@@ -806,7 +826,8 @@ Implementation conventions in `src/sandbox/`:
   `RunHandles::read_only` (copied from `Database::Impl::read_only` in the `Sandbox` constructor,
   through `friend class Sandbox`), then `Cannot <op>: path '<p>' is the database file or one of
   its journals` for the db file or its `-journal`/`-wal`/`-shm`. The file is located through
-  `RunHandles::database_entries`, built in the `Sandbox` constructor from `sqlite3_db_filename`
+  `RunHandles::database_entries` and checked by `utils::writes_database_file` (shared with the
+  log-path check), built in the `Sandbox` constructor from `sqlite3_db_filename`
   (SQLite's absolute name, from which it derives the journal names; `db.path()` may be relative to
   a working directory that has since changed) both as named and with symlinks resolved. The check
   is on the **first** path component under the database's directory: a deeper path refuses a

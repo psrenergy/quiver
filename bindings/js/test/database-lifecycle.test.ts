@@ -1,12 +1,12 @@
 import { CString, type Pointer } from "bun:ffi";
 import { afterAll, describe, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 
 const __dirname = import.meta.dir;
 
-import { join } from "node:path";
-import { Database, QuiverError } from "../src/index.ts";
+import { join, relative } from "node:path";
+import { Database, LOG_LEVEL_OFF, QuiverError, Sandbox } from "../src/index.ts";
 import { getSymbols } from "../src/loader.ts";
 
 const SCHEMA_PATH = join(__dirname, "..", "..", "..", "tests", "schemas", "valid", "basic.sql");
@@ -32,6 +32,110 @@ describe("Database lifecycle", () => {
     tempDirs.push(dir);
     return dir;
   }
+
+  for (const factory of ["open", "fromSchema", "fromMigrations"] as const) {
+    test(`logPath selects the file for ${factory} and receives Lua prints`, () => {
+      const dir = makeTempDir();
+      const dbPath = join(dir, "test.db");
+      const logPath = join(dir, "logs", `${factory}.log`);
+      const options = {
+        consoleLevel: LOG_LEVEL_OFF,
+        logPath: factory === "fromSchema" ? logPath : join("logs", `${factory}.log`),
+      };
+      const db =
+        factory === "open"
+          ? Database.open(dbPath, options)
+          : factory === "fromSchema"
+            ? Database.fromSchema(dbPath, SCHEMA_PATH, options)
+            : Database.fromMigrations(dbPath, MIGRATIONS_PATH, options);
+      try {
+        const sandbox = new Sandbox(db);
+        try {
+          sandbox.run(`print('custom ${factory}')`);
+          expect(readFileSync(logPath, "utf8")).toContain(`[info] custom ${factory}`);
+        } finally {
+          sandbox.close();
+        }
+      } finally {
+        db.close();
+      }
+      expect(readFileSync(logPath, "utf8")).toContain("Opening database:");
+      expect(existsSync(join(dir, "quiver_database.log"))).toBe(false);
+    });
+  }
+
+  test("explicit logPath enables read-only and in-memory file logging", () => {
+    const dir = makeTempDir();
+    const dbPath = join(dir, "test.db");
+    Database.fromMigrations(dbPath, MIGRATIONS_PATH, { consoleLevel: LOG_LEVEL_OFF }).close();
+    const readonlyLog = join(dir, "readonly.log");
+    for (const open of [
+      () =>
+        Database.open(dbPath, {
+          readOnly: true,
+          consoleLevel: LOG_LEVEL_OFF,
+          logPath: readonlyLog,
+        }),
+      () =>
+        Database.fromMigrations(dbPath, MIGRATIONS_PATH, {
+          readOnly: true,
+          consoleLevel: LOG_LEVEL_OFF,
+          logPath: join(dir, "migrations-readonly.log"),
+        }),
+    ]) {
+      open().close();
+    }
+    expect(readFileSync(readonlyLog, "utf8")).toContain("Database opened successfully:");
+    expect(readFileSync(join(dir, "migrations-readonly.log"), "utf8")).toContain(
+      "Database opened successfully:",
+    );
+
+    const memoryLog = join(dir, "memory.log");
+    Database.fromSchema(":memory:", SCHEMA_PATH, {
+      consoleLevel: LOG_LEVEL_OFF,
+      logPath: relative(process.cwd(), memoryLog),
+    }).close();
+    expect(readFileSync(memoryLog, "utf8")).toContain("Database opened successfully: :memory:");
+  });
+
+  test("omitted and empty logPath keep defaults, and explicit logs truncate on open", () => {
+    const dir = makeTempDir();
+    const dbPath = join(dir, "test.db");
+    const logPath = join(dir, "quiver_database.log");
+    Database.open(dbPath, { consoleLevel: LOG_LEVEL_OFF }).close();
+    const original = readFileSync(logPath, "utf8");
+    Database.open(dbPath, { readOnly: true, consoleLevel: LOG_LEVEL_OFF, logPath: "" }).close();
+    expect(readFileSync(logPath, "utf8")).toBe(original);
+    rmSync(logPath);
+    Database.open(dbPath, { consoleLevel: LOG_LEVEL_OFF, logPath: "" }).close();
+    expect(existsSync(logPath)).toBe(true);
+    writeFileSync(logPath, "old log history");
+    Database.open(dbPath, { consoleLevel: LOG_LEVEL_OFF, logPath }).close();
+    expect(readFileSync(logPath, "utf8")).not.toContain("old log history");
+  });
+
+  test("explicit log failures throw through every factory and preserve the database", () => {
+    const dir = makeTempDir();
+    const dbPath = join(dir, "test.db");
+    const db = Database.fromSchema(dbPath, SCHEMA_PATH, { consoleLevel: LOG_LEVEL_OFF });
+    db.createElement("Configuration", { label: "preserved" });
+    db.close();
+    const options = { consoleLevel: LOG_LEVEL_OFF, logPath: dir };
+    for (const open of [
+      () => Database.open(dbPath, options),
+      () => Database.fromSchema(dbPath, SCHEMA_PATH, options),
+      () => Database.fromMigrations(dbPath, MIGRATIONS_PATH, options),
+    ]) {
+      expect(open).toThrow(QuiverError);
+      const reopened = Database.open(dbPath, { readOnly: true, consoleLevel: LOG_LEVEL_OFF });
+      try {
+        expect(reopened.readScalarStrings("Configuration", "label")).toEqual(["preserved"]);
+      } finally {
+        reopened.close();
+      }
+    }
+    expect(() => Database.open(dbPath, { ...options, logPath: dbPath })).toThrow(QuiverError);
+  });
 
   test("fromSchema opens database and returns Database instance", () => {
     const db = Database.fromSchema(":memory:", SCHEMA_PATH);

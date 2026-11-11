@@ -356,6 +356,8 @@ public:
     bool in_dry_run() const;
 
 private:
+    Database(const std::string& path, const DatabaseOptions& options, bool recreate);
+
     struct Impl;
     std::unique_ptr<Impl> impl_;
 

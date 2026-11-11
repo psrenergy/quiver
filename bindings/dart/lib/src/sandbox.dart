@@ -29,8 +29,9 @@ class Sandbox {
   /// Creates a new Sandbox for the given database.
   ///
   /// Lua `print()` writes and flushes an INFO entry through the database logger.
-  /// Writable databases use `quiver_database.log`; in-memory and read-only
-  /// databases use only the console, respecting the database's `consoleLevel`.
+  /// The database's `logPath` selects the file; without it writable databases use
+  /// `quiver_database.log` and in-memory/read-only databases use only the console.
+  /// The database's `consoleLevel` controls console output.
   Sandbox(Database db) : _ptr = nullptr {
     final arena = Arena();
     try {

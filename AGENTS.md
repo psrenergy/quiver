@@ -53,8 +53,13 @@ Settled questions — don't relitigate without the user; each was decided delibe
 
 - **Time-series group data is column-oriented** (`{column: [values]}`) in every binding — the
   canonical cross-binding shape. The C++ core keeps row-shaped `vector<map<string, Value>>`.
-- **`DatabaseOptions`** (`read_only`, `console_level`) is exposed as optional parameters on the
-  open/factory methods of every binding.
+- **`DatabaseOptions`** (`read_only`, `console_level`, `log_path`) is exposed as optional parameters on the
+  open/factory methods of every binding (`logPath` in Dart/JS). A nonempty `log_path` names the
+  log file, enables it even for read-only/in-memory databases, and fails opening on a log error.
+  Relative paths start at the database directory (`:memory:` uses CWD). Files are truncated on
+  open; spdlog creates parent directories. An unset/empty path keeps the default policy.
+  Database and log paths are UTF-8, including on Windows (spdlog uses wide filenames there).
+  The C API borrows the path only during the call; bindings must keep its storage alive until return.
 - **Schema metadata loads lazily, on first use** (`Impl::require_schema`, `src/database_impl.h`).
   `Database(path, options)` — the only implementation behind `quiver_database_open` and every
   binding's `open()` — opens the file without reading the schema, so eager loading would have to
@@ -758,12 +763,13 @@ Public Database methods follow `verb_[category_]type[_by_id]`:
 - **Examples:** `create_element`, `read_vector_floats_by_id`, `get_scalar_metadata`, `list_time_series_groups`
 
 ### Database Class
-- Factory methods: `from_schema()`, `from_migrations()` — `DatabaseOptions` (`read_only`, `console_level`) exposed as optional parameters in every binding.
-  `from_migrations` with `read_only` applies nothing and creates nothing: it loads the `ui/`
+- Factory methods: `from_schema()`, `from_migrations()` — `DatabaseOptions` (`read_only`, `console_level`, `log_path`) exposed as optional parameters in every binding.
+  `from_migrations` with `read_only` applies no migrations and creates no database: it loads the `ui/`
   sidecar for a database with no pending migrations, and throws Pattern 1
   (`... a read-only open cannot apply them`) for one behind them; `from_schema` refuses
-  `read_only`. A read-only open creates no `quiver_database.log`, and a Sandbox over it writes no
-  files; the host's own `export_csv` on that handle still writes, as the host asked.
+  `read_only`. A read-only open creates no default log, but an explicit `log_path` enables one.
+  A Sandbox over it cannot write files through Lua file operations; the host's own `export_csv`
+  on that handle still writes, as the host asked.
 - `validate_migrations(migrations_path)` — validates a migrations directory (up then down) against a
   throwaway in-memory database; no out-parameter, returns nothing. Bound in every layer, including
   Lua (`db:validate_migrations`, db-scoped and sandboxed — see the design decision above). A directory
@@ -897,9 +903,10 @@ takes every expression operation and method in C++, Lua and Julia; the C API con
 
 `print()` writes one INFO entry to the database's current logger and flushes it immediately.
 Arguments use Lua's `tostring` and tab separators; the logger supplies its usual prefix/newline.
-Writable databases use their existing `quiver_database.log`; read-only/in-memory databases use
-only the console, filtered by `console_level`. There is no separate sandbox log or output API.
-The CLI uses the same policy (`--log-level info` shows prints on stderr); stdout holds JSON results.
+Writable databases default to `quiver_database.log`; read-only/in-memory databases default to
+console only. A host-provided `log_path` selects the file in every mode. `console_level` filters
+only the console. There is no separate sandbox log or output API. The CLI accepts `--log-path`
+and uses the same policy (`--log-level info` shows prints on stderr); stdout holds JSON results.
 Executes Lua scripts against a database; the `db` userdata exposes the same API surface
 (see cross-layer tables below). `run(script, timeout_ms = 0)` returns the script's return value
 encoded as **JSON** (empty string if it returned nothing) — every binding passes that string

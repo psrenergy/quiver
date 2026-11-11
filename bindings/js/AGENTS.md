@@ -151,8 +151,11 @@ bunfig.toml       # coverageSkipTestFiles = true (Bun 1.3 reports test/ otherwis
   `test/sandbox.test.ts` checks mixed Lua REAL arrays on create/update; cell conversion and
   schema validation stay in C++.
 - **Lua `print()` uses the database's current logger.** Each completed call logs and flushes one
-  INFO entry with tab-separated arguments, following existing file/console policy. No capture API,
-  log-path option or wrapper-side formatting; script results remain JSON.
+  INFO entry with tab-separated arguments, following existing file/console policy. `DatabaseOptions.logPath`
+  selects a file even for read-only/in-memory databases; omitted/empty keeps the defaults. Relative
+  paths use the database directory (`:memory:` uses CWD), explicit failures throw and files truncate
+  on open. `makeDefaultOptions` builds the 16-byte C struct (pointer at offset 8) and returns its
+  string keepalive alongside the struct, following the CSV marshaller. Script results remain JSON.
 - **Time-series NULL cells** (`TimeSeriesData = Record<string, (number | string | null)[]>`): a
   `null` value marshals to a per-column `uint8_t` mask (0 = NULL) with a placeholder in the data
   array; an all-`null` column is tagged FLOAT with a zeroed placeholder (the C API ignores the tag

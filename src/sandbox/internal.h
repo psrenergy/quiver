@@ -66,11 +66,11 @@ struct RunHandles {
     // Copied from the Database once, when the Sandbox is built: an open handle never changes mode.
     bool read_only = false;
 
-    // Where the database file sits, as (canonical directory, case-folded file name): once as SQLite
-    // named it at open, which its journals extend with -journal/-wal/-shm, and once with symlinks
-    // resolved. Fixed when the Sandbox is built, so a later change of the working directory cannot
-    // point the write gate at another file. Empty for an in-memory database.
-    std::vector<std::pair<std::filesystem::path, std::string>> database_entries;
+    // The database file, in a canonical directory: once as SQLite named it at open, which its
+    // journals extend with -journal/-wal/-shm, and once with symlinks resolved. Fixed when the
+    // Sandbox is built, so a later change of the working directory cannot point the write gate at
+    // another file. Empty for an in-memory database.
+    std::vector<std::filesystem::path> database_entries;
 
     // Taken at each run()'s entry. A scope already open then belongs to the host (including one an
     // earlier run() left open), so the Lua commit/rollback/end_dry_run refuse to end it. Outside

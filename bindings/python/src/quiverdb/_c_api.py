@@ -27,6 +27,7 @@ ffi.cdef("""
     typedef struct {
         int read_only;
         quiver_log_level_t console_level;
+        const char* log_path;
     } quiver_database_options_t;
 
     // database.h

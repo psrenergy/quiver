@@ -11,6 +11,7 @@ end
 function build_quiver_database_options(;
     read_only::Optional{Bool} = nothing,
     console_level::Optional{C.quiver_log_level_t} = nothing,
+    log_path::Optional{String} = nothing,
 )
     options = Ref(C.quiver_database_options_default())
     if !isnothing(read_only)
@@ -19,20 +20,28 @@ function build_quiver_database_options(;
     if !isnothing(console_level)
         options[].console_level = console_level
     end
-    return options
+    if !isnothing(log_path)
+        # A String is NUL-terminated in memory; the struct only borrows it, so callers preserve it.
+        options[].log_path = pointer(log_path)
+    end
+    return options, log_path
 end
 
 function from_schema(db_path::String, schema_path::String; kwargs...)
-    options = build_quiver_database_options(; kwargs...)
+    options, log_path = build_quiver_database_options(; kwargs...)
     out_db = Ref{Ptr{C.quiver_database}}(C_NULL)
-    check(C.quiver_database_from_schema(db_path, schema_path, options, out_db))
+    GC.@preserve log_path begin
+        check(C.quiver_database_from_schema(db_path, schema_path, options, out_db))
+    end
     return Database(out_db[])
 end
 
 function from_migrations(db_path::String, migrations_path::String; kwargs...)
-    options = build_quiver_database_options(; kwargs...)
+    options, log_path = build_quiver_database_options(; kwargs...)
     out_db = Ref{Ptr{C.quiver_database}}(C_NULL)
-    check(C.quiver_database_from_migrations(db_path, migrations_path, options, out_db))
+    GC.@preserve log_path begin
+        check(C.quiver_database_from_migrations(db_path, migrations_path, options, out_db))
+    end
     return Database(out_db[])
 end
 
@@ -42,9 +51,11 @@ function validate_migrations(migrations_path::String)
 end
 
 function open(db_path::String; kwargs...)
-    options = build_quiver_database_options(; kwargs...)
+    options, log_path = build_quiver_database_options(; kwargs...)
     out_db = Ref{Ptr{C.quiver_database}}(C_NULL)
-    check(C.quiver_database_open(db_path, options, out_db))
+    GC.@preserve log_path begin
+        check(C.quiver_database_open(db_path, options, out_db))
+    end
     return Database(out_db[])
 end
 

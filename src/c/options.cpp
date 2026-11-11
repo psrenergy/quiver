@@ -3,7 +3,7 @@
 extern "C" {
 
 QUIVER_C_API quiver_database_options_t quiver_database_options_default(void) {
-    return {0, QUIVER_LOG_INFO};
+    return {0, QUIVER_LOG_INFO, nullptr};
 }
 
 QUIVER_C_API quiver_csv_options_t quiver_csv_options_default(void) {

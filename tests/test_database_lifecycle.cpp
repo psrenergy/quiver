@@ -1,11 +1,15 @@
 #include "test_utils.h"
+#include "utils/file.h"
 
 #include <gtest/gtest.h>
 #include <quiver/database.h>
 #include <quiver/element.h>
 
+#include <algorithm>
+#include <cctype>
 #include <filesystem>
 #include <fstream>
+#include <iterator>
 #include <string>
 
 namespace fs = std::filesystem;
@@ -345,4 +349,542 @@ TEST_F(TempFileFixture, FromMigrationsWithNoVersionsReturnsHandle) {
     EXPECT_EQ(db.current_version(), 0);
 
     fs::remove_all(empty_dir);
+}
+
+namespace {
+
+std::string read_log_file(const fs::path& path) {
+    std::ifstream file(path, std::ios::binary);
+    return {std::istreambuf_iterator<char>(file), {}};
+}
+
+class DatabaseLogTest : public ::testing::Test {
+protected:
+    void SetUp() override {
+        directory = fs::temp_directory_path() /
+                    ("quiver_log_" + std::string(::testing::UnitTest::GetInstance()->current_test_info()->name()));
+        database = directory / "study" / "test.db";
+        fs::create_directories(database.parent_path());
+    }
+    void TearDown() override {
+        fs::remove_all(directory);
+    }
+    fs::path directory;
+    fs::path database;
+};
+
+}  // namespace
+
+TEST_F(DatabaseLogTest, RelativeAndAbsoluteDestinationsCreateDirectoriesAndTruncate) {
+    const auto relative_log = database.parent_path() / "logs" / "nested" / "study.log";
+    fs::create_directories(relative_log.parent_path());
+    std::ofstream(relative_log) << "old history";
+    {
+        quiver::Database db(
+            database.string(),
+            {.console_level = quiver::LogLevel::Off, .log_path = "logs/nested/study.log"}
+        );
+    }
+    auto content = read_log_file(relative_log);
+    EXPECT_NE(content.find("Opening database:"), std::string::npos);
+    EXPECT_EQ(content.find("old history"), std::string::npos);
+    EXPECT_FALSE(fs::exists(database.parent_path() / "quiver_database.log"));
+
+    const auto absolute_log = directory / "external" / "absolute.log";
+    {
+        quiver::Database db(
+            database.string(),
+            {.console_level = quiver::LogLevel::Off, .log_path = absolute_log.string()}
+        );
+    }
+    EXPECT_NE(read_log_file(absolute_log).find("Database opened successfully:"), std::string::npos);
+}
+
+TEST_F(DatabaseLogTest, EmptyDestinationPreservesDefaultAndReadOnlyConsolePolicy) {
+    EXPECT_TRUE(quiver::DatabaseOptions{}.log_path.empty());
+    const auto default_log = database.parent_path() / "quiver_database.log";
+    {
+        quiver::Database db(database.string(), {.console_level = quiver::LogLevel::Off, .log_path = ""});
+    }
+    const auto original = read_log_file(default_log);
+    EXPECT_NE(original.find("Database opened successfully:"), std::string::npos);
+    {
+        quiver::Database db(database.string(), {.read_only = true, .console_level = quiver::LogLevel::Off});
+    }
+    EXPECT_EQ(read_log_file(default_log), original);
+    fs::remove(default_log);
+    {
+        quiver::Database db(database.string(), {.read_only = true, .console_level = quiver::LogLevel::Off});
+    }
+    EXPECT_FALSE(fs::exists(default_log));
+    fs::create_directory(default_log);  // A failed default sink still falls back to the console.
+    EXPECT_NO_THROW(quiver::Database(database.string(), {.console_level = quiver::LogLevel::Off}));
+}
+
+TEST_F(DatabaseLogTest, Utf8PathsCreateTheRequestedFilesAndProtectTheDatabase) {
+    using quiver::utils::path_to_utf8;
+    database = directory / u8"研究/café.db";
+    fs::create_directories(database.parent_path());
+    const fs::path relative_log(u8"記録/café.log");
+    const auto log = database.parent_path() / relative_log;
+    const auto db_path = path_to_utf8(database);
+    for (bool absolute : {false, true}) {
+        auto db = quiver::Database::from_schema(
+            db_path,
+            VALID_SCHEMA("basic.sql"),
+            {.console_level = quiver::LogLevel::Off, .log_path = path_to_utf8(absolute ? log : relative_log)}
+        );
+        EXPECT_TRUE(db.is_healthy());
+    }
+    EXPECT_NE(read_log_file(log).find("Opening database:"), std::string::npos);
+    const auto original = read_log_file(database);
+    ASSERT_FALSE(original.empty());
+    for (const auto* suffix : {"", "-journal", "-wal", "-shm"}) {
+        auto destination = database;
+        destination += suffix;
+        try {
+            quiver::Database db(
+                db_path,
+                {.console_level = quiver::LogLevel::Off, .log_path = path_to_utf8(destination)}
+            );
+            FAIL() << "Expected UTF-8 database/journal collision to fail";
+        } catch (const std::runtime_error& error) {
+            EXPECT_NE(
+                std::string(error.what()).find("destination is the database file or one of its journals"),
+                std::string::npos
+            ) << error.what();
+        }
+        EXPECT_EQ(read_log_file(database), original);
+        if (*suffix != '\0') {
+            EXPECT_FALSE(fs::exists(destination));
+        }
+    }
+}
+
+TEST_F(DatabaseLogTest, ExplicitDestinationEnablesReadOnlyAndInMemoryLogs) {
+    {
+        quiver::Database db(database.string(), {.console_level = quiver::LogLevel::Off});
+    }
+    const auto default_log = database.parent_path() / "quiver_database.log";
+    const auto original = read_log_file(default_log);
+    {
+        quiver::Database db(
+            database.string(),
+            {.read_only = true, .console_level = quiver::LogLevel::Off, .log_path = "readonly.log"}
+        );
+    }
+    EXPECT_NE(read_log_file(database.parent_path() / "readonly.log").find("Opening database:"), std::string::npos);
+    EXPECT_EQ(read_log_file(default_log), original);
+
+    const auto memory_log = directory / "memory.log";
+    const auto relative_path = memory_log.lexically_relative(fs::current_path());
+    const auto destination = relative_path.empty() ? memory_log : relative_path;
+    {
+        quiver::Database db(":memory:", {.console_level = quiver::LogLevel::Off, .log_path = destination.string()});
+    }
+    EXPECT_NE(read_log_file(memory_log).find("Database opened successfully: :memory:"), std::string::npos);
+    const auto cwd_default = fs::current_path() / "quiver_database.log";
+    const bool existed = fs::exists(cwd_default);
+    const auto previous = read_log_file(cwd_default);
+    {
+        quiver::Database db(":memory:", {.console_level = quiver::LogLevel::Off});
+    }
+    EXPECT_EQ(fs::exists(cwd_default), existed);
+    EXPECT_EQ(read_log_file(cwd_default), previous);
+}
+
+TEST_F(DatabaseLogTest, FactoriesUseTheRequestedDestination) {
+    {
+        auto db = quiver::Database::from_schema(
+            database.string(),
+            VALID_SCHEMA("basic.sql"),
+            {.console_level = quiver::LogLevel::Off, .log_path = "schema.log"}
+        );
+        EXPECT_TRUE(db.is_healthy());
+    }
+    EXPECT_NE(read_log_file(database.parent_path() / "schema.log").find("Opening database:"), std::string::npos);
+    {
+        auto db = quiver::Database::from_migrations(
+            (database.parent_path() / "migrated.db").string(),
+            SCHEMA_PATH("schemas/migrations"),
+            {.console_level = quiver::LogLevel::Off, .log_path = "migrations.log"}
+        );
+        EXPECT_EQ(db.current_version(), 3);
+    }
+    EXPECT_NE(read_log_file(database.parent_path() / "migrations.log").find("Opening database:"), std::string::npos);
+}
+
+TEST_F(DatabaseLogTest, ExplicitFailureNamesTheDestinationAndPreservesTheDatabase) {
+    {
+        auto db = quiver::Database::from_schema(
+            database.string(),
+            VALID_SCHEMA("basic.sql"),
+            {.console_level = quiver::LogLevel::Off}
+        );
+    }
+    const auto original = read_log_file(database);
+    const quiver::DatabaseOptions options{.console_level = quiver::LogLevel::Off, .log_path = directory.string()};
+    for (int factory = 0; factory < 3; ++factory) {
+        try {
+            auto db =
+                factory == 0 ? quiver::Database(database.string(), options)
+                : factory == 1
+                    ? quiver::Database::from_schema(database.string(), VALID_SCHEMA("basic.sql"), options)
+                    : quiver::Database::from_migrations(database.string(), SCHEMA_PATH("schemas/migrations"), options);
+            FAIL() << "Expected explicit log destination to fail";
+        } catch (const std::runtime_error& error) {
+            EXPECT_NE(
+                std::string(error.what()).find("Failed to open log file '" + directory.string() + "':"),
+                std::string::npos
+            );
+        }
+        EXPECT_EQ(read_log_file(database), original);
+    }
+}
+
+TEST_F(DatabaseLogTest, DatabaseAndJournalAliasesCannotBeFilesOrParentDirectories) {
+    {
+        auto db = quiver::Database::from_schema(
+            database.string(),
+            VALID_SCHEMA("basic.sql"),
+            {.console_level = quiver::LogLevel::Off}
+        );
+    }
+    const auto original = read_log_file(database);
+    for (const auto* suffix : {"", "-journal", "-wal", "-shm"}) {
+        const auto base = std::string("test.db") + suffix;
+        const auto protected_file = database.parent_path() / base;
+        if (*suffix != '\0') {
+            std::ofstream(protected_file) << "journal history";
+        }
+        const auto protected_content = read_log_file(protected_file);
+        for (
+            const auto& alias :
+            {base,
+             std::string("TEST.DB") + suffix,
+             base + ".",
+             base + " ",
+             base + "::$DATA",
+             base + "::$INDEX_ALLOCATION",
+             base + "/nested/log.txt"}
+        ) {
+            SCOPED_TRACE(alias);
+            const auto destination = database.parent_path() / alias;
+            try {
+                auto db = quiver::Database::from_schema(
+                    database.string(),
+                    VALID_SCHEMA("basic.sql"),
+                    {.console_level = quiver::LogLevel::Off, .log_path = destination.string()}
+                );
+                FAIL() << "Expected database/journal collision to fail";
+            } catch (const std::runtime_error& error) {
+                EXPECT_NE(
+                    std::string(error.what()).find("destination is the database file or one of its journals"),
+                    std::string::npos
+                ) << error.what();
+            }
+            EXPECT_EQ(read_log_file(database), original);
+            EXPECT_EQ(read_log_file(protected_file), protected_content);
+        }
+    }
+}
+
+TEST_F(DatabaseLogTest, JournalDirectoryCollisionDoesNotCreateAnything) {
+    const auto destination = fs::path(database.string() + "-journal") / "nested" / "log.txt";
+    EXPECT_THROW(
+        quiver::Database(database.string(), {.console_level = quiver::LogLevel::Off, .log_path = destination.string()}),
+        std::runtime_error
+    );
+    EXPECT_FALSE(fs::exists(database));
+    EXPECT_FALSE(fs::exists(database.string() + "-journal"));
+}
+
+TEST_F(DatabaseLogTest, ExistingHardlinkToDatabaseCannotBeTruncated) {
+    {
+        auto db = quiver::Database::from_schema(
+            database.string(),
+            VALID_SCHEMA("basic.sql"),
+            {.console_level = quiver::LogLevel::Off}
+        );
+    }
+    const auto original = read_log_file(database);
+    const auto alias = directory / "hardlink.log";
+    std::error_code ec;
+    fs::create_hard_link(database, alias, ec);
+    if (ec) {
+        GTEST_SKIP() << "cannot create a hardlink here: " << ec.message();
+    }
+    EXPECT_THROW(
+        quiver::Database(database.string(), {.console_level = quiver::LogLevel::Off, .log_path = alias.string()}),
+        std::runtime_error
+    );
+    EXPECT_EQ(read_log_file(database), original);
+}
+
+TEST_F(DatabaseLogTest, DanglingSymlinksCannotCreateDatabaseOrJournalFiles) {
+    for (const auto* suffix : {"", "-journal", "-wal", "-shm"}) {
+        const fs::path target(database.string() + suffix);
+        for (bool directory_link : {false, true}) {
+            SCOPED_TRACE(std::string(suffix) + (directory_link ? " directory" : " file"));
+            const auto alias = directory / "alias";
+            std::error_code ec;
+            if (directory_link) {
+                fs::create_directory_symlink(target, alias, ec);
+            } else {
+                fs::create_symlink(target, alias, ec);
+            }
+            if (ec) {
+                GTEST_SKIP() << "cannot create a symlink here: " << ec.message();
+            }
+            const auto destination = directory_link ? alias / "nested" / "run.log" : alias;
+            try {
+                quiver::Database db(
+                    database.string(),
+                    {.console_level = quiver::LogLevel::Off, .log_path = destination.string()}
+                );
+                FAIL() << "Expected dangling log symlink to fail";
+            } catch (const std::runtime_error& error) {
+                EXPECT_NE(
+                    std::string(error.what()).find("destination is the database file or one of its journals"),
+                    std::string::npos
+                ) << error.what();
+            }
+            EXPECT_FALSE(fs::exists(database));
+            EXPECT_FALSE(fs::exists(target));
+            fs::remove(alias);
+        }
+    }
+}
+
+TEST_F(DatabaseLogTest, DanglingSymlinkToAHarmlessTargetIsFollowed) {
+    const auto target = directory / "elsewhere" / "run.log";
+    const auto alias = database.parent_path() / "run.log";
+    std::error_code ec;
+    fs::create_symlink(target, alias, ec);
+    if (ec) {
+        GTEST_SKIP() << "cannot create a symlink here: " << ec.message();
+    }
+    {
+        quiver::Database db(database.string(), {.console_level = quiver::LogLevel::Off, .log_path = "run.log"});
+    }
+    EXPECT_NE(read_log_file(target).find("Opening database:"), std::string::npos);
+}
+
+TEST_F(DatabaseLogTest, DirectoryCaseAliasOfAJournalIsRefused) {
+    auto upper = database.parent_path().string();
+    std::ranges::transform(upper, upper.begin(), [](unsigned char c) { return static_cast<char>(std::toupper(c)); });
+    const auto destination = fs::path(upper) / "test.db-wal";
+    EXPECT_THROW(
+        quiver::Database(database.string(), {.console_level = quiver::LogLevel::Off, .log_path = destination.string()}),
+        std::runtime_error
+    );
+    EXPECT_FALSE(fs::exists(database.string() + "-wal"));
+}
+
+TEST(DatabaseLogPaths, WritesDatabaseFileComparesDrivesAndDotComponents) {
+    using quiver::utils::writes_database_file;
+    const auto root = fs::temp_directory_path().root_path();
+    const auto database = root / "data" / "study.db";
+    EXPECT_TRUE(writes_database_file(root / "DATA" / "Study.DB-wal", database));
+    EXPECT_TRUE(writes_database_file(root / "data" / "study.db-journal" / "run.log", database));
+    EXPECT_TRUE(writes_database_file(root / "data" / "sub" / ".." / "study.db", database));
+    EXPECT_FALSE(writes_database_file(root / "data" / "sub" / "." / "study.db", database));
+    EXPECT_FALSE(writes_database_file(root / "data" / "study.db.log", database));
+    EXPECT_FALSE(writes_database_file(root / "data", database));
+#ifdef _WIN32
+    EXPECT_TRUE(writes_database_file("c:\\data\\study.db", "C:\\data\\study.db"));
+    EXPECT_FALSE(writes_database_file("D:\\data\\study.db\\run.log", "C:\\data\\study.db"));
+    EXPECT_FALSE(writes_database_file("D:\\data\\study.db", "C:\\data\\study.db"));
+#endif
+}
+
+TEST(DatabaseLogPaths, EmptyDatabasePathLogsToTheWorkingDirectory) {
+    const auto log = fs::temp_directory_path() / "quiver_empty_path.log";
+    {
+        quiver::Database db("", {.console_level = quiver::LogLevel::Off, .log_path = log.string()});
+    }
+    EXPECT_NE(read_log_file(log).find("Opening database:"), std::string::npos);
+    fs::remove(log);
+}
+
+TEST_F(DatabaseLogTest, DanglingDatabaseAndJournalSymlinksCannotHideTheLogDestination) {
+    const auto destination = directory / "run.log";
+    for (const auto* suffix : {"", "-journal", "-wal", "-shm"}) {
+        SCOPED_TRACE(suffix);
+        const fs::path alias(database.string() + suffix);
+        std::error_code ec;
+        fs::create_symlink(destination, alias, ec);
+        if (ec) {
+            GTEST_SKIP() << "cannot create a symlink here: " << ec.message();
+        }
+        EXPECT_THROW(
+            quiver::Database(
+                database.string(),
+                {.console_level = quiver::LogLevel::Off, .log_path = destination.string()}
+            ),
+            std::runtime_error
+        );
+        EXPECT_FALSE(fs::exists(database));
+        EXPECT_FALSE(fs::exists(destination));
+        fs::remove(alias);
+    }
+}
+
+TEST_F(DatabaseLogTest, SymlinkDestinationsAndDatabaseAliasesAreProtected) {
+    {
+        auto db = quiver::Database::from_schema(
+            database.string(),
+            VALID_SCHEMA("basic.sql"),
+            {.console_level = quiver::LogLevel::Off}
+        );
+    }
+    const auto original = read_log_file(database);
+    const auto alias = directory / "alias.db";
+    std::error_code ec;
+    fs::create_symlink(database, alias, ec);
+    if (ec) {
+        GTEST_SKIP() << "cannot create a symlink here: " << ec.message();
+    }
+    EXPECT_THROW(
+        quiver::Database(database.string(), {.console_level = quiver::LogLevel::Off, .log_path = alias.string()}),
+        std::runtime_error
+    );
+    EXPECT_THROW(
+        quiver::Database(
+            alias.string(),
+            {.console_level = quiver::LogLevel::Off, .log_path = database.string() + "-wal/nested/log.txt"}
+        ),
+        std::runtime_error
+    );
+    EXPECT_EQ(read_log_file(database), original);
+    EXPECT_FALSE(fs::exists(database.string() + "-wal"));
+
+    const auto destination = directory / "journal.log";
+    for (const auto& base : {alias, database}) {
+        for (const auto* suffix : {"-journal", "-wal", "-shm"}) {
+            auto journal = base;
+            journal += suffix;
+            for (bool hardlink : {true, false}) {
+                SCOPED_TRACE(journal.string() + (hardlink ? " hardlink" : " dangling symlink"));
+                if (hardlink) {
+                    std::ofstream(journal) << "journal history";
+                    fs::create_hard_link(journal, destination, ec);
+                } else {
+                    fs::create_symlink(destination, journal, ec);
+                }
+                ASSERT_FALSE(ec) << ec.message();
+                try {
+                    quiver::Database db(
+                        alias.string(),
+                        {.console_level = quiver::LogLevel::Off, .log_path = destination.string()}
+                    );
+                    FAIL() << "Expected journal alias collision to fail";
+                } catch (const std::runtime_error& error) {
+                    EXPECT_NE(
+                        std::string(error.what()).find("destination is the database file or one of its journals"),
+                        std::string::npos
+                    ) << error.what();
+                }
+                if (hardlink) {
+                    EXPECT_EQ(read_log_file(journal), "journal history");
+                    fs::remove(destination);
+                } else {
+                    EXPECT_FALSE(fs::exists(destination));
+                }
+                fs::remove(journal);
+            }
+        }
+    }
+    EXPECT_EQ(read_log_file(database), original);
+}
+
+#ifdef _WIN32
+TEST_F(DatabaseLogTest, NamedDatabaseJournalHardlinkPreservesLiveTransaction) {
+    {
+        auto db = quiver::Database::from_schema(
+            database.string(),
+            VALID_SCHEMA("basic.sql"),
+            {.console_level = quiver::LogLevel::Off}
+        );
+    }
+    const auto alias = directory / "alias.db";
+    std::error_code ec;
+    fs::create_symlink(database, alias, ec);
+    if (ec) {
+        GTEST_SKIP() << "cannot create a symlink here: " << ec.message();
+    }
+    quiver::Database writer(alias.string(), {.console_level = quiver::LogLevel::Off});
+    writer.begin_transaction();
+    quiver::Element element;
+    element.set("label", std::string("pending"));
+    writer.create_element("Configuration", element);
+    const fs::path journal(alias.string() + "-journal");
+    ASSERT_TRUE(fs::exists(journal));
+    const auto original = read_log_file(journal);
+    ASSERT_FALSE(original.empty());
+    const auto destination = directory / "journal.log";
+    fs::create_hard_link(journal, destination);
+    EXPECT_THROW(
+        quiver::Database(alias.string(), {.console_level = quiver::LogLevel::Off, .log_path = destination.string()}),
+        std::runtime_error
+    );
+    EXPECT_EQ(read_log_file(journal), original);
+    writer.rollback();
+    EXPECT_EQ(writer.number_of_elements("Configuration"), 0);
+    EXPECT_EQ(writer.query_string("SELECT integrity_check FROM pragma_integrity_check"), "ok");
+}
+#endif
+
+TEST_F(DatabaseLogTest, DefaultLogCannotTruncateADatabaseWithTheDefaultLogName) {
+    const auto named_log = database.parent_path() / "quiver_database.log";
+    quiver::test::exec_sql(named_log.string(), "PRAGMA user_version = 77;");
+    const auto original = read_log_file(named_log);
+    {
+        quiver::Database db(named_log.string(), {.console_level = quiver::LogLevel::Off});
+        EXPECT_EQ(db.current_version(), 77);
+    }
+    EXPECT_EQ(read_log_file(named_log), original);
+}
+
+TEST_F(DatabaseLogTest, SymlinkParentTraversalCannotHideTheDatabase) {
+    const auto actual_directory = directory / "actual";
+    fs::create_directories(actual_directory / "sub");
+    const auto link = directory / "study" / "link";
+    std::error_code ec;
+    fs::create_directory_symlink(actual_directory / "sub", link, ec);
+    if (ec) {
+        GTEST_SKIP() << "cannot create a directory symlink here: " << ec.message();
+    }
+    const auto aliased_database = link / ".." / "study.db";
+    fs::path actual_database;
+    {
+        auto db = quiver::Database::from_schema(
+            aliased_database.string(),
+            VALID_SCHEMA("basic.sql"),
+            {.console_level = quiver::LogLevel::Off, .log_path = (directory / "setup.log").string()}
+        );
+        // Win32 folds .. before following a symlink; POSIX follows the symlink first.
+        const auto filename = db.query_string("SELECT file FROM pragma_database_list WHERE name = 'main'");
+        ASSERT_TRUE(filename.has_value());
+        actual_database = fs::weakly_canonical(*filename);
+    }
+    const auto original = read_log_file(actual_database);
+    EXPECT_THROW(
+        quiver::Database(
+            aliased_database.string(),
+            {.console_level = quiver::LogLevel::Off, .log_path = actual_database.string()}
+        ),
+        std::runtime_error
+    );
+    EXPECT_TRUE(read_log_file(actual_database) == original) << "database bytes changed";
+
+    const auto aliased_log = link / ".." / "custom.log";
+    const auto resolved_log = fs::weakly_canonical(aliased_log);
+    {
+        quiver::Database db(
+            actual_database.string(),
+            {.console_level = quiver::LogLevel::Off, .log_path = aliased_log.string()}
+        );
+    }
+    EXPECT_NE(read_log_file(resolved_log).find("Opening database:"), std::string::npos);
 }

@@ -41,6 +41,18 @@ TEST_F(LuaSandboxTest, OutputSharesTheDatabaseLogAndPreservesPrintFormatting) {
     EXPECT_NE(log.find("[info] custom {}\n"), std::string::npos);
 }
 
+TEST_F(LuaSandboxTest, OutputUsesTheHostConfiguredLogPath) {
+    auto db = quiver::Database::from_schema(
+        db_path(),
+        VALID_SCHEMA("collections.sql"),
+        {.console_level = quiver::LogLevel::Off, .log_path = "logs/custom.log"}
+    );
+    quiver::Sandbox sandbox(db);
+    EXPECT_EQ(sandbox.run("print('custom destination'); return 42"), "42");
+    EXPECT_NE(read_log(sandbox_path / "logs" / "custom.log").find("[info] custom destination\n"), std::string::npos);
+    EXPECT_FALSE(std::filesystem::exists(sandbox_path / "quiver_database.log"));
+}
+
 TEST_F(LuaSandboxTest, OutputIsFlushedBeforeErrorsAndTimeout) {
     auto db = output_database(db_path());
     quiver::Sandbox sandbox(db);
