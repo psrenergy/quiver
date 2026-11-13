@@ -181,6 +181,9 @@ static CsvTable read_csv_file(const std::string& path) {
 // If format is non-empty, parses with that format and reformats to ISO 8601.
 static std::string parse_datetime_import(const std::string& raw_value, const std::string& format) {
     std::tm tm{};
+    // A format without %d (e.g. "%Y" for yearly series, "%Y-%m") never sets the day, and a zero day
+    // is not a date. Default to the 1st so those formats resolve to "2028-01-01T00:00:00".
+    tm.tm_mday = 1;
     bool parsed = false;
     if (format.empty()) {
         parsed = datetime::parse_iso8601(raw_value, tm);
