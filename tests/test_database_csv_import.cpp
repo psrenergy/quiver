@@ -646,17 +646,46 @@ TEST(DatabaseCSV, ImportCSV_Scalar_CustomFormatImpossibleDay_Throws) {
     fs::remove(csv_path);
 }
 
-// A format without %d leaves tm_mday at 0, which strftime is not allowed to format - MSVC kills the
-// process rather than returning. Must be a plain error like any other unparsable timestamp.
-TEST(DatabaseCSV, ImportCSV_Scalar_CustomFormatWithoutDay_Throws) {
+// A format without %d never sets the day. Left at 0, strftime is not allowed to format it (MSVC
+// kills the process), so the importer defaults the day to the 1st and the value imports.
+TEST(DatabaseCSV, ImportCSV_Scalar_CustomFormatWithoutDay) {
     auto db = make_db();
     auto csv_path = temp_csv("ImportCustomFormatWithoutDay");
-    write_csv_file(csv_path.string(), "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,,,2024-01,\n");
+    write_csv_file(csv_path.string(), "sep=,\nlabel,name,status,price,date_created,notes\nItem1,Alpha,,,2024-03,\n");
 
     quiver::CSVOptions options;
     options.date_time_format = "%Y-%m";
-    EXPECT_THROW(db.import_csv("Items", "", csv_path.string(), options), std::runtime_error);
-    EXPECT_EQ(db.number_of_elements("Items"), 0);
+    db.import_csv("Items", "", csv_path.string(), options);
+
+    auto dates = db.read_scalar_strings("Items", "date_created");
+    ASSERT_EQ(dates.size(), 1);
+    EXPECT_EQ(*dates[0], "2024-03-01T00:00:00");
+
+    fs::remove(csv_path);
+}
+
+// Yearly series (e.g. degradation per year) are exported and imported with a year-only format.
+TEST(DatabaseCSV, ImportCSV_TimeSeries_YearOnlyFormat) {
+    auto db = make_db();
+
+    quiver::Element e1;
+    e1.set("label", std::string("Item1")).set("name", std::string("Alpha"));
+    auto id1 = db.create_element("Items", e1);
+
+    auto csv_path = temp_csv("ImportTSYearOnly");
+    write_csv_file(
+        csv_path.string(),
+        "sep=,\nid,date_time,temperature,humidity\nItem1,2028,22.5,60\nItem1,2029,23.5,61\n"
+    );
+
+    quiver::CSVOptions options;
+    options.date_time_format = "%Y";
+    db.import_csv("Items", "readings", csv_path.string(), options);
+
+    auto ts_rows = db.read_time_series_group("Items", "readings", id1);
+    ASSERT_EQ(ts_rows.size(), 2);
+    EXPECT_EQ(std::get<std::string>(ts_rows[0].at("date_time")), "2028-01-01T00:00:00");
+    EXPECT_EQ(std::get<std::string>(ts_rows[1].at("date_time")), "2029-01-01T00:00:00");
 
     fs::remove(csv_path);
 }

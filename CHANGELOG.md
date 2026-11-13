@@ -5,6 +5,14 @@ All notable changes to Quiver are recorded here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Entries that require
 callers to change something are prefixed **BREAKING** and say what to do.
 
+## [0.13.9] — unreleased
+
+### Fixed
+
+- **`import_csv` accepts a `date_time_format` without a day.** A format like `%Y` (yearly series)
+  or `%Y-%m` rejected every value, e.g. `Timestamp 2028 is not valid ... with format %Y`. The day
+  now defaults to the 1st, so `2028` imports as `2028-01-01T00:00:00`.
+
 ## [0.13.8] — unreleased
 
 ### Changed
@@ -1660,6 +1668,7 @@ are functionally identical to 0.10.0.
   `read_time_series_group` emits for a NULL STRING cell — so feeding a read result back with the
   mask stripped was UB. A NULL entry, or a NULL per-column data pointer, is now SQL NULL.
 
+[0.13.9]: https://github.com/psrenergy/quiver/compare/v0.13.8...HEAD
 [0.13.8]: https://github.com/psrenergy/quiver/compare/v0.13.5...v0.13.8
 [0.13.5]: https://github.com/psrenergy/quiver/compare/v0.13.4...v0.13.5
 [0.13.4]: https://github.com/psrenergy/quiver/compare/v0.13.3...v0.13.4
